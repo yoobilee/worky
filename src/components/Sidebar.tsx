@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -138,10 +138,13 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
 
   const [collapsed, setCollapsed]   = useState(false);
   const [colMounted, setColMounted] = useState(false);
+  // 텍스트 타이밍: 즉시 숨김(접기), 180ms 후 표시(펼치기)
+  const [showText, setShowText]     = useState(true);
+  const textTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem(COLLAPSED_KEY);
-    if (saved === "true") setCollapsed(true);
+    if (saved === "true") { setCollapsed(true); setShowText(false); }
     setColMounted(true);
   }, []);
 
@@ -153,10 +156,21 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
 
   const isCollapsed = colMounted && collapsed;
 
-  // 텍스트 공통 fade 클래스: 접힐 때 빠르게, 펼칠 때 지연 후 fade in
-  const textFade = isCollapsed
-    ? "max-w-0 opacity-0 duration-150"
-    : "max-w-xs opacity-100 duration-200 delay-150";
+  useEffect(() => {
+    if (textTimerRef.current) clearTimeout(textTimerRef.current);
+    if (isCollapsed) {
+      setShowText(false);
+    } else {
+      textTimerRef.current = setTimeout(() => setShowText(true), 180);
+    }
+    return () => { if (textTimerRef.current) clearTimeout(textTimerRef.current); };
+  }, [isCollapsed]);
+
+  const collapseIcon = (
+    <IconLayoutSidebarLeftCollapse
+      className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? "rotate-180" : "rotate-0"}`}
+    />
+  );
 
   return (
     <aside
@@ -169,57 +183,90 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
         isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
       ].join(" ")}
     >
-      {/* ── 헤더 ── */}
-      <div className="flex items-center gap-2 px-3 py-3.5 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-        {/* 로고 */}
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-          style={{ background: "#6C63FF" }}
-        >
-          W
-        </div>
 
-        {/* Worky 텍스트 — fade + width 전환 */}
-        <div className={`overflow-hidden transition-all whitespace-nowrap ${textFade}`}>
-          <p className="font-bold text-sm leading-none" style={{ color: "var(--primary)" }}>Worky</p>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">AI 업무 보조</p>
+      {/* ── 헤더 (조건부 렌더링 — 레이아웃 안정성 우선) ── */}
+      {isCollapsed ? (
+        /* 접힌 상태: 아이콘 + 토글만 세로 배치 */
+        <div className="flex flex-col items-center gap-2 px-2 py-3 border-b border-slate-200 dark:border-zinc-800 shrink-0">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
+            style={{ background: "#6C63FF" }}
+          >
+            W
+          </div>
+          <button
+            onClick={toggleCollapse}
+            aria-label="사이드바 펼치기"
+            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors hidden lg:flex"
+          >
+            {collapseIcon}
+          </button>
         </div>
-
-        {/* 다크모드 토글 — fade + width 전환 */}
-        <div className={`overflow-hidden transition-all ${textFade}`}>
+      ) : (
+        /* 펼친 상태: 로고 | 텍스트 | 다크모드 | 접기 가로 배치 */
+        <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-200 dark:border-zinc-800 shrink-0">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
+            style={{ background: "#6C63FF" }}
+          >
+            W
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm leading-none" style={{ color: "var(--primary)" }}>Worky</p>
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">AI 업무 보조</p>
+          </div>
           <button
             onClick={toggleTheme}
             aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}
-            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
           >
             {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
           </button>
+          <button
+            onClick={toggleCollapse}
+            aria-label="사이드바 접기"
+            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0 hidden lg:flex"
+          >
+            {collapseIcon}
+          </button>
         </div>
-
-        {/* 접기/펼치기 — 항상 표시, 아이콘 rotate */}
-        <button
-          onClick={toggleCollapse}
-          aria-label={isCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
-          className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0 ml-auto hidden lg:flex items-center"
-        >
-          <IconLayoutSidebarLeftCollapse
-            className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? "rotate-180" : "rotate-0"}`}
-          />
-        </button>
-      </div>
+      )}
 
       {/* ── 네비게이션 ── */}
-      <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto sidebar-nav-collapsed min-h-0">
-        {/* "메뉴" 레이블 — fade + width */}
-        <div className={`overflow-hidden transition-all ${textFade}`}>
-          <p className="px-3 mb-2 text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">
+      <nav className={[
+        "flex-1 py-3 space-y-0.5 overflow-y-auto sidebar-nav-collapsed min-h-0",
+        isCollapsed ? "px-2" : "px-3",
+      ].join(" ")}>
+        {showText && (
+          <p className="px-3 mb-2 text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
             메뉴
           </p>
-        </div>
+        )}
 
         {navItems.map((item) => {
           const isActive = pathname === item.href;
-          return (
+
+          return isCollapsed ? (
+            /* 접힌 상태: 아이콘만, 가운데 정렬 */
+            <div key={item.href}
+              className="flex items-center justify-center h-10 rounded-xl transition-colors cursor-default"
+            >
+              <Link
+                href={item.href}
+                onClick={onClose}
+                className={[
+                  "flex items-center justify-center w-full h-10 rounded-xl transition-colors",
+                  isActive
+                    ? "text-white shadow-md"
+                    : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
+                ].join(" ")}
+                style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+              >
+                <span className={isActive ? "opacity-90" : "opacity-60"}>{item.icon}</span>
+              </Link>
+            </div>
+          ) : (
+            /* 펼친 상태: 아이콘 + 텍스트 */
             <Link
               key={item.href}
               href={item.href}
@@ -233,20 +280,34 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
             >
               <span className={isActive ? "opacity-90" : "opacity-50"}>{item.icon}</span>
-              {/* 레이블 — fade + max-width 전환 */}
-              <span className={`overflow-hidden whitespace-nowrap transition-all ${textFade}`}>
-                {item.label}
-              </span>
+              {showText && item.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* ── 하단 ── */}
+      {/* ── 하단 AI 상태 ── */}
       <div className="shrink-0 px-3 py-3 border-t border-slate-200 dark:border-zinc-800">
-        {/* 펼친 상태: full AI 상태 카드 */}
-        <div className={`overflow-hidden transition-all ${textFade}`}>
-          <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
+        {isCollapsed ? (
+          /* 접힌 상태: 다크모드 토글 + AI dot */
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}
+              className="p-2 rounded-xl text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
+            </button>
+            <div className="relative flex">
+              <span className={`w-2.5 h-2.5 rounded-full ${status.dot}`} />
+              {aiStatus === "connected" && (
+                <span className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-60" />
+              )}
+            </div>
+          </div>
+        ) : (
+          /* 펼친 상태: AI 상태 카드 */
+          <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700">
             <span className="relative flex shrink-0">
               <span className={`w-2.5 h-2.5 rounded-full ${status.dot}`} />
               {aiStatus === "connected" && (
@@ -260,27 +321,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               )}
             </div>
           </div>
-        </div>
-
-        {/* 접힌 상태: 다크모드 토글 + AI dot (역방향 fade) */}
-        <div className={`overflow-hidden transition-all ${
-          isCollapsed ? "max-w-xs opacity-100 duration-200 delay-150" : "max-w-0 opacity-0 duration-150"
-        }`}>
-          <div className="flex flex-col items-center gap-2 py-1">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-            >
-              {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
-            </button>
-            <div className="relative flex">
-              <span className={`w-2.5 h-2.5 rounded-full ${status.dot}`} />
-              {aiStatus === "connected" && (
-                <span className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-60" />
-              )}
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </aside>
   );
