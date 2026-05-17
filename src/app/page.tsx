@@ -7,6 +7,7 @@ import TodoMemo from "@/components/TodoMemo";
 import TemplateGen from "@/components/TemplateGen";
 import QnA from "@/components/QnA";
 import EmailReply from "@/components/EmailReply";
+import DocSummary from "@/components/DocSummary";
 import type { Tab } from "@/types";
 
 const tabMeta: Record<Tab, { title: string; desc: string; aiChip: boolean }> = {
@@ -15,6 +16,7 @@ const tabMeta: Record<Tab, { title: string; desc: string; aiChip: boolean }> = {
   template: { title: "템플릿 생성",  desc: "업무 문서를 AI가 즉시 작성해드립니다",         aiChip: true },
   qna:      { title: "Q&A",          desc: "업무 관련 질문을 AI에게 자유롭게 물어보세요",   aiChip: true },
   email:    { title: "이메일 작성",  desc: "받은 이메일에 톤에 맞는 답장 초안을 생성합니다", aiChip: true },
+  summary:  { title: "문서 요약",   desc: "텍스트나 PDF를 붙여넣으면 AI가 요약해드립니다",  aiChip: true },
 };
 
 export default function HomePage() {
@@ -42,6 +44,7 @@ export default function HomePage() {
       case "template": return <TemplateGen />;
       case "qna":      return <QnA />;
       case "email":    return <EmailReply />;
+      case "summary":  return <DocSummary />;
     }
   };
 

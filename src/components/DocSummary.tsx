@@ -1,0 +1,328 @@
+"use client";
+
+import { useState, useRef } from "react";
+import {
+  IconAlignLeft,
+  IconFileUpload,
+  IconListDetails,
+  IconList,
+  IconMinus,
+  IconCopy,
+  IconCheck,
+  IconSparkles,
+} from "@tabler/icons-react";
+
+type InputMode = "text" | "file";
+type SummaryStyle = "핵심 요약" | "bullet 포인트" | "한 줄 요약";
+
+const SUMMARY_STYLES: {
+  id: SummaryStyle;
+  Icon: React.ComponentType<{ className?: string }>;
+  desc: string;
+}[] = [
+  { id: "핵심 요약",    Icon: IconListDetails, desc: "주요 내용 정리" },
+  { id: "bullet 포인트", Icon: IconList,        desc: "항목별 요약" },
+  { id: "한 줄 요약",   Icon: IconMinus,       desc: "한 문장으로 압축" },
+];
+
+function buildSystemPrompt(style: SummaryStyle): string {
+  if (style === "핵심 요약") {
+    return `당신은 문서 요약 전문가입니다. 제공된 텍스트의 핵심 내용을 3~5개의 핵심 포인트로 정리하세요.
+각 포인트는 명확하고 간결하게 작성하고, 전체 내용을 파악할 수 있도록 구성하세요. 한국어로 작성하세요.`;
+  }
+  if (style === "bullet 포인트") {
+    return `당신은 문서 요약 전문가입니다. 제공된 텍스트를 bullet 포인트 형식으로 요약하세요.
+각 항목은 "• " 기호로 시작하세요. 중요한 정보를 빠짐없이 포함하되 간결하게 작성하세요.
+계층 구조가 필요하면 들여쓰기를 사용하세요. 한국어로 작성하세요.`;
+  }
+  return `당신은 문서 요약 전문가입니다. 제공된 텍스트의 핵심을 단 한 문장(50자 내외)으로 요약하세요.
+가장 중요한 정보만 포함하고, 명확하고 완결된 문장으로 작성하세요. 한국어로 작성하세요.`;
+}
+
+async function extractTextFromPDF(file: File): Promise<string> {
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pages: string[] = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ");
+    pages.push(pageText);
+  }
+
+  return pages.join("\n\n").replace(/\s{3,}/g, "  ").trim();
+}
+
+export default function DocSummary() {
+  const [inputMode, setInputMode] = useState<InputMode>("text");
+  const [textInput, setTextInput] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [extractedText, setExtractedText] = useState("");
+  const [summaryStyle, setSummaryStyle] = useState<SummaryStyle>("핵심 요약");
+  const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleModeChange = (mode: InputMode) => {
+    setInputMode(mode);
+    setError("");
+    setResult("");
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    setExtractedText("");
+    setError("");
+    setResult("");
+
+    setExtracting(true);
+    try {
+      let text: string;
+      if (f.type === "application/pdf") {
+        text = await extractTextFromPDF(f);
+      } else {
+        text = await f.text();
+      }
+      if (!text.trim()) throw new Error("텍스트를 추출할 수 없습니다. 스캔 PDF는 지원되지 않습니다.");
+      setExtractedText(text);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "파일 처리 중 오류가 발생했습니다.");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const sourceText = inputMode === "text" ? textInput : extractedText;
+
+  const handleSummarize = async () => {
+    if (!sourceText.trim()) return;
+    setLoading(true);
+    setError("");
+    setResult("");
+
+    try {
+      const res = await fetch("/api/groq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: sourceText.slice(0, 12000) }],
+          systemPrompt: buildSystemPrompt(summaryStyle),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
+      setResult(data.result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "요약 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(result);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const inputModes: { id: InputMode; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: "text", label: "텍스트 붙여넣기", Icon: IconAlignLeft },
+    { id: "file", label: "파일 업로드",     Icon: IconFileUpload },
+  ];
+
+  return (
+    <div className="space-y-3 max-w-4xl mx-auto">
+      {/* 입력 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+        {/* 모드 탭 */}
+        <div className="flex gap-2 mb-4">
+          {inputModes.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => handleModeChange(id)}
+              className={[
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                inputMode === id
+                  ? "text-white shadow-sm"
+                  : "text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700",
+              ].join(" ")}
+              style={inputMode === id ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {inputMode === "text" ? (
+          <>
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+              요약할 텍스트 입력
+            </label>
+            <textarea
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="요약할 내용을 붙여넣으세요..."
+              rows={7}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+            />
+            {textInput && (
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5 text-right">
+                {textInput.length.toLocaleString()}자
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+              PDF 또는 텍스트 파일 업로드
+            </label>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={extracting}
+              className="w-full flex flex-col items-center justify-center gap-3 py-8 rounded-xl border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <IconFileUpload className="w-8 h-8 text-slate-400 dark:text-zinc-500" />
+              <div className="text-center">
+                <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">
+                  {file ? file.name : "클릭해서 파일 선택"}
+                </p>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">PDF, TXT 지원</p>
+              </div>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt,application/pdf,text/plain"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {extracting && (
+              <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
+                <span className="w-4 h-4 border-2 border-slate-300 border-t-[#6C63FF] rounded-full animate-spin shrink-0" />
+                PDF에서 텍스트 추출 중...
+              </div>
+            )}
+
+            {extractedText && !extracting && (
+              <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1">추출된 텍스트 미리보기</p>
+                <p className="text-xs text-slate-600 dark:text-zinc-400 line-clamp-3 leading-relaxed">
+                  {extractedText}
+                </p>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">
+                  총 {extractedText.length.toLocaleString()}자 추출됨
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* 요약 방식 선택 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">요약 방식</p>
+        <div className="grid grid-cols-3 gap-2">
+          {SUMMARY_STYLES.map(({ id, Icon, desc }) => {
+            const isActive = summaryStyle === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setSummaryStyle(id)}
+                className={[
+                  "flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border text-sm font-medium transition-all",
+                  isActive
+                    ? "text-white border-transparent shadow-md"
+                    : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                ].join(" ")}
+                style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{id}</span>
+                <span className={`text-xs ${isActive ? "text-white/70" : "text-slate-400 dark:text-zinc-500"}`}>
+                  {desc}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-end mt-4">
+          <button
+            onClick={handleSummarize}
+            disabled={loading || !sourceText.trim() || extracting}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+          >
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                요약 중...
+              </>
+            ) : (
+              <>
+                <IconSparkles className="w-4 h-4" />
+                AI로 요약하기
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* 에러 */}
+      {error && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
+          <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {error}
+        </div>
+      )}
+
+      {/* 결과 */}
+      {result && (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+              요약 결과 — {summaryStyle}
+            </span>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+            >
+              {copied ? (
+                <>
+                  <IconCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  복사됨!
+                </>
+              ) : (
+                <>
+                  <IconCopy className="w-3.5 h-3.5" />
+                  복사
+                </>
+              )}
+            </button>
+          </div>
+          <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed">
+            {result}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
