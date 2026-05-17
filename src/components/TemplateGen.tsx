@@ -104,7 +104,7 @@ export default function TemplateGen() {
   };
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
+    <div className="space-y-4 max-w-4xl mx-auto w-full">
       {/* 헤더 */}
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">템플릿 생성</h1>

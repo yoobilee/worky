@@ -228,7 +228,7 @@ export default function HomePage() {
   const preview   = todos.filter((t) => !t.completed).slice(0, 3);
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-3 flex-1 min-h-0 w-full">
+    <div className="max-w-4xl mx-auto flex flex-col gap-3 flex-1 min-h-0 w-full">
 
       {/* ── 환영 카드 ── */}
       <div

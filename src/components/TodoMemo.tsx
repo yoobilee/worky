@@ -66,7 +66,7 @@ export default function TodoMemo() {
   if (!hydrated) return null;
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
+    <div className="space-y-4 max-w-4xl mx-auto w-full">
       {/* 헤더 */}
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">할 일 / 메모</h1>

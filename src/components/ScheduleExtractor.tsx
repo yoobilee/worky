@@ -101,7 +101,7 @@ export default function ScheduleExtractor() {
   };
 
   return (
-    <div className="space-y-3 max-w-4xl mx-auto">
+    <div className="space-y-3 max-w-4xl mx-auto w-full">
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
         <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">

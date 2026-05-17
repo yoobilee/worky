@@ -99,7 +99,7 @@ export default function QnA() {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-3xl mx-auto" style={{ minHeight: "calc(100vh - 120px)" }}>
+    <div className="flex flex-col h-full max-w-4xl mx-auto w-full">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div>

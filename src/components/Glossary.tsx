@@ -161,7 +161,7 @@ export default function Glossary() {
   if (!hydrated) return null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-3">
+    <div className="max-w-4xl mx-auto space-y-3 w-full">
 
       {/* ── Bento 상단: 통계 + AI 설명 ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">

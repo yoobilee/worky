@@ -13,7 +13,7 @@ import {
 } from "@tabler/icons-react";
 
 type InputMode = "text" | "file";
-type SummaryStyle = "핵심 요약" | "bullet 포인트" | "한 줄 요약";
+type SummaryStyle = "핵심 요약" | "요점 정리" | "한 줄 요약";
 
 const SUMMARY_STYLES: {
   id: SummaryStyle;
@@ -21,7 +21,7 @@ const SUMMARY_STYLES: {
   desc: string;
 }[] = [
   { id: "핵심 요약",    Icon: IconListDetails, desc: "주요 내용 정리" },
-  { id: "bullet 포인트", Icon: IconList,        desc: "항목별 요약" },
+  { id: "요점 정리", Icon: IconList,        desc: "항목별 요약" },
   { id: "한 줄 요약",   Icon: IconMinus,       desc: "한 문장으로 압축" },
 ];
 
@@ -30,8 +30,8 @@ function buildSystemPrompt(style: SummaryStyle): string {
     return `당신은 문서 요약 전문가입니다. 제공된 텍스트의 핵심 내용을 3~5개의 핵심 포인트로 정리하세요.
 각 포인트는 명확하고 간결하게 작성하고, 전체 내용을 파악할 수 있도록 구성하세요. 한국어로 작성하세요.`;
   }
-  if (style === "bullet 포인트") {
-    return `당신은 문서 요약 전문가입니다. 제공된 텍스트를 bullet 포인트 형식으로 요약하세요.
+  if (style === "요점 정리") {
+    return `당신은 문서 요약 전문가입니다. 제공된 텍스트를 요점 정리 형식으로 요약하세요.
 각 항목은 "• " 기호로 시작하세요. 중요한 정보를 빠짐없이 포함하되 간결하게 작성하세요.
 계층 구조가 필요하면 들여쓰기를 사용하세요. 한국어로 작성하세요.`;
   }
@@ -144,7 +144,7 @@ export default function DocSummary() {
   ];
 
   return (
-    <div className="space-y-3 max-w-4xl mx-auto">
+    <div className="space-y-3 max-w-4xl mx-auto w-full">
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
         {/* 모드 탭 */}
