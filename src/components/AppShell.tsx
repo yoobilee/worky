@@ -89,7 +89,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        <main className="flex-1 overflow-auto p-3 lg:p-5">
+        <main className="flex-1 overflow-auto p-3 lg:p-5 flex flex-col">
           {children}
         </main>
       </div>

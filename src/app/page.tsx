@@ -16,19 +16,21 @@ interface Todo { id: string; text: string; completed: boolean }
 
 const DAY_KO = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
 
-const TIPS = [
-  "첫 보고서는 '결론 → 이유 → 근거' 순서로 작성하면 가독성이 높아집니다.",
-  "업무 요청을 받으면 기한·우선순위·담당자를 반드시 확인하고 시작하세요.",
-  "회의가 끝나면 24시간 안에 액션 아이템을 정리해 공유하면 신뢰를 얻을 수 있습니다.",
-  "이메일은 보내기 전 수신자·참조·제목·첨부파일을 한 번 더 확인하는 습관을 들이세요.",
-  "업무 중 막히는 부분은 30분 이상 혼자 고민하기 전에 선배에게 질문하세요.",
-  "To-Do는 구체적인 액션 단위로 쪼개야 실행이 쉽습니다. '기획안 작성' 대신 '목차 초안 만들기'처럼요.",
-  "상사에게 중간 보고를 자주 하면 방향이 틀렸을 때 수정 비용이 줄어듭니다.",
-  "일주일 단위로 이번 주 배운 것 3가지를 기록하면 성장이 눈에 보입니다.",
-  "슬랙·메일 알림은 집중 시간대에는 끄고, 정해진 시간에 일괄 확인하는 것이 효율적입니다.",
-  "문서 저장 시 파일명에 날짜를 포함하면 나중에 찾기 훨씬 쉽습니다.",
-  "모르는 용어나 프로세스는 그 자리에서 바로 메모하고 업무 후 정리하세요.",
-  "동료의 업무 성과를 공개적으로 칭찬하는 습관은 팀 협업을 강화합니다.",
+interface Tip { text: string; category: string }
+
+const TIPS: Tip[] = [
+  { text: "첫 보고서는 '결론 → 이유 → 근거' 순서로 작성하면 가독성이 높아집니다.", category: "문서작성" },
+  { text: "업무 요청을 받으면 기한·우선순위·담당자를 반드시 확인하고 시작하세요.", category: "업무관리" },
+  { text: "회의가 끝나면 24시간 안에 액션 아이템을 정리해 공유하면 신뢰를 얻을 수 있습니다.", category: "커뮤니케이션" },
+  { text: "이메일은 보내기 전 수신자·참조·제목·첨부파일을 한 번 더 확인하는 습관을 들이세요.", category: "커뮤니케이션" },
+  { text: "업무 중 막히는 부분은 30분 이상 혼자 고민하기 전에 선배에게 질문하세요.", category: "학습" },
+  { text: "To-Do는 구체적인 액션 단위로 쪼개야 실행이 쉽습니다. '기획안 작성' 대신 '목차 초안 만들기'처럼요.", category: "시간관리" },
+  { text: "상사에게 중간 보고를 자주 하면 방향이 틀렸을 때 수정 비용이 줄어듭니다.", category: "업무관리" },
+  { text: "일주일 단위로 이번 주 배운 것 3가지를 기록하면 성장이 눈에 보입니다.", category: "학습" },
+  { text: "슬랙·메일 알림은 집중 시간대에는 끄고, 정해진 시간에 일괄 확인하는 것이 효율적입니다.", category: "시간관리" },
+  { text: "문서 저장 시 파일명에 날짜를 포함하면 나중에 찾기 훨씬 쉽습니다.", category: "문서작성" },
+  { text: "모르는 용어나 프로세스는 그 자리에서 바로 메모하고 업무 후 정리하세요.", category: "학습" },
+  { text: "동료의 업무 성과를 공개적으로 칭찬하는 습관은 팀 협업을 강화합니다.", category: "팀워크" },
 ];
 
 const QUICK_LINKS = [
@@ -129,6 +131,7 @@ export default function HomePage() {
   const [dateStr, setDateStr]   = useState("");
   const [todos, setTodos]       = useState<Todo[]>([]);
   const [tip, setTip]           = useState("");
+  const [tipCategory, setTipCategory] = useState("");
   const [aiStatus, setAiStatus] = useState<"checking" | "connected" | "error">("checking");
   const [weather, setWeather]   = useState<WeatherInfo | null>(null);
   const [locationName, setLocationName] = useState("");
@@ -159,7 +162,9 @@ export default function HomePage() {
     setDateStr(`${now.getFullYear()}년 ${month}월 ${date}일 ${day}`);
 
     // 날짜 기반 팁 (하루 동안 고정)
-    setTip(TIPS[date % TIPS.length]);
+    const todayTip = TIPS[date % TIPS.length];
+    setTip(todayTip.text);
+    setTipCategory(todayTip.category);
 
     // localStorage 할 일
     try {
@@ -223,7 +228,7 @@ export default function HomePage() {
   const preview   = todos.filter((t) => !t.completed).slice(0, 3);
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-3 h-full">
+    <div className="max-w-5xl mx-auto flex flex-col gap-3 flex-1 min-h-0 w-full">
 
       {/* ── 환영 카드 ── */}
       <div
@@ -402,17 +407,27 @@ export default function HomePage() {
 
         {/* 오늘의 팁 */}
         <div
-          className="rounded-2xl p-4 shadow-sm flex flex-col gap-3"
+          className="rounded-2xl p-5 shadow-sm flex flex-col"
           style={{ background: "linear-gradient(135deg, #6C63FF18, #8B85FF10)", border: "1px solid #6C63FF30" }}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-4">
             <IconBulb className="w-4 h-4 text-[#6C63FF]" />
             <span className="text-sm font-semibold text-[#6C63FF]">오늘의 팁</span>
           </div>
-          <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed flex-1">
+          <p className="text-base leading-7 text-slate-700 dark:text-zinc-300 flex-1">
             {tip || "오늘 하루도 차근차근 해나가면 됩니다."}
           </p>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-auto">매일 새로운 팁이 표시됩니다.</p>
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#6C63FF20]">
+            {tipCategory && (
+              <span
+                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                style={{ background: "#6C63FF22", color: "#6C63FF" }}
+              >
+                {tipCategory}
+              </span>
+            )}
+            <p className="text-xs text-slate-400 dark:text-zinc-500 ml-auto">매일 새로운 팁</p>
+          </div>
         </div>
 
       </div>
