@@ -1,8 +1,6 @@
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 interface Message {
   role: "user" | "assistant" | "system";
   content: string;
@@ -14,6 +12,8 @@ interface RequestBody {
 }
 
 export async function POST(req: NextRequest) {
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
   try {
     const body: RequestBody = await req.json();
     const { messages, systemPrompt } = body;
