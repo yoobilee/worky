@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 
 const routeMeta: Record<string, { title: string; desc: string; aiChip: boolean }> = {
-  "/":         { title: "데이터 정리",  desc: "지저분한 텍스트를 AI가 표로 정리합니다",              aiChip: true  },
+  "/":         { title: "Home",         desc: "오늘의 업무 현황을 한눈에 확인하세요",                 aiChip: false },
+  "/data":     { title: "데이터 정리",  desc: "지저분한 텍스트를 AI가 표로 정리합니다",              aiChip: true  },
   "/todo":     { title: "할 일 / 메모", desc: "할 일을 추가하고 메모를 자유롭게 기록하세요",          aiChip: false },
   "/template": { title: "템플릿 생성",  desc: "업무 문서를 AI가 즉시 작성해드립니다",                aiChip: true  },
   "/qa":       { title: "Q&A",          desc: "업무 관련 질문을 AI에게 자유롭게 물어보세요",          aiChip: true  },
