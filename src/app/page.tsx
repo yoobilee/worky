@@ -64,12 +64,13 @@ function getWeatherFromCode(code: number): { label: string; Icon: React.Componen
 /* ───────── 컴포넌트 ───────── */
 
 export default function HomePage() {
-  const [time, setTime]       = useState("");
-  const [dateStr, setDateStr] = useState("");
-  const [todos, setTodos]     = useState<Todo[]>([]);
-  const [tip, setTip]         = useState("");
+  const [time, setTime]         = useState("");
+  const [dateStr, setDateStr]   = useState("");
+  const [todos, setTodos]       = useState<Todo[]>([]);
+  const [tip, setTip]           = useState("");
   const [aiStatus, setAiStatus] = useState<"checking" | "connected" | "error">("checking");
-  const [weather, setWeather] = useState<WeatherInfo | null>(null);
+  const [weather, setWeather]   = useState<WeatherInfo | null>(null);
+  const [locationName, setLocationName] = useState("");
   const [geoStatus, setGeoStatus] = useState<"waiting" | "ok" | "denied">("waiting");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -119,21 +120,34 @@ export default function HomePage() {
       .catch(() => setAiStatus("error"));
   }, []);
 
-  // 날씨 (geolocation + Open-Meteo)
+  // 날씨 + 위치명 (geolocation + Open-Meteo + Nominatim)
   useEffect(() => {
     if (!navigator.geolocation) { setGeoStatus("denied"); return; }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         setGeoStatus("ok");
+        const { latitude: lat, longitude: lon } = pos.coords;
         try {
-          const { latitude: lat, longitude: lon } = pos.coords;
-          const res  = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
-          );
-          const data = await res.json();
-          const cw   = data.current_weather;
+          const [weatherRes, geoRes] = await Promise.all([
+            fetch(
+              `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
+            ),
+            fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+              { headers: { "Accept-Language": "ko", "User-Agent": "Worky-App/1.0" } }
+            ),
+          ]);
+          const [weatherData, geoData] = await Promise.all([weatherRes.json(), geoRes.json()]);
+
+          // 날씨
+          const cw = weatherData.current_weather;
           const { label, Icon } = getWeatherFromCode(cw.weathercode);
           setWeather({ temp: Math.round(cw.temperature), label, Icon });
+
+          // 위치명: city → town → county → state 순 우선순위
+          const addr = geoData.address ?? {};
+          const city = addr.city || addr.town || addr.county || addr.state || "";
+          setLocationName(city);
         } catch {}
       },
       () => setGeoStatus("denied")
@@ -186,20 +200,26 @@ export default function HomePage() {
                 </span>
               )}
               {geoStatus === "ok" && weather && (
-                <div className="flex flex-col items-center gap-0.5">
+                <div className="flex flex-col items-center gap-1">
                   <weather.Icon className="w-6 h-6 text-[#6C63FF]" />
-                  <span className="text-xs font-medium">{weather.label}</span>
-                  <span className="text-xs flex items-center gap-0.5">
-                    <IconTemperature className="w-3.5 h-3.5" />{weather.temp}°C
+                  <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">{weather.label}</span>
+                  <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                    {locationName && <><span>{locationName}</span><span className="opacity-40">·</span></>}
+                    <span className="flex items-center gap-0.5">
+                      <IconTemperature className="w-3 h-3" />{weather.temp}°C
+                    </span>
                   </span>
                 </div>
               )}
             </div>
 
             {/* 실시간 시계 */}
-            <div className="flex flex-col items-center gap-0.5">
-              <IconClock className="w-5 h-5 text-[#6C63FF]" />
-              <span className="text-2xl font-bold tabular-nums text-slate-800 dark:text-slate-100 tracking-tight">
+            <div className="flex flex-col items-center gap-1">
+              <IconClock className="w-4 h-4 text-[#6C63FF]" />
+              <span
+                className="text-3xl text-slate-800 dark:text-slate-100 tracking-wider"
+                style={{ fontFamily: "var(--font-dm-mono)", fontWeight: 500 }}
+              >
                 {time}
               </span>
             </div>
