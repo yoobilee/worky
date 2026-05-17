@@ -116,18 +116,17 @@ export default function Translator() {
     <div className="space-y-3 max-w-4xl mx-auto">
 
       {/* 모드 전환 탭 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm flex gap-1">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1">
         {MODES.map(({ id, label, Icon }) => (
           <button
             key={id}
             onClick={() => handleModeChange(id)}
             className={[
-              "flex-1 w-0 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium",
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
               mode === id
-                ? "text-white shadow-sm"
-                : "text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                ? "bg-[#6C63FF] text-white shadow-sm"
+                : "bg-transparent text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
             ].join(" ")}
-            style={mode === id ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
           >
             <Icon className="w-4 h-4" />
             {label}
