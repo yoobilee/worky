@@ -28,16 +28,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  // 테마 변경 시 <html> 클래스 + localStorage 동기화
+  // 테마 변경 시 <html> 클래스 + localStorage 동기화 (transition 즉시 차단)
   useEffect(() => {
     if (!mounted) return;
     const root = document.documentElement;
+
+    root.classList.add("theme-switching");
+
     if (theme === "dark") {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
     }
+
     localStorage.setItem("worky-theme", theme);
+
+    // 다음 두 프레임 후 transition 재활성화 (페인트 완료 보장)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        root.classList.remove("theme-switching");
+      });
+    });
   }, [theme, mounted]);
 
   const toggle = () => setTheme((t) => (t === "light" ? "dark" : "light"));
