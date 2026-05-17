@@ -32,7 +32,7 @@ export default function QnA() {
     {
       id: "welcome",
       role: "assistant",
-      content: "안녕하세요! 저는 Worky예요 👋\n업무 관련 궁금한 점이 있으시면 뭐든지 물어보세요. 이메일 작성, 보고서 형식, 사내 커뮤니케이션 등 신입사원으로서 어려운 부분을 함께 해결해드릴게요!",
+      content: "안녕하세요! 저는 Worky예요.\n업무 관련 궁금한 점이 있으시면 뭐든지 물어보세요. 이메일 작성, 보고서 형식, 사내 커뮤니케이션 등 신입사원으로서 어려운 부분을 함께 해결해드릴게요!",
     },
   ]);
   const [input, setInput] = useState("");
@@ -92,7 +92,7 @@ export default function QnA() {
       {
         id: "welcome",
         role: "assistant",
-        content: "안녕하세요! 저는 Worky예요 👋\n업무 관련 궁금한 점이 있으시면 뭐든지 물어보세요. 이메일 작성, 보고서 형식, 사내 커뮤니케이션 등 신입사원으로서 어려운 부분을 함께 해결해드릴게요!",
+        content: "안녕하세요! 저는 Worky예요.\n업무 관련 궁금한 점이 있으시면 뭐든지 물어보세요. 이메일 작성, 보고서 형식, 사내 커뮤니케이션 등 신입사원으로서 어려운 부분을 함께 해결해드릴게요!",
       },
     ]);
     setError("");

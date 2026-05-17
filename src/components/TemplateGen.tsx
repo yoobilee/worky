@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { IconReport, IconMail, IconNotes, IconBulb } from "@tabler/icons-react";
 
 type TemplateType = "report" | "email" | "meeting" | "plan";
 
 interface TemplateOption {
   id: TemplateType;
   label: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string }>;
   placeholder: string;
   systemPrompt: string;
 }
@@ -16,7 +17,7 @@ const TEMPLATES: TemplateOption[] = [
   {
     id: "report",
     label: "업무 보고서",
-    icon: "📊",
+    Icon: IconReport,
     placeholder: "예: 이번 주 마케팅 캠페인 성과 보고. 클릭율 15% 향상, 전환율 8% 향상, 예산 초과 없음.",
     systemPrompt: `당신은 전문 비즈니스 문서 작성가입니다. 사용자가 제공한 내용을 바탕으로 체계적인 업무 보고서를 작성해주세요.
 보고서에는 반드시 포함해야 할 항목: 제목, 작성일, 보고 목적, 주요 내용 (번호 목록), 결과 및 성과, 향후 계획, 특이사항.
@@ -25,7 +26,7 @@ const TEMPLATES: TemplateOption[] = [
   {
     id: "email",
     label: "이메일",
-    icon: "✉️",
+    Icon: IconMail,
     placeholder: "예: 신규 프로젝트 킥오프 미팅 일정 조율. 다음 주 화요일이나 목요일 오후 2시~4시 가능.",
     systemPrompt: `당신은 비즈니스 이메일 전문가입니다. 사용자가 제공한 내용으로 격식 있는 비즈니스 이메일을 작성해주세요.
 이메일 구조: 수신자 (담당자 귀중), 제목, 인사말, 본문 (목적 → 세부 내용 → 요청/안내), 마무리 인사, 서명란.
@@ -34,7 +35,7 @@ const TEMPLATES: TemplateOption[] = [
   {
     id: "meeting",
     label: "회의록",
-    icon: "📝",
+    Icon: IconNotes,
     placeholder: "예: 2024 Q1 마케팅 전략 회의. 참석자: 마케팅팀 5명. 주요 안건: 신규 채널 발굴, 예산 배분.",
     systemPrompt: `당신은 회의록 작성 전문가입니다. 사용자가 제공한 내용으로 공식 회의록을 작성해주세요.
 회의록 구조: 회의명, 일시/장소, 참석자, 안건 목록, 논의 내용 (각 안건별), 결정 사항, 액션 아이템 (담당자/기한 포함), 차기 회의 예정.
@@ -43,7 +44,7 @@ const TEMPLATES: TemplateOption[] = [
   {
     id: "plan",
     label: "기획안",
-    icon: "💡",
+    Icon: IconBulb,
     placeholder: "예: 사내 온보딩 프로그램 개선 기획. 현재 2주 과정을 1달로 확대, 멘토링 시스템 도입.",
     systemPrompt: `당신은 기획안 작성 전문가입니다. 사용자가 제공한 아이디어를 바탕으로 체계적인 기획안을 작성해주세요.
 기획안 구조: 제목, 기획 배경 및 목적, 현황 분석, 기획 내용 (세부 계획), 기대 효과, 일정 계획, 예산 계획 (개략), 리스크 및 대응 방안.
@@ -128,7 +129,7 @@ export default function TemplateGen() {
               ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" }
               : undefined}
           >
-            <span className="text-2xl">{tpl.icon}</span>
+            <tpl.Icon className="w-6 h-6" />
             <span className={`text-sm font-semibold ${selectedType === tpl.id ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>
               {tpl.label}
             </span>
@@ -162,7 +163,7 @@ export default function TemplateGen() {
               </>
             ) : (
               <>
-                <span>{selectedTemplate.icon}</span>
+                <selectedTemplate.Icon className="w-4 h-4" />
                 {selectedTemplate.label} 생성
               </>
             )}

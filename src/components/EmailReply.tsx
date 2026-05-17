@@ -1,15 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import {
+  IconTie,
+  IconBolt,
+  IconBan,
+  IconHeartHandshake,
+  IconHeart,
+} from "@tabler/icons-react";
 
 type Tone = "정중하게" | "간결하게" | "거절하기" | "사과하기" | "감사하기";
 
-const TONES: { id: Tone; emoji: string; desc: string }[] = [
-  { id: "정중하게", emoji: "🤝", desc: "격식 있고 공손한 톤" },
-  { id: "간결하게", emoji: "⚡", desc: "짧고 핵심만 전달" },
-  { id: "거절하기", emoji: "🙅", desc: "정중히 거절하는 톤" },
-  { id: "사과하기", emoji: "🙏", desc: "진심 어린 사과 표현" },
-  { id: "감사하기", emoji: "💛", desc: "감사함을 전하는 톤" },
+const TONES: { id: Tone; Icon: React.ComponentType<{ className?: string }>; desc: string }[] = [
+  { id: "정중하게", Icon: IconTie,           desc: "격식 있고 공손한 톤" },
+  { id: "간결하게", Icon: IconBolt,          desc: "짧고 핵심만 전달" },
+  { id: "거절하기", Icon: IconBan,           desc: "정중히 거절하는 톤" },
+  { id: "사과하기", Icon: IconHeartHandshake, desc: "진심 어린 사과 표현" },
+  { id: "감사하기", Icon: IconHeart,         desc: "감사함을 전하는 톤" },
 ];
 
 const SYSTEM_PROMPT = `당신은 비즈니스 이메일 작성 전문가입니다.
@@ -112,7 +119,7 @@ export default function EmailReply() {
                 ].join(" ")}
                 style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
               >
-                <span className="text-lg">{tone.emoji}</span>
+                <tone.Icon className="w-5 h-5" />
                 <span>{tone.id}</span>
                 <span className={`text-xs ${isActive ? "text-white/70" : "text-slate-400 dark:text-zinc-500"}`}>
                   {tone.desc}
