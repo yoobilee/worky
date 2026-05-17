@@ -12,7 +12,8 @@ const routeMeta: Record<string, { title: string; desc: string; aiChip: boolean }
   "/qa":       { title: "Q&A",          desc: "업무 관련 질문을 AI에게 자유롭게 물어보세요",          aiChip: true  },
   "/email":    { title: "이메일 작성",  desc: "받은 이메일에 톤에 맞는 답장 초안을 생성합니다",        aiChip: true  },
   "/summary":  { title: "문서 요약",    desc: "텍스트나 PDF를 붙여넣으면 AI가 요약해드립니다",        aiChip: true  },
-  "/schedule": { title: "일정 추출",    desc: "이메일·공지·메시지에서 일정 정보를 자동으로 추출합니다", aiChip: true  },
+  "/schedule":  { title: "일정 추출",   desc: "이메일·공지·메시지에서 일정 정보를 자동으로 추출합니다",  aiChip: true  },
+  "/translate": { title: "번역·다듬기", desc: "텍스트를 번역하거나 비즈니스 톤으로 다듬어드립니다",        aiChip: true  },
 };
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
