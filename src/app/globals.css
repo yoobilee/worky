@@ -1,16 +1,12 @@
 @import "tailwindcss";
 
+/* Tailwind v4: class 기반 다크모드 (기본 prefers-color-scheme 방식 대체) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --primary: #6C63FF;
   --primary-light: #8B85FF;
   --primary-dark: #4D44CC;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-  }
 }
 
 * {
@@ -30,8 +26,20 @@ body {
   background: #F8F8FA;
 }
 
-@media (prefers-color-scheme: dark) {
-  body { background: #09090b; }
+/* 다크모드 배경 — .dark 클래스 기반 */
+.dark body {
+  background: #0F0F13;
+}
+
+/* 다크모드 카드/사이드바 배경을 #1A1A22로 고정 */
+.dark .bg-white,
+.dark .dark\:bg-zinc-900 {
+  background-color: #1A1A22;
+}
+
+/* 다크모드 입력창 배경 */
+.dark .dark\:bg-zinc-800 {
+  background-color: #22222E;
 }
 
 /* 스크롤바 스타일 */

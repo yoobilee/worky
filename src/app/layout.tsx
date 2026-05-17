@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const dmMono = DM_Mono({
   weight: ["400", "500"],
@@ -15,11 +16,26 @@ export const metadata: Metadata = {
   description: "신입사원을 위한 AI 기반 업무 보조 도구",
 };
 
+// 페이지 렌더 전 다크모드 클래스 주입 — FOUC(깜빡임) 방지
+const themeInitScript = `
+(function(){
+  var s=localStorage.getItem('worky-theme');
+  if(s==='dark'||(s===null&&window.matchMedia('(prefers-color-scheme:dark)').matches)){
+    document.documentElement.classList.add('dark');
+  }
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className={`h-full ${dmMono.variable}`}>
+    <html lang="ko" className={`h-full ${dmMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="h-full text-slate-900 dark:text-slate-100">
-        <AppShell>{children}</AppShell>
+        <ThemeProvider>
+          <AppShell>{children}</AppShell>
+        </ThemeProvider>
       </body>
     </html>
   );

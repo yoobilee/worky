@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { IconSun, IconMoon } from "@tabler/icons-react";
+import { useTheme } from "./ThemeProvider";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -101,6 +103,7 @@ const aiStatusConfig = {
 export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const pathname = usePathname();
   const status = aiStatusConfig[aiStatus];
+  const { theme, toggle } = useTheme();
 
   return (
     <aside
@@ -112,18 +115,25 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
         isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
       ].join(" ")}
     >
-      {/* 로고 */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-200 dark:border-zinc-800">
+      {/* 로고 + 다크모드 토글 */}
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-200 dark:border-zinc-800">
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm text-white font-bold text-sm"
+          className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm text-white font-bold text-sm shrink-0"
           style={{ background: "#6C63FF" }}
         >
           W
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="font-bold leading-none" style={{ color: "var(--primary)" }}>Worky</p>
           <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">AI 업무 보조</p>
         </div>
+        <button
+          onClick={toggle}
+          aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+          className="p-2 rounded-xl text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-800 dark:hover:text-zinc-100 transition-colors shrink-0"
+        >
+          {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
+        </button>
       </div>
 
       {/* 네비게이션 */}
