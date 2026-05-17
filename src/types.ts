@@ -1,0 +1,1 @@
+export type Tab = "data" | "todo" | "template" | "qna";

@@ -1,0 +1,208 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
+const SYSTEM_PROMPT = `당신은 신입사원의 업무를 돕는 친절한 AI 어시스턴트 Worky입니다.
+업무 관련 질문(이메일 작성법, 회의 에티켓, 보고서 형식, 사내 커뮤니케이션, 업무 우선순위 등)에 대해 실용적이고 구체적인 답변을 제공하세요.
+답변은 간결하되 핵심을 짚어주고, 필요한 경우 예시를 들어 설명하세요.
+항상 신입사원 입장을 이해하고 격려하는 따뜻한 태도로 답변하세요.`;
+
+function LoadingDots() {
+  return (
+    <div className="flex items-center gap-1 px-4 py-3">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-2 h-2 rounded-full bg-slate-400 dark:bg-zinc-500 animate-bounce"
+          style={{ animationDelay: `${i * 0.15}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default function QnA() {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content: "안녕하세요! 저는 Worky예요 👋\n업무 관련 궁금한 점이 있으시면 뭐든지 물어보세요. 이메일 작성, 보고서 형식, 사내 커뮤니케이션 등 신입사원으로서 어려운 부분을 함께 해결해드릴게요!",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setLoading(true);
+    setError("");
+
+    try {
+      // 대화 히스토리 구성 (welcome 메시지 제외)
+      const history = [...messages, userMsg]
+        .filter((m) => m.id !== "welcome")
+        .map(({ role, content }) => ({ role, content }));
+
+      const res = await fetch("/api/groq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history, systemPrompt: SYSTEM_PROMPT }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
+
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", content: data.result },
+      ]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "응답을 가져오는 데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleReset = () => {
+    setMessages([
+      {
+        id: "welcome",
+        role: "assistant",
+        content: "안녕하세요! 저는 Worky예요 👋\n업무 관련 궁금한 점이 있으시면 뭐든지 물어보세요. 이메일 작성, 보고서 형식, 사내 커뮤니케이션 등 신입사원으로서 어려운 부분을 함께 해결해드릴게요!",
+      },
+    ]);
+    setError("");
+  };
+
+  return (
+    <div className="flex flex-col h-full max-w-3xl mx-auto" style={{ minHeight: "calc(100vh - 120px)" }}>
+      {/* 헤더 */}
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Q&A</h1>
+          <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+            업무 관련 질문을 자유롭게 해보세요.
+          </p>
+        </div>
+        <button
+          onClick={handleReset}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          대화 초기화
+        </button>
+      </div>
+
+      {/* 채팅 영역 */}
+      <div className="flex-1 overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm p-4 space-y-4 mb-4">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            {msg.role === "assistant" && (
+              <div
+                className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm mt-0.5"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #9C95FF)" }}
+              >
+                W
+              </div>
+            )}
+            <div
+              className={[
+                "max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
+                msg.role === "user"
+                  ? "text-white rounded-tr-sm"
+                  : "bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 rounded-tl-sm",
+              ].join(" ")}
+              style={msg.role === "user" ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+            >
+              {msg.content}
+            </div>
+            {msg.role === "user" && (
+              <div className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 text-xs font-bold mt-0.5">
+                나
+              </div>
+            )}
+          </div>
+        ))}
+
+        {loading && (
+          <div className="flex gap-3 justify-start">
+            <div
+              className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm mt-0.5"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #9C95FF)" }}
+            >
+              W
+            </div>
+            <div className="bg-slate-50 dark:bg-zinc-800 rounded-2xl rounded-tl-sm">
+              <LoadingDots />
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+            <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* 입력 영역 */}
+      <div className="shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-3">
+        <div className="flex gap-2 items-end">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="질문을 입력하세요... (Shift+Enter로 줄바꿈)"
+            rows={1}
+            className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none max-h-32 overflow-y-auto"
+            style={{ fieldSizing: "content" } as React.CSSProperties}
+          />
+          <button
+            onClick={handleSend}
+            disabled={loading || !input.trim()}
+            className="flex items-center justify-center w-10 h-10 rounded-xl text-white transition-all disabled:opacity-40 shrink-0"
+            style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+            aria-label="전송"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2 px-1">Enter로 전송 · Shift+Enter로 줄바꿈</p>
+      </div>
+    </div>
+  );
+}
