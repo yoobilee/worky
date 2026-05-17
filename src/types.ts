@@ -1,1 +1,1 @@
-export type Tab = "data" | "todo" | "template" | "qna" | "email" | "summary";
+export type Tab = "data" | "todo" | "template" | "qna" | "email" | "summary" | "schedule";
