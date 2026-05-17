@@ -188,12 +188,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
       {isCollapsed ? (
         /* 접힌 상태: 아이콘 + 토글만 세로 배치 */
         <div className="flex flex-col items-center gap-2 px-2 py-3 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-            style={{ background: "#6C63FF" }}
-          >
-            W
-          </div>
+          <img src="/favicon.svg" alt="Worky" width={32} height={32} className="shrink-0" />
           <button
             onClick={toggleCollapse}
             aria-label="사이드바 펼치기"
@@ -205,12 +200,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
       ) : (
         /* 펼친 상태: 로고 | 텍스트 | 다크모드 | 접기 가로 배치 */
         <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-            style={{ background: "#6C63FF" }}
-          >
-            W
-          </div>
+          <img src="/favicon.svg" alt="Worky" width={32} height={32} className="shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm leading-none" style={{ color: "var(--primary)" }}>Worky</p>
             <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">AI 업무 보조</p>

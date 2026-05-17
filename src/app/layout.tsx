@@ -14,6 +14,7 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "Worky — AI 업무 보조",
   description: "신입사원을 위한 AI 기반 업무 보조 도구",
+  icons: { icon: "/favicon.svg" },
 };
 
 // 페이지 렌더 전 다크모드 클래스 주입 — FOUC(깜빡임) 방지
