@@ -1,1 +1,1 @@
-export type Tab = "data" | "todo" | "template" | "qna" | "email" | "summary" | "schedule";
+// 공용 타입 정의

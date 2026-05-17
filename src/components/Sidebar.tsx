@@ -1,17 +1,17 @@
 "use client";
 
-import type { Tab } from "@/types";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface SidebarProps {
-  activeTab: Tab;
-  onTabChange: (tab: Tab) => void;
   isOpen: boolean;
+  onClose: () => void;
   aiStatus: "checking" | "connected" | "error";
 }
 
-const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const navItems = [
   {
-    id: "data",
+    href: "/",
     label: "데이터 정리",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -21,7 +21,7 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
-    id: "todo",
+    href: "/todo",
     label: "할 일 / 메모",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,7 +31,7 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
-    id: "template",
+    href: "/template",
     label: "템플릿 생성",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,7 +41,7 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
-    id: "qna",
+    href: "/qa",
     label: "Q&A",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,7 +51,7 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
-    id: "email",
+    href: "/email",
     label: "이메일 작성",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,7 +61,7 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
-    id: "summary",
+    href: "/summary",
     label: "문서 요약",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +71,7 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
-    id: "schedule",
+    href: "/schedule",
     label: "일정 추출",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,12 +83,13 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
 ];
 
 const aiStatusConfig = {
-  checking: { dot: "bg-amber-400 animate-pulse", text: "AI 연결 확인 중..." },
-  connected: { dot: "bg-emerald-400", text: "Groq AI 연결됨" },
-  error:     { dot: "bg-red-400", text: "AI 연결 실패" },
+  checking:  { dot: "bg-amber-400 animate-pulse", text: "AI 연결 확인 중..." },
+  connected: { dot: "bg-emerald-400",             text: "Groq AI 연결됨"    },
+  error:     { dot: "bg-red-400",                 text: "AI 연결 실패"      },
 };
 
-export default function Sidebar({ activeTab, onTabChange, isOpen, aiStatus }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
+  const pathname = usePathname();
   const status = aiStatusConfig[aiStatus];
 
   return (
@@ -121,14 +122,15 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, aiStatus }: Si
           메뉴
         </p>
         {navItems.map((item) => {
-          const isActive = activeTab === item.id;
+          const isActive = pathname === item.href;
           return (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
               className={[
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium",
-                "transition-all duration-150 text-left",
+                "transition-all duration-150",
                 isActive
                   ? "text-white shadow-md"
                   : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-zinc-100",
@@ -137,7 +139,7 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, aiStatus }: Si
             >
               <span className={isActive ? "opacity-90" : "opacity-50"}>{item.icon}</span>
               {item.label}
-            </button>
+            </Link>
           );
         })}
       </nav>
