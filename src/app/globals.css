@@ -36,6 +36,15 @@ body {
   transition: none !important;
 }
 
+/* 사이드바 접힘 상태 스크롤바 숨기기 */
+.sidebar-nav-collapsed {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sidebar-nav-collapsed::-webkit-scrollbar {
+  display: none;
+}
+
 /* 다크모드 카드/사이드바 배경을 #1A1A22로 고정 */
 .dark .bg-white,
 .dark .dark\:bg-zinc-900 {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -139,11 +139,13 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
 
   const [collapsed, setCollapsed]   = useState(false);
   const [colMounted, setColMounted] = useState(false);
+  const [showText, setShowText]     = useState(true);
+  const textTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // localStorage에서 접기 상태 복원
   useEffect(() => {
     const saved = localStorage.getItem(COLLAPSED_KEY);
-    if (saved === "true") setCollapsed(true);
+    if (saved === "true") { setCollapsed(true); setShowText(false); }
     setColMounted(true);
   }, []);
 
@@ -156,6 +158,17 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
 
   // 마운트 전엔 기본 너비로 렌더 (hydration 불일치 방지)
   const isCollapsed = colMounted && collapsed;
+
+  // 텍스트 표시 타이밍: 접힐 때 즉시 숨김, 펼칠 때 애니메이션 완료 후 표시
+  useEffect(() => {
+    if (textTimerRef.current) clearTimeout(textTimerRef.current);
+    if (isCollapsed) {
+      setShowText(false);
+    } else {
+      textTimerRef.current = setTimeout(() => setShowText(true), 180);
+    }
+    return () => { if (textTimerRef.current) clearTimeout(textTimerRef.current); };
+  }, [isCollapsed]);
 
   return (
     <aside
@@ -182,7 +195,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
         </div>
 
         {/* 텍스트 + 다크모드 (펼쳤을 때만) */}
-        {!isCollapsed && (
+        {showText && (
           <>
             <div className="flex-1 min-w-0">
               <p className="font-bold leading-none text-sm" style={{ color: "var(--primary)" }}>Worky</p>
@@ -216,9 +229,9 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
       {/* ── 네비게이션 ── */}
       <nav className={[
         "flex-1 py-3 space-y-0.5 overflow-y-auto min-h-0",
-        isCollapsed ? "px-2" : "px-3",
+        isCollapsed ? "px-2 sidebar-nav-collapsed" : "px-3",
       ].join(" ")}>
-        {!isCollapsed && (
+        {showText && (
           <p className="px-3 mb-2 text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
             메뉴
           </p>
@@ -234,7 +247,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
                   href={item.href}
                   onClick={onClose}
                   className={[
-                    "flex items-center justify-center w-full h-10 rounded-xl transition-all duration-150",
+                    "flex items-center justify-center w-full h-10 rounded-xl transition-colors",
                     isActive
                       ? "text-white shadow-md"
                       : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
@@ -259,7 +272,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               onClick={onClose}
               className={[
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium",
-                "transition-all duration-150",
+                "transition-colors",
                 isActive
                   ? "text-white shadow-md"
                   : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-zinc-100",
@@ -267,7 +280,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
             >
               <span className={isActive ? "opacity-90" : "opacity-50"}>{item.icon}</span>
-              {item.label}
+              {showText && item.label}
             </Link>
           );
         })}
