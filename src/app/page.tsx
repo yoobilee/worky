@@ -41,6 +41,66 @@ const QUICK_LINKS = [
   { href: "/schedule", label: "일정 추출",    Icon: IconCalendarEvent,  desc: "날짜·장소 추출" },
 ];
 
+/* ───────── 인사말 ───────── */
+
+type Period = "오전" | "오후" | "저녁" | "심야";
+
+function getPeriod(hour: number): Period {
+  if (hour >= 6  && hour < 12) return "오전";
+  if (hour >= 12 && hour < 18) return "오후";
+  if (hour >= 18 && hour < 21) return "저녁";
+  return "심야";
+}
+
+const GREETINGS: Record<number, Record<Period, string>> = {
+  0: {
+    오전: "일요일 아침이에요! 느긋하게 시작해봐요.",
+    오후: "일요일 오후, 내일을 위해 충전 중인가요?",
+    저녁: "일요일 저녁, 내일 월요일 준비됐나요?",
+    심야: "일요일 밤, 이번 주도 수고하셨어요. 푹 주무세요.",
+  },
+  1: {
+    오전: "월요일 아침이에요! 한 주의 시작, 힘차게 달려봐요.",
+    오후: "월요일 오후도 파이팅이에요!",
+    저녁: "월요일 수고하셨어요. 내일도 잘 부탁드려요.",
+    심야: "늦은 월요일 밤까지 수고가 많으세요.",
+  },
+  2: {
+    오전: "화요일 아침이에요! 어제보다 더 나은 하루가 될 거예요.",
+    오후: "화요일 오후, 오늘 목표 잘 되어가고 있나요?",
+    저녁: "화요일도 수고하셨어요!",
+    심야: "늦은 밤까지 열심이시네요. 푹 쉬세요.",
+  },
+  3: {
+    오전: "벌써 수요일이에요! 이번 주 절반 왔어요.",
+    오후: "수요일 오후, 주중 고비를 넘기고 있어요!",
+    저녁: "수요일 저녁, 한 주의 반환점을 돌았어요.",
+    심야: "수요일 밤까지 수고 많으세요.",
+  },
+  4: {
+    오전: "목요일 아침이에요! 이제 주말이 보이기 시작해요.",
+    오후: "목요일 오후, 조금만 더 힘내봐요!",
+    저녁: "목요일 저녁, 내일이면 금요일이에요!",
+    심야: "목요일 밤, 내일을 위해 푹 쉬세요.",
+  },
+  5: {
+    오전: "드디어 금요일 아침이에요! 오늘 하루만 더 힘내요.",
+    오후: "금요일 오후, 주말이 코앞이에요!",
+    저녁: "금요일 저녁, 이번 주도 정말 수고하셨어요!",
+    심야: "금요일 밤, 신나는 주말 즐기세요!",
+  },
+  6: {
+    오전: "토요일 아침이에요! 여유로운 주말 시작해봐요.",
+    오후: "토요일 오후, 푹 쉬고 계신가요?",
+    저녁: "토요일 저녁, 즐거운 시간 보내세요!",
+    심야: "토요일 밤, 주말 잘 보내고 계신가요?",
+  },
+};
+
+function getGreeting(now: Date): string {
+  return GREETINGS[now.getDay()][getPeriod(now.getHours())];
+}
+
 /* ───────── 날씨 ───────── */
 
 interface WeatherInfo {
@@ -65,6 +125,7 @@ function getWeatherFromCode(code: number): { label: string; Icon: React.Componen
 
 export default function HomePage() {
   const [time, setTime]         = useState("");
+  const [greeting, setGreeting] = useState("");
   const [dateStr, setDateStr]   = useState("");
   const [todos, setTodos]       = useState<Todo[]>([]);
   const [tip, setTip]           = useState("");
@@ -74,7 +135,7 @@ export default function HomePage() {
   const [geoStatus, setGeoStatus] = useState<"waiting" | "ok" | "denied">("waiting");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // 실시간 시계
+  // 실시간 시계 + 시간대별 인사말
   useEffect(() => {
     const tick = () => {
       const now = new Date();
@@ -82,6 +143,7 @@ export default function HomePage() {
       const mm = String(now.getMinutes()).padStart(2, "0");
       const ss = String(now.getSeconds()).padStart(2, "0");
       setTime(`${hh}:${mm}:${ss}`);
+      setGreeting(getGreeting(now));
     };
     tick();
     intervalRef.current = setInterval(tick, 1000);
@@ -161,7 +223,7 @@ export default function HomePage() {
   const preview   = todos.filter((t) => !t.completed).slice(0, 3);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-3">
+    <div className="max-w-5xl mx-auto flex flex-col gap-3 h-full">
 
       {/* ── 환영 카드 ── */}
       <div
@@ -176,7 +238,7 @@ export default function HomePage() {
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-slate-400 dark:text-zinc-500">{dateStr}</p>
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-              안녕하세요, 오늘도 잘 부탁드립니다.
+              {greeting}
             </h2>
             <p className="text-sm text-slate-500 dark:text-zinc-400">
               {total === 0
@@ -320,8 +382,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── 하단 그리드 ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* ── 하단 그리드 (flex-1로 나머지 공간 채움) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-h-0">
 
         {/* 최근 활동 */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
@@ -329,7 +391,7 @@ export default function HomePage() {
             <IconHistory className="w-4 h-4 text-[#6C63FF]" />
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">최근 활동</span>
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-2">
               <IconHistory className="w-5 h-5 text-slate-300 dark:text-zinc-600" />
             </div>
@@ -350,7 +412,7 @@ export default function HomePage() {
           <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed flex-1">
             {tip || "오늘 하루도 차근차근 해나가면 됩니다."}
           </p>
-          <p className="text-xs text-slate-400 dark:text-zinc-500">매일 새로운 팁이 표시됩니다.</p>
+          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-auto">매일 새로운 팁이 표시됩니다.</p>
         </div>
 
       </div>
