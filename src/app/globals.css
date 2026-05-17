@@ -27,6 +27,11 @@ body {
     "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #F8F8FA;
+}
+
+@media (prefers-color-scheme: dark) {
+  body { background: #09090b; }
 }
 
 /* 스크롤바 스타일 */

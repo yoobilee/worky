@@ -127,7 +127,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
       </div>
 
       {/* 네비게이션 */}
-      <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-5 pb-3 space-y-1 overflow-y-auto min-h-0">
         <p className="px-3 mb-3 text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
           메뉴
         </p>
@@ -155,10 +155,20 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
       </nav>
 
       {/* AI 연결 상태 */}
-      <div className="px-4 py-4 border-t border-slate-200 dark:border-zinc-800">
-        <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-slate-50 dark:bg-zinc-800">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${status.dot}`} />
-          <span className="text-xs text-slate-500 dark:text-zinc-400 truncate">{status.text}</span>
+      <div className="shrink-0 px-4 py-4 border-t border-slate-200 dark:border-zinc-800">
+        <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700">
+          <span className="relative flex shrink-0">
+            <span className={`w-2.5 h-2.5 rounded-full ${status.dot}`} />
+            {aiStatus === "connected" && (
+              <span className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-60" />
+            )}
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{status.text}</p>
+            {aiStatus === "connected" && (
+              <p className="text-[10px] text-slate-400 dark:text-zinc-500 truncate mt-0.5">llama-3.3-70b</p>
+            )}
+          </div>
         </div>
       </div>
     </aside>

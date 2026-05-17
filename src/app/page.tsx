@@ -240,12 +240,12 @@ export default function HomePage() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* 왼쪽: 날짜·인사·현황 */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-slate-400 dark:text-zinc-500">{dateStr}</p>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-snug">
               {greeting}
             </h2>
-            <p className="text-sm text-slate-500 dark:text-zinc-400">
+            <p className="text-base text-slate-500 dark:text-zinc-400">
               {total === 0
                 ? "오늘의 할 일을 추가해보세요."
                 : `할 일 ${total}개 중 ${completed}개 완료${completed === total ? " — 모두 완료!" : ""}`}
