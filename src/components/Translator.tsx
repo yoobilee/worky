@@ -113,10 +113,10 @@ export default function Translator() {
   ];
 
   return (
-    <div className="space-y-3 max-w-4xl mx-auto">
+    <div className="space-y-3 max-w-4xl mx-auto w-full">
 
       {/* 모드 전환 탭 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1">
+      <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1">
         {MODES.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -138,7 +138,7 @@ export default function Translator() {
       {mode === "translate" && (
         <>
           {/* 대상 언어 선택 */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
             <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">번역 대상 언어</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {LANG_OPTIONS.map(({ code, label }) => {
@@ -163,7 +163,7 @@ export default function Translator() {
           </div>
 
           {/* 입력 */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
               번역할 텍스트
               <span className="ml-2 text-xs font-normal text-slate-400 dark:text-zinc-500">언어 자동 감지</span>
@@ -201,7 +201,7 @@ export default function Translator() {
       {mode === "refine" && (
         <>
           {/* 톤 선택 */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
             <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">다듬을 톤 선택</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {TONES.map(({ id, desc }) => {
@@ -229,7 +229,7 @@ export default function Translator() {
           </div>
 
           {/* 입력 */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
               다듬을 텍스트
             </label>
@@ -271,7 +271,7 @@ export default function Translator() {
 
       {/* 결과 */}
       {result && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
               {mode === "translate"
