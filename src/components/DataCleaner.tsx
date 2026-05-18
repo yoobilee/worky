@@ -1,7 +1,38 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { IconAlignLeft, IconFileUpload } from "@tabler/icons-react";
 import { trackUsage } from "@/lib/usageStats";
+
+type InputMode = "text" | "file";
+
+async function parseFileToText(file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+  if (ext === "csv" || file.type === "text/csv") {
+    const Papa = (await import("papaparse")).default;
+    return new Promise((resolve, reject) => {
+      Papa.parse(file, {
+        complete: (res) => {
+          const rows = res.data as string[][];
+          resolve(rows.map((r) => r.join("\t")).join("\n"));
+        },
+        error: reject,
+        skipEmptyLines: true,
+      });
+    });
+  }
+
+  if (ext === "xlsx" || ext === "xls") {
+    const XLSX = await import("xlsx");
+    const buf  = await file.arrayBuffer();
+    const wb   = XLSX.read(buf, { type: "array" });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_csv(ws);
+  }
+
+  throw new Error("지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드하세요.");
+}
 
 const SYSTEM_PROMPT = `당신은 데이터 정리 전문가입니다. 사용자가 붙여넣은 지저분한 텍스트나 데이터를 분석하여 깔끔한 HTML 표로 변환하세요.
 반드시 <table> 태그로 시작하고 </table> 태그로 끝나는 HTML만 반환하세요.
@@ -46,14 +77,44 @@ function formatLastClean(iso: string | null): string {
 }
 
 export default function DataCleaner() {
-  const [input, setInput]       = useState("");
-  const [tableHtml, setTableHtml] = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
-  const [copied, setCopied]     = useState(false);
+  const [inputMode, setInputMode]   = useState<InputMode>("text");
+  const [input, setInput]           = useState("");
+  const [file, setFile]             = useState<File | null>(null);
+  const [fileText, setFileText]     = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const [tableHtml, setTableHtml]   = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
+  const [copied, setCopied]         = useState(false);
   const [cleanCount, setCleanCount] = useState(0);
   const [lastClean, setLastClean]   = useState<string | null>(null);
-  const resultRef = useRef<HTMLDivElement>(null);
+  const resultRef  = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleModeChange = (mode: InputMode) => {
+    setInputMode(mode);
+    setError("");
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    setFileText("");
+    setError("");
+    setExtracting(true);
+    try {
+      const text = await parseFileToText(f);
+      if (!text.trim()) throw new Error("파일에서 데이터를 추출할 수 없습니다.");
+      setFileText(text);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "파일 처리 중 오류가 발생했습니다.");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   useEffect(() => {
     const count = localStorage.getItem(CLEAN_COUNT_KEY);
@@ -61,8 +122,10 @@ export default function DataCleaner() {
     setLastClean(localStorage.getItem(LAST_CLEAN_KEY));
   }, []);
 
+  const sourceText = inputMode === "text" ? input : fileText;
+
   const handleClean = async () => {
-    if (!input.trim()) return;
+    if (!sourceText.trim()) return;
     setLoading(true);
     setError("");
     setTableHtml("");
@@ -72,7 +135,7 @@ export default function DataCleaner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ role: "user", content: input }],
+          messages: [{ role: "user", content: sourceText }],
           systemPrompt: SYSTEM_PROMPT,
         }),
       });
@@ -128,22 +191,98 @@ export default function DataCleaner() {
         </div>
       </div>
 
+      {/* 입력 탭 */}
+      <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
+        {([
+          { id: "text" as InputMode, label: "텍스트 입력", Icon: IconAlignLeft },
+          { id: "file" as InputMode, label: "파일 업로드", Icon: IconFileUpload },
+        ]).map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => handleModeChange(id)}
+            className={[
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              inputMode === id
+                ? "bg-[#6C63FF] text-white shadow-sm"
+                : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700",
+            ].join(" ")}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-          원본 데이터 입력
-        </label>
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={"이름 나이 부서\n홍길동 28 개발팀\n김철수 32 마케팅\n이영희 25 디자인"}
-          rows={6}
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-        />
+        {inputMode === "text" ? (
+          <>
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+              원본 데이터 입력
+            </label>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={"이름 나이 부서\n홍길동 28 개발팀\n김철수 32 마케팅\n이영희 25 디자인"}
+              rows={6}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+            />
+          </>
+        ) : (
+          <>
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+              CSV 또는 Excel 파일 업로드
+            </label>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={extracting}
+              className={[
+                "w-full flex flex-col items-center justify-center gap-3 min-h-[160px] rounded-xl border-2 border-dashed transition-all disabled:opacity-60 disabled:cursor-not-allowed",
+                file
+                  ? "border-[#6C63FF]/50 bg-[#6C63FF]/5 hover:border-[#6C63FF]/70"
+                  : "border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5",
+              ].join(" ")}
+            >
+              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#6C63FF]" : "text-slate-400 dark:text-zinc-500"}`} />
+              <div className="text-center px-4">
+                <p className={`text-sm font-medium ${file ? "text-[#6C63FF]" : "text-slate-600 dark:text-zinc-400"}`}>
+                  {file ? file.name : "클릭해서 파일 선택"}
+                </p>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+                  {file ? "클릭해서 파일 교체" : "CSV, Excel(.xlsx, .xls) 지원"}
+                </p>
+              </div>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            {extracting && (
+              <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
+                <span className="w-4 h-4 border-2 border-slate-300 border-t-[#6C63FF] rounded-full animate-spin shrink-0" />
+                데이터 추출 중...
+              </div>
+            )}
+            {fileText && !extracting && (
+              <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">추출된 데이터 미리보기</p>
+                <div className="max-h-[80px] overflow-hidden">
+                  <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">{fileText}</p>
+                </div>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">
+                  총 {fileText.split("\n").length.toLocaleString()}행 추출됨
+                </p>
+              </div>
+            )}
+          </>
+        )}
         <div className="flex justify-end mt-3">
           <button
             onClick={handleClean}
-            disabled={loading || !input.trim()}
+            disabled={loading || !sourceText.trim() || extracting}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
           >
