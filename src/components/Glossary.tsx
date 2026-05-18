@@ -90,22 +90,35 @@ export default function Glossary() {
   const [aiLoading, setAiLoading]   = useState(false);
   const [aiError, setAiError]       = useState("");
 
-  // localStorage 로드 (데이터 없으면 기본 예시 삽입)
+  // localStorage 로드 (데이터 없거나 빈 배열이면 기본 예시 삽입)
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setTerms(JSON.parse(saved));
+      const raw = localStorage.getItem(STORAGE_KEY);
+      console.log("[Glossary] localStorage raw:", raw);
+
+      const parsed: Term[] = raw ? JSON.parse(raw) : [];
+      console.log("[Glossary] parsed terms count:", parsed.length);
+
+      if (parsed.length > 0) {
+        console.log("[Glossary] 기존 용어 로드:", parsed.length, "개");
+        setTerms(parsed);
       } else {
+        console.log("[Glossary] 저장된 용어 없음 → 기본 예시 삽입");
         setTerms(DEFAULT_TERMS);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TERMS));
       }
-    } catch {}
+    } catch (e) {
+      console.error("[Glossary] 로드 오류:", e);
+      setTerms(DEFAULT_TERMS);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TERMS));
+    }
     setHydrated(true);
   }, []);
 
   // localStorage 저장
   useEffect(() => {
     if (!hydrated) return;
+    console.log("[Glossary] localStorage 저장:", terms.length, "개");
     localStorage.setItem(STORAGE_KEY, JSON.stringify(terms));
   }, [terms, hydrated]);
 
