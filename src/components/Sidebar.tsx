@@ -280,7 +280,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
             </p>
             {aiStatus === "connected" && (
               <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 whitespace-nowrap">
-                gemma2-9b-it
+                llama-3.3-70b
               </p>
             )}
           </div>
