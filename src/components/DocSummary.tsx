@@ -39,6 +39,48 @@ function buildSystemPrompt(style: SummaryStyle): string {
 가장 중요한 정보만 포함하고, 명확하고 완결된 문장으로 작성하세요. 한국어로 작성하세요.`;
 }
 
+/* ───────── 마크다운 간이 렌더러 ───────── */
+
+function renderMarkdown(text: string): React.ReactNode {
+  const lines = text.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  let k = 0;
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    nodes.push(
+      <ul key={k++} className="list-disc pl-5 space-y-0.5 my-1">
+        {listItems.map((item, i) => (
+          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
+        ))}
+      </ul>
+    );
+    listItems = [];
+  };
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith("## ")) {
+      flushList();
+      nodes.push(<p key={k++} className="text-[15px] font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1">{t.slice(3)}</p>);
+    } else if (t.startsWith("### ")) {
+      flushList();
+      nodes.push(<p key={k++} className="text-sm font-bold text-slate-800 dark:text-zinc-100 mt-2 mb-0.5">{t.slice(4)}</p>);
+    } else if (/^[-•*] /.test(t)) {
+      listItems.push(t.slice(2));
+    } else if (t === "") {
+      flushList();
+      nodes.push(<div key={k++} className="h-1.5" />);
+    } else {
+      flushList();
+      nodes.push(<p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{t}</p>);
+    }
+  }
+  flushList();
+  return <div className="space-y-0.5">{nodes}</div>;
+}
+
 async function extractTextFromPDF(file: File): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist");
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
@@ -185,22 +227,32 @@ export default function DocSummary() {
           </>
         ) : (
           <>
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
               PDF 또는 텍스트 파일 업로드
             </label>
+
+            {/* 드래그 영역 — 파일 유무와 관계없이 항상 표시 */}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={extracting}
-              className="w-full flex flex-col items-center justify-center gap-3 py-8 rounded-xl border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className={[
+                "w-full flex flex-col items-center justify-center gap-3 min-h-[180px] rounded-xl border-2 border-dashed transition-all disabled:opacity-60 disabled:cursor-not-allowed",
+                file
+                  ? "border-[#6C63FF]/50 bg-[#6C63FF]/5 hover:border-[#6C63FF]/70 hover:bg-[#6C63FF]/8"
+                  : "border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5",
+              ].join(" ")}
             >
-              <IconFileUpload className="w-8 h-8 text-slate-400 dark:text-zinc-500" />
-              <div className="text-center">
-                <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">
+              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#6C63FF]" : "text-slate-400 dark:text-zinc-500"}`} />
+              <div className="text-center px-4">
+                <p className={`text-sm font-medium ${file ? "text-[#6C63FF]" : "text-slate-600 dark:text-zinc-400"}`}>
                   {file ? file.name : "클릭해서 파일 선택"}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">PDF, TXT 지원</p>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+                  {file ? "클릭해서 파일 교체" : "PDF, TXT 지원"}
+                </p>
               </div>
             </button>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -209,17 +261,19 @@ export default function DocSummary() {
               className="hidden"
             />
 
+            {/* 추출 중 */}
             {extracting && (
               <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
                 <span className="w-4 h-4 border-2 border-slate-300 border-t-[#6C63FF] rounded-full animate-spin shrink-0" />
-                PDF에서 텍스트 추출 중...
+                텍스트 추출 중...
               </div>
             )}
 
+            {/* 추출된 텍스트 미리보기 */}
             {extractedText && !extracting && (
               <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1">추출된 텍스트 미리보기</p>
-                <p className="text-xs text-slate-600 dark:text-zinc-400 line-clamp-3 leading-relaxed">
+                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">추출된 텍스트 미리보기</p>
+                <p className="text-xs text-slate-600 dark:text-zinc-400 line-clamp-4 leading-relaxed">
                   {extractedText}
                 </p>
                 <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">
@@ -316,8 +370,8 @@ export default function DocSummary() {
               )}
             </button>
           </div>
-          <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed">
-            {result}
+          <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+            {renderMarkdown(result)}
           </div>
         </div>
       )}
