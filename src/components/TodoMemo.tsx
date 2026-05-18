@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { IconTrash } from "@tabler/icons-react";
 
 interface Todo {
   id: string;
@@ -9,37 +10,90 @@ interface Todo {
   createdAt: number;
 }
 
-const STORAGE_KEYS = { todos: "worky_todos", memo: "worky_memo" };
+type MemoTab = "업무" | "회의" | "개인";
+type SaveStatus = "idle" | "saving" | "saved";
+
+const MEMO_TABS: { id: MemoTab; label: string }[] = [
+  { id: "업무", label: "업무 메모" },
+  { id: "회의", label: "회의 메모" },
+  { id: "개인", label: "개인 메모" },
+];
+
+const STORAGE_KEYS = {
+  todos:   "worky_todos",
+  memo_업무: "worky_memo_work",
+  memo_회의: "worky_memo_meeting",
+  memo_개인: "worky_memo_personal",
+};
 
 export default function TodoMemo() {
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [input, setInput] = useState("");
-  const [memo, setMemo] = useState("");
+  const [todos,    setTodos]    = useState<Todo[]>([]);
+  const [input,    setInput]    = useState("");
+  const [memoTab,  setMemoTab]  = useState<MemoTab>("업무");
+  const [memos,    setMemos]    = useState<Record<MemoTab, string>>({ 업무: "", 회의: "", 개인: "" });
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [hydrated, setHydrated] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // localStorage 불러오기
+  const inputRef      = useRef<HTMLInputElement>(null);
+  const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // localStorage 로드
   useEffect(() => {
     try {
       const savedTodos = localStorage.getItem(STORAGE_KEYS.todos);
-      const savedMemo  = localStorage.getItem(STORAGE_KEYS.memo);
       if (savedTodos) setTodos(JSON.parse(savedTodos));
-      if (savedMemo)  setMemo(savedMemo);
+
+      // 각 탭별 메모 로드 (레거시 worky_memo → 업무 메모로 마이그레이션)
+      const legacy = localStorage.getItem("worky_memo");
+      setMemos({
+        업무: localStorage.getItem(STORAGE_KEYS.memo_업무) ?? legacy ?? "",
+        회의: localStorage.getItem(STORAGE_KEYS.memo_회의) ?? "",
+        개인: localStorage.getItem(STORAGE_KEYS.memo_개인) ?? "",
+      });
     } catch {}
     setHydrated(true);
   }, []);
 
-  // localStorage 저장
+  // 할 일 저장
   useEffect(() => {
     if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.todos, JSON.stringify(todos));
   }, [todos, hydrated]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEYS.memo, memo);
-  }, [memo, hydrated]);
+  // 메모 변경 핸들러 (debounce 500ms + 저장 상태 표시)
+  const handleMemoChange = (value: string) => {
+    setMemos((prev) => ({ ...prev, [memoTab]: value }));
+    setSaveStatus("saving");
 
+    if (debounceRef.current)   clearTimeout(debounceRef.current);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEYS[`memo_${memoTab}`], value);
+      setSaveStatus("saved");
+      savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+    }, 500);
+  };
+
+  // 탭 전환
+  const handleTabChange = (tab: MemoTab) => {
+    setMemoTab(tab);
+    setSaveStatus("idle");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  };
+
+  // 메모 전체 삭제
+  const clearMemo = () => {
+    if (!confirm("메모를 전체 삭제할까요?")) return;
+    setMemos((prev) => ({ ...prev, [memoTab]: "" }));
+    localStorage.removeItem(STORAGE_KEYS[`memo_${memoTab}`]);
+    setSaveStatus("idle");
+    if (debounceRef.current)   clearTimeout(debounceRef.current);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+  };
+
+  // 할 일 CRUD
   const addTodo = () => {
     const text = input.trim();
     if (!text) return;
@@ -52,9 +106,7 @@ export default function TodoMemo() {
   };
 
   const toggleTodo = (id: string) =>
-    setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
+    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
 
   const deleteTodo = (id: string) =>
     setTodos((prev) => prev.filter((t) => t.id !== id));
@@ -67,6 +119,7 @@ export default function TodoMemo() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full">
+
       {/* Bento 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
@@ -93,11 +146,11 @@ export default function TodoMemo() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
+
         {/* 할 일 목록 */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">할 일 목록</h2>
 
-          {/* 입력 */}
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -117,7 +170,6 @@ export default function TodoMemo() {
             </button>
           </div>
 
-          {/* 목록 */}
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {todos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-slate-300 dark:text-zinc-600">
@@ -173,17 +225,59 @@ export default function TodoMemo() {
         </div>
 
         {/* 메모 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-3">
+
+          {/* 헤더 */}
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">메모</h2>
-            <span className="text-xs text-slate-400 dark:text-zinc-500">자동 저장</span>
+            <div className="flex items-center gap-2">
+              {saveStatus === "saving" && (
+                <span className="text-xs text-slate-400 dark:text-zinc-500">저장 중...</span>
+              )}
+              {saveStatus === "saved" && (
+                <span className="text-xs text-emerald-500 font-medium">방금 저장됨 ✓</span>
+              )}
+              <button
+                onClick={clearMemo}
+                aria-label="메모 전체 삭제"
+                className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-400 transition-colors"
+              >
+                <IconTrash className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
+
+          {/* 탭 — 번역·다듬기와 동일 스타일 */}
+          <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
+            {MEMO_TABS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => handleTabChange(id)}
+                className={[
+                  "py-1.5 rounded-lg text-xs font-medium transition-colors",
+                  memoTab === id
+                    ? "bg-[#6C63FF] text-white shadow-sm"
+                    : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                ].join(" ")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* textarea */}
           <textarea
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
+            value={memos[memoTab]}
+            onChange={(e) => handleMemoChange(e.target.value)}
             placeholder="자유롭게 메모를 입력하세요..."
-            className="flex-1 min-h-[240px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+            className="flex-1 min-h-[200px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
           />
+
+          {/* 글자 수 */}
+          <p className="text-xs text-slate-400 dark:text-zinc-500 text-right">
+            {memos[memoTab].length}자
+          </p>
+
         </div>
       </div>
     </div>
