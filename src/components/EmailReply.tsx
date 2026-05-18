@@ -43,21 +43,25 @@ function buildSystemPrompt(sender: SenderInfo, tone: Tone): string {
   return `당신은 비즈니스 이메일 작성 전문가입니다.
 사용자가 받은 이메일 내용과 원하는 답장 톤을 제공하면, 해당 톤에 맞는 한국어 답장 초안 3가지를 작성하세요.
 ${senderInfo}
+각 초안은 반드시 아래 형식을 정확히 따르세요:
+
+안녕하세요.
+${senderLine}입니다.
+
+(본문 내용 — 톤에 맞게 작성, 150자 내외)
+
+감사합니다.
+
 응답은 반드시 아래 구분자 형식으로만 작성하세요. JSON, 마크다운, 설명 텍스트는 절대 포함하지 마세요.
 
 [초안 1]
-(첫 번째 이메일 본문 전체)
+(첫 번째 이메일 전체)
 
 [초안 2]
-(두 번째 이메일 본문 전체)
+(두 번째 이메일 전체)
 
 [초안 3]
-(세 번째 이메일 본문 전체)
-
-각 초안은 완성된 이메일 본문이어야 합니다. 인사말 포함, 200자 내외로 작성하세요.
-각 초안 마지막에 반드시 아래 서명을 포함하세요:
-감사합니다.
-${senderLine}`;
+(세 번째 이메일 전체)`;
 }
 
 function parseDrafts(raw: string): string[] {
@@ -217,15 +221,15 @@ export default function EmailReply() {
       </div>
 
       {/* 입력 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
-        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
+        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
           받은 이메일 내용
         </label>
         <textarea
           value={emailInput}
           onChange={(e) => setEmailInput(e.target.value)}
           placeholder={"안녕하세요,\n다음 주 회의 일정을 변경할 수 있을지 문의드립니다..."}
-          className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          className="w-full h-36 px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
       </div>
 
