@@ -93,7 +93,10 @@ export default function EmailReply() {
     const next = { ...sender, [field]: value };
     setSender(next);
     localStorage.setItem(SENDER_KEY, JSON.stringify(next));
-    // 세 필드 모두 입력 완료되면 자동 접기
+  };
+
+  // 포커스가 벗어날 때만 자동 접기 (입력 중 접힘 방지)
+  const handleSenderBlur = (next: SenderInfo) => {
     if (next.org && next.name && next.title) setCollapsed(true);
   };
 
@@ -172,6 +175,10 @@ export default function EmailReply() {
                 key={field}
                 value={sender[field]}
                 onChange={(e) => handleSenderChange(field, e.target.value)}
+                onBlur={(e) => {
+                  const next = { ...sender, [field]: e.target.value };
+                  handleSenderBlur(next);
+                }}
                 placeholder={field === "org" ? "소속 (예: 개발팀)" : field === "name" ? "이름" : "직급 (예: 사원)"}
                 className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
