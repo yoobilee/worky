@@ -48,9 +48,17 @@ const TEMPLATES: TemplateOption[] = [
     label: "이메일",
     Icon: IconMail,
     placeholder: "예: 신규 프로젝트 킥오프 미팅 일정 조율. 다음 주 화요일이나 목요일 오후 2시~4시 가능.",
-    systemPrompt: `당신은 비즈니스 이메일 전문가입니다. 사용자가 제공한 내용으로 격식 있는 비즈니스 이메일을 작성해주세요.
-이메일 구조: 수신자 (담당자 귀중), 제목, 인사말, 본문 (목적 → 세부 내용 → 요청/안내), 마무리 인사, 서명란.
-정중하고 명확하게 작성하세요. 서명란에는 반드시 발신자 정보를 사용하세요.${KO_RULES}`,
+    systemPrompt: `당신은 비즈니스 이메일 전문가입니다. 사용자가 제공한 내용으로 격식 있는 비즈니스 이메일 본문을 작성해주세요.
+반드시 아래 형식을 정확히 따르세요. "인사말:", "본문:", "마무리 인사:", "서명란:" 같은 라벨이나 구분자는 절대 쓰지 마세요.
+
+안녕하세요.
+[발신자]입니다.
+
+(본문 내용 — 목적, 세부 내용, 요청/안내 순서로 작성)
+
+감사합니다.
+
+마지막 줄은 반드시 "감사합니다."로만 끝내세요. 그 이후 이름, 소속, 직급 등 아무것도 추가하지 마세요.${KO_RULES}`,
   },
   {
     id: "meeting",
@@ -96,9 +104,11 @@ export default function TemplateGen() {
       ? [sender.org, sender.name, sender.title].filter(Boolean).join(" ")
       : null;
 
-    if (selectedType === "email" && senderLine) {
+    if (selectedType === "email") {
+      const intro = senderLine ? `${senderLine}입니다.` : "담당자입니다.";
       return selectedTemplate.systemPrompt +
-        `\n발신자 정보: ${senderLine}\n서명은 반드시 "감사합니다.\\n${senderLine}" 형식으로 고정하세요. 플레이스홀더 사용 금지.`;
+        `\n[발신자] 자리에는 "${intro}"을 그대로 사용하세요.` +
+        `\n마지막 줄은 반드시 "감사합니다."로만 끝내세요. 그 이후 이름, 소속, 직급 등 절대 추가 금지.`;
     }
     return selectedTemplate.systemPrompt;
   };
