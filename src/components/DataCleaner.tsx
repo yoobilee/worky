@@ -26,21 +26,38 @@ function tableHtmlToCSV(html: string): string {
 }
 
 const CLEAN_COUNT_KEY = "worky_clean_count";
-const GOAL = 30;
-const MINS_PER_CLEAN = 8;
+const LAST_CLEAN_KEY  = "worky_last_clean";
+
+function formatLastClean(iso: string | null): string {
+  if (!iso) return "기록 없음";
+  const then = new Date(iso);
+  const now  = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const thenStart  = new Date(then.getFullYear(), then.getMonth(), then.getDate());
+  const diffDays   = Math.round((todayStart.getTime() - thenStart.getTime()) / 86400000);
+  if (diffDays === 0) {
+    const hh = String(then.getHours()).padStart(2, "0");
+    const mm = String(then.getMinutes()).padStart(2, "0");
+    return `오늘 ${hh}:${mm}`;
+  }
+  if (diffDays === 1) return "어제";
+  return `${diffDays}일 전`;
+}
 
 export default function DataCleaner() {
-  const [input, setInput] = useState("");
+  const [input, setInput]       = useState("");
   const [tableHtml, setTableHtml] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+  const [copied, setCopied]     = useState(false);
   const [cleanCount, setCleanCount] = useState(0);
+  const [lastClean, setLastClean]   = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem(CLEAN_COUNT_KEY);
-    if (saved) setCleanCount(parseInt(saved, 10) || 0);
+    const count = localStorage.getItem(CLEAN_COUNT_KEY);
+    if (count) setCleanCount(parseInt(count, 10) || 0);
+    setLastClean(localStorage.getItem(LAST_CLEAN_KEY));
   }, []);
 
   const handleClean = async () => {
@@ -61,6 +78,9 @@ export default function DataCleaner() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       setTableHtml(extractTableHtml(data.result));
+      const now = new Date().toISOString();
+      localStorage.setItem(LAST_CLEAN_KEY, now);
+      setLastClean(now);
       setCleanCount((prev) => {
         const next = prev + 1;
         localStorage.setItem(CLEAN_COUNT_KEY, String(next));
@@ -97,13 +117,12 @@ export default function DataCleaner() {
       {/* Bento 통계 카드 */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">누적 정리 횟수</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">누적 정리 건수</p>
           <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{cleanCount}건</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">절약 시간</p>
-          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{(cleanCount * MINS_PER_CLEAN / 60).toFixed(1)}h</p>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">건당 {MINS_PER_CLEAN}분 절약 기준</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">마지막 정리</p>
+          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{formatLastClean(lastClean)}</p>
         </div>
       </div>
 
