@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
 import { IconReport, IconMail, IconNotes, IconBulb, IconSettings, IconAlertTriangle } from "@tabler/icons-react";
 
@@ -155,6 +156,7 @@ export default function TemplateGen() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       setResult(data.result);
+      trackUsage("template");
     } catch (e) {
       setError(e instanceof Error ? e.message : "문서 생성 중 오류가 발생했습니다.");
     } finally {

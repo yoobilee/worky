@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackUsage } from "@/lib/usageStats";
 import {
   IconChartBar,
   IconArrowUpRight,
@@ -110,6 +111,7 @@ export default function DataInsight() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       setResult(parseResult(data.result));
+      trackUsage("insight");
     } catch (e) {
       setError(e instanceof Error ? e.message : "분석 중 오류가 발생했습니다.");
     } finally {

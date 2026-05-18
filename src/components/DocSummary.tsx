@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { trackUsage } from "@/lib/usageStats";
 import {
   IconAlignLeft,
   IconFileUpload,
@@ -167,6 +168,7 @@ export default function DocSummary() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       setResult(data.result);
+      trackUsage("summary");
     } catch (e) {
       setError(e instanceof Error ? e.message : "요약 중 오류가 발생했습니다.");
     } finally {

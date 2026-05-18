@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
 import {
   IconTie,
@@ -128,6 +129,7 @@ export default function EmailReply() {
       const parsed = parseDrafts(data.result);
       if (parsed.length === 0) throw new Error("AI 응답이 비어 있습니다. 다시 시도해주세요.");
       setDrafts(parsed);
+      trackUsage("email");
     } catch (e) {
       setError(e instanceof Error ? e.message : "이메일 생성 중 오류가 발생했습니다.");
     } finally {

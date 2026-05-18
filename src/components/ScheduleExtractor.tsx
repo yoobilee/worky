@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackUsage } from "@/lib/usageStats";
 import {
   IconCalendarEvent,
   IconClock,
@@ -79,6 +80,7 @@ export default function ScheduleExtractor() {
         setError("추출된 일정이 없습니다. 날짜나 시간이 포함된 텍스트를 입력해주세요.");
       } else {
         setSchedules(parsed);
+        trackUsage("schedule");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "일정 추출 중 오류가 발생했습니다.");

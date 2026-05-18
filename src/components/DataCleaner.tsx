@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { trackUsage } from "@/lib/usageStats";
 
 const SYSTEM_PROMPT = `당신은 데이터 정리 전문가입니다. 사용자가 붙여넣은 지저분한 텍스트나 데이터를 분석하여 깔끔한 HTML 표로 변환하세요.
 반드시 <table> 태그로 시작하고 </table> 태그로 끝나는 HTML만 반환하세요.
@@ -78,6 +79,7 @@ export default function DataCleaner() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       setTableHtml(extractTableHtml(data.result));
+      trackUsage("data");
       const now = new Date().toISOString();
       localStorage.setItem(LAST_CLEAN_KEY, now);
       setLastClean(now);

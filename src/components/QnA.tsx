@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { trackUsage } from "@/lib/usageStats";
 
 interface Message {
   id: string;
@@ -73,6 +74,7 @@ export default function QnA() {
         ...prev,
         { id: crypto.randomUUID(), role: "assistant", content: data.result },
       ]);
+      trackUsage("qa");
     } catch (e) {
       setError(e instanceof Error ? e.message : "응답을 가져오는 데 실패했습니다.");
     } finally {

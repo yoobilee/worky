@@ -5,10 +5,11 @@ import Link from "next/link";
 import {
   IconTable, IconMail, IconFileDescription, IconCalendarEvent,
   IconListCheck, IconBulb, IconWifi, IconWifiOff, IconArrowRight,
-  IconCircleCheck, IconMessageDots, IconNotes, IconPlus, IconHistory,
+  IconCircleCheck, IconMessageDots, IconNotes, IconPlus,
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
   IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook,
 } from "@tabler/icons-react";
+import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
 
 /* ───────── 상수 ───────── */
 
@@ -139,6 +140,7 @@ export default function HomePage() {
   const [weather, setWeather]   = useState<WeatherInfo | null>(null);
   const [locationName, setLocationName] = useState("");
   const [geoStatus, setGeoStatus] = useState<"waiting" | "ok" | "denied">("waiting");
+  const [weekStats, setWeekStats] = useState<Partial<Record<FeatureKey, number>>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 실시간 시계 + 시간대별 인사말
@@ -168,6 +170,9 @@ export default function HomePage() {
     const todayTip = TIPS[date % TIPS.length];
     setTip(todayTip.text);
     setTipCategory(todayTip.category);
+
+    // 이번 주 사용 통계
+    setWeekStats(getThisWeekStats());
 
     // localStorage 할 일
     try {
@@ -393,20 +398,69 @@ export default function HomePage() {
       {/* ── 하단 그리드 (flex-1로 나머지 공간 채움) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-h-0">
 
-        {/* 최근 활동 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <IconHistory className="w-4 h-4 text-[#6C63FF]" />
-            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">최근 활동</span>
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-2">
-              <IconHistory className="w-5 h-5 text-slate-300 dark:text-zinc-600" />
+        {/* 이번 주 활동 */}
+        {(() => {
+          const FEATURES: { key: FeatureKey; label: string }[] = [
+            { key: "data",      label: "데이터 정리"   },
+            { key: "email",     label: "이메일 작성"   },
+            { key: "template",  label: "템플릿 생성"   },
+            { key: "translate", label: "번역·다듬기"   },
+            { key: "summary",   label: "문서 요약"     },
+            { key: "schedule",  label: "일정 추출"     },
+            { key: "insight",   label: "데이터 인사이트" },
+            { key: "qa",        label: "Q&A"          },
+          ];
+          const counts = FEATURES.map((f) => weekStats[f.key] ?? 0);
+          const maxCount = Math.max(...counts, 1);
+          const totalUsed = counts.reduce((a, b) => a + b, 0);
+
+          return (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <IconChartBar className="w-4 h-4 text-[#6C63FF]" />
+                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">이번 주 활동</span>
+                </div>
+                {totalUsed > 0 && (
+                  <span className="text-xs text-slate-400 dark:text-zinc-500">총 {totalUsed}회</span>
+                )}
+              </div>
+
+              {totalUsed === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+                  <p className="text-sm text-slate-400 dark:text-zinc-500">이번 주 아직 사용 기록이 없습니다.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {FEATURES.map(({ key, label }, i) => {
+                    const count  = counts[i];
+                    const isMax  = count === maxCount && count > 0;
+                    const pct    = Math.round((count / maxCount) * 100);
+                    return (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className={`text-xs w-[88px] shrink-0 truncate ${isMax ? "font-semibold text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`}>
+                          {label}
+                        </span>
+                        <div className="flex-1 h-2 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${pct}%`,
+                              background: count > 0 ? (isMax ? "linear-gradient(90deg,#6C63FF,#8B85FF)" : "#6C63FF80") : "transparent",
+                            }}
+                          />
+                        </div>
+                        <span className={`text-xs w-6 text-right shrink-0 ${count > 0 ? "text-slate-600 dark:text-zinc-300" : "text-slate-300 dark:text-zinc-700"}`}>
+                          {count > 0 ? count : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <p className="text-sm text-slate-400 dark:text-zinc-500">아직 활동 내역이 없습니다.</p>
-            <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">기능을 사용하면 여기에 표시됩니다.</p>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* 오늘의 팁 */}
         <div

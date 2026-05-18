@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackUsage } from "@/lib/usageStats";
 import {
   IconWorld,
   IconPencil,
@@ -136,6 +137,7 @@ export default function Translator() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       setResult(data.result);
+      trackUsage("translate");
     } catch (e) {
       setError(e instanceof Error ? e.message : "처리 중 오류가 발생했습니다.");
     } finally {
