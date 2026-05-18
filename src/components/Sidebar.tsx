@@ -1,16 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconSun,
-  IconMoon,
-  IconLayoutSidebarLeftCollapse,
-} from "@tabler/icons-react";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
-
-/* ───────── 타입·상수 ───────── */
 
 interface SidebarProps {
   isOpen: boolean;
@@ -23,7 +17,7 @@ const navItems = [
     href: "/",
     label: "Home",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10" />
       </svg>
@@ -33,7 +27,7 @@ const navItems = [
     href: "/todo",
     label: "할 일 / 메모",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
@@ -43,7 +37,7 @@ const navItems = [
     href: "/qa",
     label: "Q&A",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
       </svg>
@@ -53,7 +47,7 @@ const navItems = [
     href: "/email",
     label: "이메일 작성",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
       </svg>
@@ -63,7 +57,7 @@ const navItems = [
     href: "/template",
     label: "템플릿 생성",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
@@ -73,7 +67,7 @@ const navItems = [
     href: "/translate",
     label: "번역·다듬기",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
       </svg>
@@ -83,9 +77,9 @@ const navItems = [
     href: "/summary",
     label: "문서 요약",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          d="M4 6h16M4 12h16M4 18h10" />
       </svg>
     ),
   },
@@ -93,7 +87,7 @@ const navItems = [
     href: "/data",
     label: "데이터 정리",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M3 10h18M3 14h18M10 3v18M14 3v18" />
       </svg>
@@ -103,7 +97,7 @@ const navItems = [
     href: "/schedule",
     label: "일정 추출",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
@@ -113,7 +107,7 @@ const navItems = [
     href: "/glossary",
     label: "용어집",
     icon: (
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
@@ -121,31 +115,26 @@ const navItems = [
   },
 ];
 
-const aiStatusConfig = {
-  checking:  { dot: "bg-amber-400 animate-pulse", text: "AI 연결 확인 중..." },
-  connected: { dot: "bg-emerald-400",             text: "Groq AI 연결됨"    },
-  error:     { dot: "bg-red-400",                 text: "AI 연결 실패"      },
+const statusConfig = {
+  checking:  { dot: "bg-amber-400 animate-pulse", label: "AI 연결 확인 중..." },
+  connected: { dot: "bg-emerald-400",             label: "Groq AI 연결됨"    },
+  error:     { dot: "bg-red-400",                 label: "AI 연결 실패"      },
 };
 
 const COLLAPSED_KEY = "worky-sidebar-collapsed";
 
-/* ───────── 컴포넌트 ───────── */
-
 export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const pathname = usePathname();
-  const status   = aiStatusConfig[aiStatus];
   const { theme, toggle: toggleTheme } = useTheme();
+  const st = statusConfig[aiStatus];
 
-  const [collapsed, setCollapsed]   = useState(false);
-  const [colMounted, setColMounted] = useState(false);
-  // 텍스트 타이밍: 즉시 숨김(접기), 180ms 후 표시(펼치기)
-  const [showText, setShowText]     = useState(true);
-  const textTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mounted,   setMounted]   = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(COLLAPSED_KEY);
-    if (saved === "true") { setCollapsed(true); setShowText(false); }
-    setColMounted(true);
+    if (saved === "true") setCollapsed(true);
+    setMounted(true);
   }, []);
 
   const toggleCollapse = () => {
@@ -154,23 +143,14 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
     localStorage.setItem(COLLAPSED_KEY, String(next));
   };
 
-  const isCollapsed = colMounted && collapsed;
+  const isCollapsed = mounted && collapsed;
 
-  useEffect(() => {
-    if (textTimerRef.current) clearTimeout(textTimerRef.current);
-    if (isCollapsed) {
-      setShowText(false);
-    } else {
-      textTimerRef.current = setTimeout(() => setShowText(true), 180);
-    }
-    return () => { if (textTimerRef.current) clearTimeout(textTimerRef.current); };
-  }, [isCollapsed]);
-
-  const collapseIcon = (
-    <IconLayoutSidebarLeftCollapse
-      className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? "rotate-180" : "rotate-0"}`}
-    />
-  );
+  // 텍스트 표시 전략:
+  //   접힐 때 → 즉시 사라짐 (w-0 overflow-hidden, transition 없음)
+  //   펼칠 때 → 너비 transition(300ms) 완료 후 fade in (delay-[260ms] duration-150)
+  const labelCls = isCollapsed
+    ? "w-0 overflow-hidden opacity-0 whitespace-nowrap pointer-events-none"
+    : "opacity-100 whitespace-nowrap transition-opacity duration-150 delay-[260ms]";
 
   return (
     <aside
@@ -179,139 +159,128 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
         "bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800",
         "transition-[width] duration-300 ease-in-out",
         "lg:static lg:translate-x-0",
-        isCollapsed ? "w-16" : "w-64",
+        isCollapsed ? "w-14" : "w-56",
         isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
       ].join(" ")}
     >
 
-      {/* ── 헤더 (조건부 렌더링 — 레이아웃 안정성 우선) ── */}
+      {/* ── 헤더 ── */}
       {isCollapsed ? (
-        /* 접힌 상태: 아이콘 + 토글만 세로 배치 */
-        <div className="flex flex-col items-center gap-2 px-2 py-3 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-          <img src="/favicon.svg" alt="Worky" width={32} height={32} className="shrink-0" />
+        /* 접힌 상태: 토글 버튼만 중앙 정렬 */
+        <div className="flex justify-center items-center h-14 border-b border-slate-200 dark:border-zinc-800 shrink-0">
           <button
             onClick={toggleCollapse}
             aria-label="사이드바 펼치기"
-            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors hidden lg:flex"
+            className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors hidden lg:flex"
           >
-            {collapseIcon}
+            <IconLayoutSidebarLeftCollapse className="w-4 h-4 rotate-180" />
           </button>
         </div>
       ) : (
-        /* 펼친 상태: 로고 | 텍스트 | 다크모드 | 접기 가로 배치 */
-        <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-          <img src="/favicon.svg" alt="Worky" width={32} height={32} className="shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm leading-none" style={{ color: "var(--primary)" }}>Worky</p>
-            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">AI 업무 보조</p>
+        /* 펼친 상태: 로고 + 텍스트 + 토글 */
+        <div className="flex items-center h-14 px-3 gap-2 border-b border-slate-200 dark:border-zinc-800 shrink-0">
+          <img src="/favicon.svg" alt="Worky" width={28} height={28} className="shrink-0" />
+          <div className="flex-1 overflow-hidden">
+            <p
+              className="font-bold text-sm leading-none whitespace-nowrap opacity-100 transition-opacity duration-150 delay-[260ms]"
+              style={{ color: "var(--primary)" }}
+            >
+              Worky
+            </p>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 whitespace-nowrap opacity-100 transition-opacity duration-150 delay-[260ms]">
+              AI 업무 보조
+            </p>
           </div>
-          <button
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}
-            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
-          >
-            {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
-          </button>
           <button
             onClick={toggleCollapse}
             aria-label="사이드바 접기"
-            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0 hidden lg:flex"
+            className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors shrink-0 hidden lg:flex"
           >
-            {collapseIcon}
+            <IconLayoutSidebarLeftCollapse className="w-4 h-4 transition-transform duration-300" />
           </button>
         </div>
       )}
 
       {/* ── 네비게이션 ── */}
-      <nav className={[
-        "flex-1 py-3 space-y-0.5 overflow-y-auto sidebar-nav-collapsed min-h-0",
-        isCollapsed ? "px-2" : "px-3",
-      ].join(" ")}>
-        {showText && (
-          <p className="px-3 mb-2 text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
-            메뉴
-          </p>
-        )}
-
+      <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
-
-          return isCollapsed ? (
-            /* 접힌 상태: 아이콘만, 가운데 정렬 */
-            <div key={item.href}
-              className="flex items-center justify-center h-10 rounded-xl transition-colors cursor-default"
-            >
-              <Link
-                href={item.href}
-                onClick={onClose}
-                className={[
-                  "flex items-center justify-center w-full h-10 rounded-xl transition-colors",
-                  isActive
-                    ? "text-white shadow-md"
-                    : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
-                ].join(" ")}
-                style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-              >
-                <span className={isActive ? "opacity-90" : "opacity-60"}>{item.icon}</span>
-              </Link>
-            </div>
-          ) : (
-            /* 펼친 상태: 아이콘 + 텍스트 */
+          const active = pathname === item.href;
+          return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onClose}
+              title={isCollapsed ? item.label : undefined}
               className={[
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
-                isActive
-                  ? "text-white shadow-md"
+                "flex items-center px-2.5 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                isCollapsed ? "justify-center" : "gap-3",
+                active
+                  ? "text-white shadow-sm"
                   : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-zinc-100",
               ].join(" ")}
-              style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+              style={active ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
             >
-              <span className={isActive ? "opacity-90" : "opacity-50"}>{item.icon}</span>
-              {showText && item.label}
+              <span className={`shrink-0 ${active ? "opacity-90" : "opacity-60"}`}>
+                {item.icon}
+              </span>
+              {/* inline-block으로 w-0 적용 가능하게 */}
+              <span className={`inline-block ${labelCls}`}>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* ── 하단 AI 상태 ── */}
-      <div className="shrink-0 px-3 py-3 border-t border-slate-200 dark:border-zinc-800">
-        {isCollapsed ? (
-          /* 접힌 상태: 다크모드 토글 + AI dot */
-          <div className="flex flex-col items-center gap-3">
-            <button
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}
-              className="p-2 rounded-xl text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-            >
-              {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
-            </button>
-            <div className="relative flex">
-              <span className={`w-2.5 h-2.5 rounded-full ${status.dot}`} />
-              {aiStatus === "connected" && (
-                <span className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-60" />
-              )}
-            </div>
+      {/* ── 하단 푸터 ── */}
+      <div className="shrink-0 border-t border-slate-200 dark:border-zinc-800 px-2 py-2 space-y-1">
+
+        {/* 다크모드 토글 */}
+        <button
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}
+          title={isCollapsed ? (theme === "dark" ? "라이트 모드" : "다크 모드") : undefined}
+          className={[
+            "w-full flex items-center px-2.5 py-2 rounded-xl text-sm",
+            "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
+            "hover:text-slate-700 dark:hover:text-zinc-200 transition-colors",
+            isCollapsed ? "justify-center" : "gap-3",
+          ].join(" ")}
+        >
+          <span className="shrink-0">
+            {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
+          </span>
+          <span className={`inline-block ${labelCls}`}>
+            {theme === "dark" ? "라이트 모드" : "다크 모드"}
+          </span>
+        </button>
+
+        {/* AI 연결 상태 */}
+        <div
+          title={isCollapsed ? st.label : undefined}
+          className={[
+            "flex items-center rounded-xl",
+            isCollapsed
+              ? "justify-center px-2 py-2"
+              : "gap-2.5 px-3 py-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700",
+          ].join(" ")}
+        >
+          <span className="relative flex shrink-0">
+            <span className={`w-2 h-2 rounded-full ${st.dot}`} />
+            {aiStatus === "connected" && (
+              <span className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-60" />
+            )}
+          </span>
+          <div className={`min-w-0 inline-block ${labelCls}`}>
+            <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 whitespace-nowrap">
+              {st.label}
+            </p>
+            {aiStatus === "connected" && (
+              <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 whitespace-nowrap">
+                llama-3.3-70b
+              </p>
+            )}
           </div>
-        ) : (
-          /* 펼친 상태: AI 상태 카드 */
-          <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700">
-            <span className="relative flex shrink-0">
-              <span className={`w-2.5 h-2.5 rounded-full ${status.dot}`} />
-              {aiStatus === "connected" && (
-                <span className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-60" />
-              )}
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{status.text}</p>
-              {aiStatus === "connected" && (
-                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">llama-3.3-70b</p>
-              )}
-            </div>
-          </div>
-        )}
+        </div>
+
       </div>
     </aside>
   );
