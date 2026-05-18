@@ -52,17 +52,25 @@ const TONES: { id: Tone; desc: string }[] = [
 
 /* ───────── 시스템 프롬프트 ───────── */
 
+const KO_RULE = `
+한국어 대상 번역 시 추가 규칙:
+- 반드시 순수 한국어로만 번역
+- 한자, 영어, 일본어 등 외국어 혼용 절대 금지
+- 고유명사나 브랜드명은 한국어 표기 사용
+- 자연스러운 현대 한국어 비즈니스 문체 사용`;
+
 function buildTranslatePrompt(sourceLang: SourceLang, targetLang: LangCode): string {
   const targetNative = LANG_OPTIONS.find((l) => l.code === targetLang)?.native ?? "Korean";
+  const koRule = targetLang === "ko" ? KO_RULE : "";
   if (sourceLang === "auto") {
     return `You are a professional translator. Detect the language of the input text and translate it into ${targetNative}.
 Return only the translated text with no explanations, labels, or additional content.
-Preserve the original tone, formatting, and paragraph structure as much as possible.`;
+Preserve the original tone, formatting, and paragraph structure as much as possible.${koRule}`;
   }
   const sourceNative = LANG_OPTIONS.find((l) => l.code === sourceLang)?.native ?? "Korean";
   return `You are a professional translator. Translate the following ${sourceNative} text into ${targetNative}.
 Return only the translated text with no explanations, labels, or additional content.
-Preserve the original tone, formatting, and paragraph structure as much as possible.`;
+Preserve the original tone, formatting, and paragraph structure as much as possible.${koRule}`;
 }
 
 function buildRefinePrompt(tone: Tone): string {
@@ -73,7 +81,8 @@ function buildRefinePrompt(tone: Tone): string {
     정중하게:   "Rewrite the following Korean text in a polite and respectful tone suitable for business communication.",
   };
   return `You are a Korean business writing expert. ${instructions[tone]}
-Return only the rewritten text with no explanations or labels.`;
+Return only the rewritten Korean text with no explanations or labels.
+반드시 순수 한국어로만 작성하고, 외국어 혼용 금지. 자연스러운 현대 한국어 비즈니스 문체 사용.`;
 }
 
 /* ───────── 컴포넌트 ───────── */

@@ -11,6 +11,14 @@ interface RequestBody {
   systemPrompt?: string;
 }
 
+const KOREAN_RULES = `
+
+한국어 작성 규칙 (반드시 준수):
+- 반드시 순수 한국어로만 작성
+- 한자, 영어, 일본어 등 외국어 혼용 절대 금지
+- 고유명사나 브랜드명은 한국어 표기 사용
+- 자연스러운 현대 한국어 비즈니스 문체 사용`;
+
 export async function POST(req: NextRequest) {
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -26,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const fullMessages: Message[] = systemPrompt
-      ? [{ role: "system", content: systemPrompt }, ...messages]
+      ? [{ role: "system", content: systemPrompt + KOREAN_RULES }, ...messages]
       : messages;
 
     const completion = await groq.chat.completions.create({
