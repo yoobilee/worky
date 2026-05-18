@@ -53,9 +53,10 @@ const TONES: { id: Tone; desc: string }[] = [
 /* ───────── 시스템 프롬프트 ───────── */
 
 const KO_RULE = `
-한국어 대상 번역 시 추가 규칙:
+You must respond ONLY in Korean (한국어). Do not use any Chinese characters (한자), Japanese, Russian, Greek, or any other language mixed in. Use pure, natural modern Korean only.
+한국어 번역 규칙 (반드시 준수):
 - 반드시 순수 한국어로만 번역
-- 한자, 영어, 일본어 등 외국어 혼용 절대 금지
+- 한자, 영어, 일본어, 러시아어 등 모든 외국어 혼용 절대 금지
 - 고유명사나 브랜드명은 한국어 표기 사용
 - 자연스러운 현대 한국어 비즈니스 문체 사용`;
 
@@ -82,7 +83,8 @@ function buildRefinePrompt(tone: Tone): string {
   };
   return `You are a Korean business writing expert. ${instructions[tone]}
 Return only the rewritten Korean text with no explanations or labels.
-반드시 순수 한국어로만 작성하고, 외국어 혼용 금지. 자연스러운 현대 한국어 비즈니스 문체 사용.`;
+You must respond ONLY in Korean (한국어). Do not use any Chinese characters (한자), Japanese, Russian, or any other language. Use pure, natural modern Korean only.
+반드시 순수 한국어로만 작성하고, 한자·영어·일본어·러시아어 등 모든 외국어 혼용 절대 금지. 자연스러운 현대 한국어 비즈니스 문체 사용.`;
 }
 
 /* ───────── 컴포넌트 ───────── */

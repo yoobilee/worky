@@ -13,9 +13,10 @@ interface RequestBody {
 
 const KOREAN_RULES = `
 
+You must respond ONLY in Korean (한국어). Do not use any Chinese characters (한자), Japanese, Russian, Greek, or any other language mixed in. Use pure, natural modern Korean only.
 한국어 작성 규칙 (반드시 준수):
 - 반드시 순수 한국어로만 작성
-- 한자, 영어, 일본어 등 외국어 혼용 절대 금지
+- 한자, 영어, 일본어, 러시아어 등 모든 외국어 혼용 절대 금지
 - 고유명사나 브랜드명은 한국어 표기 사용
 - 자연스러운 현대 한국어 비즈니스 문체 사용`;
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       : messages;
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "gemma2-9b-it",
       messages: fullMessages,
     });
 
