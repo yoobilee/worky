@@ -145,7 +145,7 @@ export default function Translator() {
   ];
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0 min-w-0">
 
       {/* 모드 전환 탭 */}
       <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1">
@@ -353,16 +353,16 @@ export default function Translator() {
 
       {/* 결과 */}
       {result && (
-        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+        <div className="min-w-0 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300 truncate mr-3">
               {mode === "translate"
                 ? `번역 결과 — ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`
                 : `다듬기 결과 — ${tone}`}
             </span>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition shrink-0"
             >
               {copied ? (
                 <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</>
@@ -371,7 +371,7 @@ export default function Translator() {
               )}
             </button>
           </div>
-          <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed min-h-[120px]">
+          <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed min-h-[120px] break-words">
             {result}
           </div>
         </div>
