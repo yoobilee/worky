@@ -94,21 +94,15 @@ export default function Glossary() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      console.log("[Glossary] localStorage raw:", raw);
-
       const parsed: Term[] = raw ? JSON.parse(raw) : [];
-      console.log("[Glossary] parsed terms count:", parsed.length);
 
       if (parsed.length > 0) {
-        console.log("[Glossary] 기존 용어 로드:", parsed.length, "개");
         setTerms(parsed);
       } else {
-        console.log("[Glossary] 저장된 용어 없음 → 기본 예시 삽입");
         setTerms(DEFAULT_TERMS);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TERMS));
       }
     } catch (e) {
-      console.error("[Glossary] 로드 오류:", e);
       setTerms(DEFAULT_TERMS);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TERMS));
     }
@@ -118,7 +112,6 @@ export default function Glossary() {
   // localStorage 저장
   useEffect(() => {
     if (!hydrated) return;
-    console.log("[Glossary] localStorage 저장:", terms.length, "개");
     localStorage.setItem(STORAGE_KEY, JSON.stringify(terms));
   }, [terms, hydrated]);
 
