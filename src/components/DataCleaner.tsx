@@ -95,32 +95,17 @@ export default function DataCleaner() {
   return (
     <div className="space-y-3 max-w-4xl mx-auto w-full">
       {/* Bento 통계 카드 */}
-      {(() => {
-        const progressPct = Math.min(Math.round((cleanCount / GOAL) * 100), 100);
-        const savedMins = cleanCount * MINS_PER_CLEAN;
-        const savedHours = (savedMins / 60).toFixed(1);
-        const timeBarPct = Math.min(Math.round((savedMins / (GOAL * MINS_PER_CLEAN)) * 100), 100);
-        return (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">누적 정리 횟수</p>
-              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{cleanCount}건</p>
-              <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 dark:bg-zinc-700">
-                <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${progressPct}%`, background: "#6C63FF" }} />
-              </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">목표 {GOAL}건의 {progressPct}%</p>
-            </div>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">절약 시간</p>
-              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{savedHours}h</p>
-              <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 dark:bg-zinc-700">
-                <div className="h-1.5 rounded-full bg-emerald-400 transition-all duration-500" style={{ width: `${timeBarPct}%` }} />
-              </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">건당 {MINS_PER_CLEAN}분 절약 기준</p>
-            </div>
-          </div>
-        );
-      })()}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">누적 정리 횟수</p>
+          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{cleanCount}건</p>
+        </div>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">절약 시간</p>
+          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{(cleanCount * MINS_PER_CLEAN / 60).toFixed(1)}h</p>
+          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">건당 {MINS_PER_CLEAN}분 절약 기준</p>
+        </div>
+      </div>
 
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
