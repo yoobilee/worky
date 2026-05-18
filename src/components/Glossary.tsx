@@ -38,6 +38,19 @@ const CATEGORY_COLORS: Record<Category, string> = {
 
 const STORAGE_KEY = "worky_glossary";
 
+const DEFAULT_TERMS: Term[] = [
+  { id: "default-1", term: "KPI",   category: "직무",   createdAt: 0,
+    description: "핵심 성과 지표 (Key Performance Indicator). 목표 달성 정도를 측정하는 수치" },
+  { id: "default-2", term: "OKR",   category: "직무",   createdAt: 1,
+    description: "목표와 핵심 결과 (Objectives and Key Results). 목표 설정 프레임워크" },
+  { id: "default-3", term: "B2B",   category: "마케팅", createdAt: 2,
+    description: "기업 간 거래 (Business to Business). 기업이 다른 기업을 대상으로 하는 비즈니스" },
+  { id: "default-4", term: "ROI",   category: "재무",   createdAt: 3,
+    description: "투자 대비 수익률 (Return on Investment). 투자한 비용 대비 얻은 이익의 비율" },
+  { id: "default-5", term: "온보딩", category: "직무",  createdAt: 4,
+    description: "신규 입사자가 조직에 적응하는 과정. 업무 교육, 시스템 접근권한 부여 등 포함" },
+];
+
 const AI_SYSTEM_PROMPT = `당신은 친절한 직장 내 용어 해설사입니다. 사용자가 모르는 업무 용어를 입력하면 아래 형식으로 설명하세요.
 
 [뜻] 한두 문장으로 핵심 의미를 설명합니다.
@@ -77,11 +90,15 @@ export default function Glossary() {
   const [aiLoading, setAiLoading]   = useState(false);
   const [aiError, setAiError]       = useState("");
 
-  // localStorage 로드
+  // localStorage 로드 (데이터 없으면 기본 예시 삽입)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setTerms(JSON.parse(saved));
+      if (saved) {
+        setTerms(JSON.parse(saved));
+      } else {
+        setTerms(DEFAULT_TERMS);
+      }
     } catch {}
     setHydrated(true);
   }, []);
