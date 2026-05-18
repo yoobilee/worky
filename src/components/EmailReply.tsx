@@ -1,16 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   IconTie,
   IconBolt,
   IconBan,
   IconHeartHandshake,
   IconHeart,
-  IconUser,
-  IconChevronDown,
-  IconChevronUp,
-  IconCheck,
+  IconSettings,
 } from "@tabler/icons-react";
 
 type Tone = "정중하게" | "간결하게" | "거절하기" | "사과하기" | "감사하기";
@@ -21,7 +19,7 @@ interface SenderInfo {
   title: string;
 }
 
-const SENDER_KEY = "worky_email_sender";
+const SENDER_KEY = "worky_sender_info";
 
 const TONES: { id: Tone; Icon: React.ComponentType<{ className?: string }>; desc: string }[] = [
   { id: "정중하게", Icon: IconTie,            desc: "격식 있고 공손한 톤" },
@@ -31,14 +29,12 @@ const TONES: { id: Tone; Icon: React.ComponentType<{ className?: string }>; desc
   { id: "감사하기", Icon: IconHeart,          desc: "감사함을 전하는 톤" },
 ];
 
-function buildSystemPrompt(sender: SenderInfo, tone: Tone): string {
+function buildSystemPrompt(sender: SenderInfo): string {
   const hasSender = sender.org || sender.name || sender.title;
   const senderLine = hasSender
-    ? `${[sender.org, sender.name, sender.title].filter(Boolean).join(" ")}`
+    ? [sender.org, sender.name, sender.title].filter(Boolean).join(" ")
     : "[소속] [이름] [직급]";
-  const senderInfo = hasSender
-    ? `발신자 정보: ${senderLine}\n`
-    : "";
+  const senderInfo = hasSender ? `발신자 정보: ${senderLine}\n` : "";
 
   return `당신은 비즈니스 이메일 작성 전문가입니다.
 사용자가 받은 이메일 내용과 원하는 답장 톤을 제공하면, 해당 톤에 맞는 한국어 답장 초안 3가지를 작성하세요.
@@ -71,9 +67,7 @@ ${senderLine}
 function parseDrafts(raw: string): string[] {
   // 1차: [초안 N] 구분자 파싱
   const sections = raw.split(/\[초안\s*\d+\]/);
-  const drafts = sections
-    .map((s) => s.trim())
-    .filter((s) => s.length > 10);
+  const drafts = sections.map((s) => s.trim()).filter((s) => s.length > 10);
   if (drafts.length >= 2) return drafts.slice(0, 3);
 
   // 2차: JSON 파싱 시도
@@ -93,40 +87,23 @@ function parseDrafts(raw: string): string[] {
 }
 
 export default function EmailReply() {
-  const [sender, setSender]           = useState<SenderInfo>({ org: "", name: "", title: "" });
-  const [collapsed, setCollapsed]     = useState(false);
-  const [hydrated, setHydrated]       = useState(false);
-  const [emailInput, setEmailInput]   = useState("");
+  const [sender, setSender]             = useState<SenderInfo>({ org: "", name: "", title: "" });
+  const [emailInput, setEmailInput]     = useState("");
   const [selectedTone, setSelectedTone] = useState<Tone>("정중하게");
-  const [drafts, setDrafts]           = useState<string[]>([]);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState("");
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [drafts, setDrafts]             = useState<string[]>([]);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState("");
+  const [copiedIndex, setCopiedIndex]   = useState<number | null>(null);
+  const [hydrated, setHydrated]         = useState(false);
 
-  // 발신자 정보 로드
+  // 설정에서 발신자 정보 로드
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(SENDER_KEY);
-      if (saved) {
-        const parsed: SenderInfo = JSON.parse(saved);
-        setSender(parsed);
-        // 정보가 하나라도 있으면 접힌 상태로 시작
-        if (parsed.org || parsed.name || parsed.title) setCollapsed(true);
-      }
+      const raw = localStorage.getItem(SENDER_KEY);
+      if (raw) setSender(JSON.parse(raw));
     } catch {}
     setHydrated(true);
   }, []);
-
-  const handleSenderChange = (field: keyof SenderInfo, value: string) => {
-    const next = { ...sender, [field]: value };
-    setSender(next);
-    localStorage.setItem(SENDER_KEY, JSON.stringify(next));
-  };
-
-  // 포커스가 벗어날 때만 자동 접기 (입력 중 접힘 방지)
-  const handleSenderBlur = (next: SenderInfo) => {
-    if (next.org && next.name && next.title) setCollapsed(true);
-  };
 
   const handleGenerate = async () => {
     if (!emailInput.trim()) return;
@@ -140,12 +117,9 @@ export default function EmailReply() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [
-            {
-              role: "user",
-              content: `받은 이메일:\n${emailInput}\n\n답장 톤: ${selectedTone}`,
-            },
+            { role: "user", content: `받은 이메일:\n${emailInput}\n\n답장 톤: ${selectedTone}` },
           ],
-          systemPrompt: buildSystemPrompt(sender, selectedTone),
+          systemPrompt: buildSystemPrompt(sender),
         }),
       });
       const data = await res.json();
@@ -169,60 +143,23 @@ export default function EmailReply() {
   if (!hydrated) return null;
 
   const hasSender = sender.org || sender.name || sender.title;
-  const senderSummary = hasSender
-    ? [sender.org, sender.name, sender.title].filter(Boolean).join(" · ")
-    : "미입력";
 
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
 
-      {/* 발신자 정보 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm shrink-0">
-        {/* 헤더 (항상 표시) */}
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 text-left"
-        >
-          <div className="flex items-center gap-2">
-            <IconUser className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">발신자 정보</span>
-            {collapsed && (
-              <span className="text-xs text-slate-400 dark:text-zinc-500 ml-1">{senderSummary}</span>
-            )}
-          </div>
-          {collapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500" />}
-        </button>
-
-        {/* 입력 필드 (접히면 숨김) */}
-        {!collapsed && (
-          <div className="px-4 pb-4 flex flex-col sm:flex-row gap-2">
-            {(["org", "name", "title"] as const).map((field) => (
-              <input
-                key={field}
-                value={sender[field]}
-                onChange={(e) => handleSenderChange(field, e.target.value)}
-                onBlur={(e) => {
-                  const next = { ...sender, [field]: e.target.value };
-                  handleSenderBlur(next);
-                }}
-                placeholder={field === "org" ? "소속 (예: 개발팀)" : field === "name" ? "이름" : "직급 (예: 사원)"}
-                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-              />
-            ))}
-            {hasSender && (
-              <button
-                onClick={() => setCollapsed(true)}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition shrink-0"
-              >
-                <IconCheck className="w-3.5 h-3.5" />
-                완료
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      {/* 발신자 정보 없을 때 안내 */}
+      {!hasSender && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm shrink-0">
+          <span>이메일 서명에 사용할 내 정보가 없습니다.</span>
+          <Link
+            href="/settings"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors shrink-0"
+          >
+            <IconSettings className="w-3.5 h-3.5" />
+            설정에서 입력
+          </Link>
+        </div>
+      )}
 
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">

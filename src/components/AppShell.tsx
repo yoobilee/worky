@@ -16,6 +16,7 @@ const routeMeta: Record<string, { title: string; desc: string; aiChip: boolean }
   "/translate": { title: "번역·다듬기", desc: "텍스트를 번역하거나 비즈니스 톤으로 다듬어드립니다",        aiChip: true  },
   "/insight":   { title: "데이터 인사이트", desc: "숫자 데이터를 붙여넣으면 AI가 핵심 수치와 트렌드를 분석합니다", aiChip: true  },
   "/glossary":  { title: "용어집",      desc: "사내 용어를 등록하고 AI로 뜻을 설명받아 보세요",            aiChip: true  },
+  "/settings":  { title: "설정",        desc: "내 정보와 앱 환경설정을 관리하세요",                        aiChip: false },
 };
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

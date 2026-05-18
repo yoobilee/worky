@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar } from "@tabler/icons-react";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 
 interface SidebarProps {
@@ -237,6 +237,23 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
 
       {/* ── 하단 푸터 ── */}
       <div className="shrink-0 border-t border-slate-200 dark:border-zinc-800 px-2 py-2 space-y-1">
+
+        {/* 설정 */}
+        <Link
+          href="/settings"
+          onClick={onClose}
+          title={isCollapsed ? "설정" : undefined}
+          className={[
+            "w-full flex items-center px-2.5 py-2 rounded-xl text-sm",
+            "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
+            "hover:text-slate-700 dark:hover:text-zinc-200 transition-colors",
+            isCollapsed ? "justify-center" : "gap-3",
+            pathname === "/settings" ? "bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200" : "",
+          ].join(" ")}
+        >
+          <span className="shrink-0"><IconSettings className="w-4 h-4" /></span>
+          <span className={`inline-block ${labelCls}`}>설정</span>
+        </Link>
 
         {/* 다크모드 토글 */}
         <button
