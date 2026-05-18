@@ -12,9 +12,10 @@ import {
 
 /* ───────── 타입 ───────── */
 
-type Mode     = "translate" | "refine";
-type LangCode = "ko" | "en" | "ja" | "zh";
-type Tone     = "공식적으로" | "부드럽게" | "간결하게" | "정중하게";
+type Mode       = "translate" | "refine";
+type LangCode   = "ko" | "en" | "ja" | "zh";
+type SourceLang = "auto" | LangCode;
+type Tone       = "공식적으로" | "부드럽게" | "간결하게" | "정중하게";
 
 /* ───────── 상수 ───────── */
 
@@ -25,6 +26,22 @@ const LANG_OPTIONS: { code: LangCode; label: string; native: string }[] = [
   { code: "zh", label: "중국어", native: "Chinese (Simplified)" },
 ];
 
+const SOURCE_OPTIONS: { code: SourceLang; label: string }[] = [
+  { code: "auto", label: "자동감지" },
+  { code: "ko",   label: "한국어" },
+  { code: "en",   label: "영어" },
+  { code: "ja",   label: "일본어" },
+  { code: "zh",   label: "중국어" },
+];
+
+const TARGET_MAP: Record<SourceLang, { options: LangCode[]; default: LangCode }> = {
+  auto: { options: ["ko", "en", "ja", "zh"], default: "ko" },
+  ko:   { options: ["en", "ja", "zh"],       default: "en" },
+  en:   { options: ["ko", "ja", "zh"],       default: "ko" },
+  ja:   { options: ["ko", "en", "zh"],       default: "ko" },
+  zh:   { options: ["ko", "en", "ja"],       default: "ko" },
+};
+
 const TONES: { id: Tone; desc: string }[] = [
   { id: "공식적으로", desc: "격식 있는 비즈니스 문체" },
   { id: "부드럽게",   desc: "친근하고 따뜻한 어조"   },
@@ -34,9 +51,15 @@ const TONES: { id: Tone; desc: string }[] = [
 
 /* ───────── 시스템 프롬프트 ───────── */
 
-function buildTranslatePrompt(targetLang: LangCode): string {
-  const native = LANG_OPTIONS.find((l) => l.code === targetLang)?.native ?? "Korean";
-  return `You are a professional translator. Detect the language of the input text and translate it into ${native}.
+function buildTranslatePrompt(sourceLang: SourceLang, targetLang: LangCode): string {
+  const targetNative = LANG_OPTIONS.find((l) => l.code === targetLang)?.native ?? "Korean";
+  if (sourceLang === "auto") {
+    return `You are a professional translator. Detect the language of the input text and translate it into ${targetNative}.
+Return only the translated text with no explanations, labels, or additional content.
+Preserve the original tone, formatting, and paragraph structure as much as possible.`;
+  }
+  const sourceNative = LANG_OPTIONS.find((l) => l.code === sourceLang)?.native ?? "Korean";
+  return `You are a professional translator. Translate the following ${sourceNative} text into ${targetNative}.
 Return only the translated text with no explanations, labels, or additional content.
 Preserve the original tone, formatting, and paragraph structure as much as possible.`;
 }
@@ -57,7 +80,8 @@ Return only the rewritten text with no explanations or labels.`;
 export default function Translator() {
   const [mode, setMode]           = useState<Mode>("translate");
   const [input, setInput]         = useState("");
-  const [targetLang, setTargetLang] = useState<LangCode>("en");
+  const [sourceLang, setSourceLang] = useState<SourceLang>("auto");
+  const [targetLang, setTargetLang] = useState<LangCode>("ko");
   const [tone, setTone]           = useState<Tone>("공식적으로");
   const [result, setResult]       = useState("");
   const [loading, setLoading]     = useState(false);
@@ -70,6 +94,12 @@ export default function Translator() {
     setError("");
   };
 
+  const handleSourceChange = (src: SourceLang) => {
+    setSourceLang(src);
+    setTargetLang(TARGET_MAP[src].default);
+    setResult("");
+  };
+
   const handleRun = async () => {
     if (!input.trim()) return;
     setLoading(true);
@@ -79,7 +109,7 @@ export default function Translator() {
     try {
       const systemPrompt =
         mode === "translate"
-          ? buildTranslatePrompt(targetLang)
+          ? buildTranslatePrompt(sourceLang, targetLang)
           : buildRefinePrompt(tone);
 
       const res = await fetch("/api/groq", {
@@ -137,18 +167,57 @@ export default function Translator() {
       {/* ── 번역 모드 ── */}
       {mode === "translate" && (
         <>
-          {/* 대상 언어 선택 */}
-          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">번역 대상 언어</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {LANG_OPTIONS.map(({ code, label }) => {
+          {/* 언어 방향 선택 카드 */}
+          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
+            {/* 출발 언어 (5탭) */}
+            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-2">출발 언어</p>
+            <div className="grid grid-cols-5 gap-1.5 mb-4">
+              {SOURCE_OPTIONS.map(({ code, label }) => {
+                const isActive = sourceLang === code;
+                return (
+                  <button
+                    key={code}
+                    onClick={() => handleSourceChange(code)}
+                    className={[
+                      "py-2 px-1 rounded-xl border text-xs font-medium transition-all",
+                      isActive
+                        ? "text-white border-transparent shadow-sm"
+                        : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                    ].join(" ")}
+                    style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 방향 구분선 */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-slate-100 dark:bg-zinc-800" />
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-zinc-500">
+                <IconArrowsRightLeft className="w-3.5 h-3.5" />
+                <span>
+                  {sourceLang === "auto"
+                    ? `자동 감지 → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`
+                    : `${SOURCE_OPTIONS.find((s) => s.code === sourceLang)?.label} → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`}
+                </span>
+              </div>
+              <div className="flex-1 h-px bg-slate-100 dark:bg-zinc-800" />
+            </div>
+
+            {/* 도착 언어 (동적) */}
+            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-2">도착 언어</p>
+            <div className={`grid gap-1.5 grid-cols-${TARGET_MAP[sourceLang].options.length}`}>
+              {TARGET_MAP[sourceLang].options.map((code) => {
+                const label = LANG_OPTIONS.find((l) => l.code === code)?.label ?? code;
                 const isActive = targetLang === code;
                 return (
                   <button
                     key={code}
                     onClick={() => setTargetLang(code)}
                     className={[
-                      "py-2.5 px-3 rounded-xl border text-sm font-medium transition-all",
+                      "py-2 px-1 rounded-xl border text-xs font-medium transition-all",
                       isActive
                         ? "text-white border-transparent shadow-sm"
                         : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:bg-slate-50 dark:hover:bg-zinc-800",
@@ -166,7 +235,6 @@ export default function Translator() {
           <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
               번역할 텍스트
-              <span className="ml-2 text-xs font-normal text-slate-400 dark:text-zinc-500">언어 자동 감지</span>
             </label>
             <textarea
               value={input}
@@ -174,11 +242,7 @@ export default function Translator() {
               placeholder="번역할 내용을 입력하세요..."
               className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
-            <div className="flex items-center justify-between mt-3">
-              <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-zinc-500">
-                <IconArrowsRightLeft className="w-3.5 h-3.5" />
-                <span>→ {LANG_OPTIONS.find((l) => l.code === targetLang)?.label}</span>
-              </div>
+            <div className="flex justify-end mt-3 shrink-0">
               <button
                 onClick={handleRun}
                 disabled={loading || !input.trim()}
