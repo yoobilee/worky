@@ -4,7 +4,8 @@ import { useState } from "react";
 import {
   IconWorld,
   IconPencil,
-  IconArrowsRightLeft,
+  IconArrowDown,
+  IconChevronDown,
   IconCopy,
   IconCheck,
   IconSparkles,
@@ -87,6 +88,7 @@ export default function Translator() {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
   const [copied, setCopied]       = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleModeChange = (m: Mode) => {
     setMode(m);
@@ -169,9 +171,10 @@ export default function Translator() {
         <>
           {/* 언어 방향 선택 카드 */}
           <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
+
             {/* 출발 언어 (5탭) */}
-            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-2">출발 언어</p>
-            <div className="grid grid-cols-5 gap-1.5 mb-4">
+            <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 mb-2">출발 언어</p>
+            <div className="grid grid-cols-5 gap-1.5">
               {SOURCE_OPTIONS.map(({ code, label }) => {
                 const isActive = sourceLang === code;
                 return (
@@ -192,42 +195,59 @@ export default function Translator() {
               })}
             </div>
 
-            {/* 방향 구분선 */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-slate-100 dark:bg-zinc-800" />
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-zinc-500">
-                <IconArrowsRightLeft className="w-3.5 h-3.5" />
-                <span>
-                  {sourceLang === "auto"
-                    ? `자동 감지 → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`
-                    : `${SOURCE_OPTIONS.find((s) => s.code === sourceLang)?.label} → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`}
-                </span>
-              </div>
-              <div className="flex-1 h-px bg-slate-100 dark:bg-zinc-800" />
+            {/* 방향 아이콘 + 방향 텍스트 */}
+            <div className="flex flex-col items-center gap-1 my-3">
+              <IconArrowDown className="w-4 h-4 text-slate-300 dark:text-zinc-600" />
+              <span className="text-[11px] text-slate-400 dark:text-zinc-500">
+                {sourceLang === "auto"
+                  ? `자동 감지 → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`
+                  : `${SOURCE_OPTIONS.find((s) => s.code === sourceLang)?.label} → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`}
+              </span>
             </div>
 
-            {/* 도착 언어 (동적) */}
-            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-2">도착 언어</p>
-            <div className={`grid gap-1.5 grid-cols-${TARGET_MAP[sourceLang].options.length}`}>
-              {TARGET_MAP[sourceLang].options.map((code) => {
-                const label = LANG_OPTIONS.find((l) => l.code === code)?.label ?? code;
-                const isActive = targetLang === code;
-                return (
-                  <button
-                    key={code}
-                    onClick={() => setTargetLang(code)}
-                    className={[
-                      "py-2 px-1 rounded-xl border text-xs font-medium transition-all",
-                      isActive
-                        ? "text-white border-transparent shadow-sm"
-                        : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                    ].join(" ")}
-                    style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+            {/* 도착 언어 드롭다운 */}
+            <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 mb-2">도착 언어</p>
+            <div className="relative">
+              {/* 드롭다운 오버레이 (외부 클릭 닫기) */}
+              {dropdownOpen && (
+                <div className="fixed inset-0 z-[5]" onClick={() => setDropdownOpen(false)} />
+              )}
+              <button
+                onClick={() => setDropdownOpen((v) => !v)}
+                className="relative z-10 w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:border-[#6C63FF]/50 transition-all"
+              >
+                <span>{LANG_OPTIONS.find((l) => l.code === targetLang)?.label}</span>
+                <IconChevronDown
+                  className={`w-4 h-4 text-slate-400 dark:text-zinc-500 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute top-full mt-1 left-0 right-0 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg z-20 overflow-hidden">
+                  {TARGET_MAP[sourceLang].options.map((code) => {
+                    const label = LANG_OPTIONS.find((l) => l.code === code)?.label ?? code;
+                    const isActive = targetLang === code;
+                    return (
+                      <button
+                        key={code}
+                        onClick={() => { setTargetLang(code); setDropdownOpen(false); }}
+                        className={[
+                          "w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors",
+                          isActive
+                            ? "font-semibold bg-[#6C63FF]/8 dark:bg-[#6C63FF]/10"
+                            : "text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                        ].join(" ")}
+                        style={isActive ? { color: "#6C63FF" } : undefined}
+                      >
+                        <span className="w-3.5 shrink-0">
+                          {isActive && <IconCheck className="w-3.5 h-3.5" />}
+                        </span>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
