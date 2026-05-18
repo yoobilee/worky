@@ -99,6 +99,10 @@ export default function TemplateGen() {
   const selectedTemplate = TEMPLATES.find((t) => t.id === selectedType)!;
 
   const buildPrompt = () => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+    const dateNote = `\n오늘 날짜: ${todayStr}. 날짜가 필요한 경우 반드시 이 날짜를 사용하고, 임의로 다른 날짜를 만들지 마세요.`;
+
     const hasSender = sender.org || sender.name || sender.title;
     const senderLine = hasSender
       ? [sender.org, sender.name, sender.title].filter(Boolean).join(" ")
@@ -107,10 +111,23 @@ export default function TemplateGen() {
     if (selectedType === "email") {
       const intro = senderLine ? `${senderLine}입니다.` : "담당자입니다.";
       return selectedTemplate.systemPrompt +
+        dateNote +
         `\n[발신자] 자리에는 "${intro}"을 그대로 사용하세요.` +
         `\n마지막 줄은 반드시 "감사합니다."로만 끝내세요. 그 이후 이름, 소속, 직급 등 절대 추가 금지.`;
     }
-    return selectedTemplate.systemPrompt;
+    return selectedTemplate.systemPrompt + dateNote;
+  };
+
+  const handleTabChange = (type: TemplateType) => {
+    if (type === selectedType) return;
+    if (content.trim() || result) {
+      const ok = confirm("작성 중인 내용이 있습니다. 탭을 이동하면 내용이 삭제됩니다. 이동하시겠습니까?");
+      if (!ok) return;
+    }
+    setSelectedType(type);
+    setContent("");
+    setResult("");
+    setError("");
   };
 
   const handleGenerate = async () => {
@@ -178,7 +195,7 @@ export default function TemplateGen() {
         {TEMPLATES.map((tpl) => (
           <button
             key={tpl.id}
-            onClick={() => setSelectedType(tpl.id)}
+            onClick={() => handleTabChange(tpl.id)}
             className={[
               "flex flex-col items-start gap-2 p-4 rounded-2xl border text-left transition-all",
               selectedType === tpl.id
