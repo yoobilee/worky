@@ -141,19 +141,18 @@ export default function DataInsight() {
   };
 
   return (
-    <div className="space-y-3 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
 
       {/* 입력 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
+        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
           숫자 데이터 입력
         </label>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={"월별 매출 (단위: 만원)\n1월: 1,200 / 2월: 1,450 / 3월: 980\n4월: 1,700 / 5월: 2,100 / 6월: 1,890\n\nCSV, 표, 자유형식 모두 가능합니다."}
-          rows={5}
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
         <div className="flex justify-end mt-3">
           <button

@@ -113,7 +113,7 @@ export default function Translator() {
   ];
 
   return (
-    <div className="space-y-3 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
 
       {/* 모드 전환 탭 */}
       <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1">
@@ -163,8 +163,8 @@ export default function Translator() {
           </div>
 
           {/* 입력 */}
-          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
               번역할 텍스트
               <span className="ml-2 text-xs font-normal text-slate-400 dark:text-zinc-500">언어 자동 감지</span>
             </label>
@@ -172,8 +172,7 @@ export default function Translator() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="번역할 내용을 입력하세요..."
-              rows={6}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <div className="flex items-center justify-between mt-3">
               <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-zinc-500">
@@ -229,16 +228,15 @@ export default function Translator() {
           </div>
 
           {/* 입력 */}
-          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
               다듬을 텍스트
             </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="비즈니스 톤으로 다듬을 텍스트를 입력하세요..."
-              rows={6}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <div className="flex justify-end mt-3">
               <button

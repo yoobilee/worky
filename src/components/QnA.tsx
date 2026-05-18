@@ -171,6 +171,19 @@ export default function QnA() {
         <div ref={bottomRef} />
       </div>
 
+      {/* 추천 질문 */}
+      <div className="flex gap-2 flex-wrap shrink-0">
+        {["KPI가 뭔가요?", "상사에게 휴가 신청 메일 어떻게 써요?", "회의록 작성법 알려줘"].map((q) => (
+          <button
+            key={q}
+            onClick={() => { setInput(q); inputRef.current?.focus(); }}
+            className="px-3 py-1.5 rounded-full text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 hover:text-[#6C63FF] transition-all"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+
       {/* 입력 영역 */}
       <div className="shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-3">
         <div className="flex gap-2 items-end">

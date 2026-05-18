@@ -86,25 +86,24 @@ export default function EmailReply() {
   };
 
   return (
-    <div className="space-y-3 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
       {/* 입력 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
+        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
           받은 이메일 내용
         </label>
         <textarea
           value={emailInput}
           onChange={(e) => setEmailInput(e.target.value)}
           placeholder={"안녕하세요,\n다음 주 회의 일정을 변경할 수 있을지 문의드립니다..."}
-          rows={6}
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
       </div>
 
       {/* 톤 선택 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
         <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">답장 톤 선택</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {TONES.map((tone) => {
             const isActive = selectedTone === tone.id;
             return (

@@ -144,40 +144,38 @@ export default function DocSummary() {
   ];
 
   return (
-    <div className="space-y-3 max-w-4xl mx-auto w-full">
-      {/* 입력 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-        {/* 모드 탭 */}
-        <div className="flex gap-2 mb-4">
-          {inputModes.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => handleModeChange(id)}
-              className={[
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
-                inputMode === id
-                  ? "text-white shadow-sm"
-                  : "text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700",
-              ].join(" ")}
-              style={inputMode === id ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
+      {/* 모드 탭 — Translator와 동일 스타일 */}
+      <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
+        {inputModes.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => handleModeChange(id)}
+            className={[
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              inputMode === id
+                ? "bg-[#6C63FF] text-white shadow-sm"
+                : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700",
+            ].join(" ")}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
 
+      {/* 입력 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
         {inputMode === "text" ? (
           <>
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
               요약할 텍스트 입력
             </label>
             <textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               placeholder="요약할 내용을 붙여넣으세요..."
-              rows={7}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             {textInput && (
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5 text-right">
