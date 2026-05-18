@@ -105,14 +105,6 @@ export default function TemplateGen() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full">
-      {/* 헤더 */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">템플릿 생성</h1>
-        <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-          유형을 선택하고 내용을 입력하면 AI가 완성된 문서를 작성해드립니다.
-        </p>
-      </div>
-
       {/* 유형 선택 — Bento 스타일 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {TEMPLATES.map((tpl) => (

@@ -7,7 +7,7 @@ import {
   IconListCheck, IconBulb, IconWifi, IconWifiOff, IconArrowRight,
   IconCircleCheck, IconMessageDots, IconNotes, IconPlus, IconHistory,
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
-  IconTemperature, IconClock,
+  IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook,
 } from "@tabler/icons-react";
 
 /* ───────── 상수 ───────── */
@@ -34,13 +34,16 @@ const TIPS: Tip[] = [
 ];
 
 const QUICK_LINKS = [
-  { href: "/data",     label: "데이터 정리", Icon: IconTable,          desc: "텍스트 → 표" },
-  { href: "/todo",     label: "할 일 / 메모", Icon: IconListCheck,      desc: "할 일 관리" },
-  { href: "/template", label: "템플릿 생성",  Icon: IconNotes,          desc: "문서 자동 작성" },
-  { href: "/qa",       label: "Q&A",          Icon: IconMessageDots,    desc: "AI 업무 상담" },
-  { href: "/email",    label: "이메일 작성",  Icon: IconMail,           desc: "답장 초안 생성" },
-  { href: "/summary",  label: "문서 요약",    Icon: IconFileDescription, desc: "AI 핵심 요약" },
-  { href: "/schedule", label: "일정 추출",    Icon: IconCalendarEvent,  desc: "날짜·장소 추출" },
+  { href: "/data",      label: "데이터 정리",    Icon: IconTable,          desc: "텍스트 → 표" },
+  { href: "/todo",      label: "할 일 / 메모",   Icon: IconListCheck,      desc: "할 일 관리" },
+  { href: "/template",  label: "템플릿 생성",    Icon: IconNotes,          desc: "문서 자동 작성" },
+  { href: "/qa",        label: "Q&A",            Icon: IconMessageDots,    desc: "AI 업무 상담" },
+  { href: "/email",     label: "이메일 작성",    Icon: IconMail,           desc: "답장 초안 생성" },
+  { href: "/summary",   label: "문서 요약",      Icon: IconFileDescription, desc: "AI 핵심 요약" },
+  { href: "/schedule",  label: "일정 추출",      Icon: IconCalendarEvent,  desc: "날짜·장소 추출" },
+  { href: "/translate", label: "번역·다듬기",    Icon: IconLanguage,       desc: "번역 / 톤 조정" },
+  { href: "/insight",   label: "데이터 인사이트", Icon: IconChartBar,       desc: "수치 분석" },
+  { href: "/glossary",  label: "용어집",         Icon: IconBook,           desc: "사내 용어 관리" },
 ];
 
 /* ───────── 인사말 ───────── */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const SYSTEM_PROMPT = `당신은 데이터 정리 전문가입니다. 사용자가 붙여넣은 지저분한 텍스트나 데이터를 분석하여 깔끔한 HTML 표로 변환하세요.
 반드시 <table> 태그로 시작하고 </table> 태그로 끝나는 HTML만 반환하세요.
@@ -25,13 +25,23 @@ function tableHtmlToCSV(html: string): string {
     .join("\n");
 }
 
+const CLEAN_COUNT_KEY = "worky_clean_count";
+const GOAL = 30;
+const MINS_PER_CLEAN = 8;
+
 export default function DataCleaner() {
   const [input, setInput] = useState("");
   const [tableHtml, setTableHtml] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [cleanCount, setCleanCount] = useState(0);
   const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(CLEAN_COUNT_KEY);
+    if (saved) setCleanCount(parseInt(saved, 10) || 0);
+  }, []);
 
   const handleClean = async () => {
     if (!input.trim()) return;
@@ -51,6 +61,11 @@ export default function DataCleaner() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       setTableHtml(extractTableHtml(data.result));
+      setCleanCount((prev) => {
+        const next = prev + 1;
+        localStorage.setItem(CLEAN_COUNT_KEY, String(next));
+        return next;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "데이터 정리 중 오류가 발생했습니다.");
     } finally {
@@ -80,24 +95,32 @@ export default function DataCleaner() {
   return (
     <div className="space-y-3 max-w-4xl mx-auto w-full">
       {/* Bento 통계 카드 */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">이번 달 처리</p>
-          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">24건</p>
-          <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 dark:bg-zinc-700">
-            <div className="h-1.5 rounded-full" style={{ width: "80%", background: "#6C63FF" }} />
+      {(() => {
+        const progressPct = Math.min(Math.round((cleanCount / GOAL) * 100), 100);
+        const savedMins = cleanCount * MINS_PER_CLEAN;
+        const savedHours = (savedMins / 60).toFixed(1);
+        const timeBarPct = Math.min(Math.round((savedMins / (GOAL * MINS_PER_CLEAN)) * 100), 100);
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">누적 정리 횟수</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{cleanCount}건</p>
+              <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 dark:bg-zinc-700">
+                <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${progressPct}%`, background: "#6C63FF" }} />
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">목표 {GOAL}건의 {progressPct}%</p>
+            </div>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">절약 시간</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{savedHours}h</p>
+              <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 dark:bg-zinc-700">
+                <div className="h-1.5 rounded-full bg-emerald-400 transition-all duration-500" style={{ width: `${timeBarPct}%` }} />
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">건당 {MINS_PER_CLEAN}분 절약 기준</p>
+            </div>
           </div>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">목표 30건의 80%</p>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">절약 시간</p>
-          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">3.2h</p>
-          <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 dark:bg-zinc-700">
-            <div className="h-1.5 rounded-full bg-emerald-400" style={{ width: "64%" }} />
-          </div>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">이번 달 누적</p>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">

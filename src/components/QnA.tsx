@@ -102,12 +102,7 @@ export default function QnA() {
     <div className="flex flex-col h-full max-w-4xl mx-auto w-full">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4 shrink-0">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Q&A</h1>
-          <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-            업무 관련 질문을 자유롭게 해보세요.
-          </p>
-        </div>
+        <div />
         <button
           onClick={handleReset}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"

@@ -67,14 +67,6 @@ export default function TodoMemo() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full">
-      {/* 헤더 */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">할 일 / 메모</h1>
-        <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-          오늘의 할 일을 관리하고 메모를 남겨보세요.
-        </p>
-      </div>
-
       {/* Bento 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
