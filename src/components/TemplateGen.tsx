@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { IconReport, IconMail, IconNotes, IconBulb } from "@tabler/icons-react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { IconReport, IconMail, IconNotes, IconBulb, IconSettings } from "@tabler/icons-react";
+
+const SENDER_KEY = "worky_sender_info";
+
+interface SenderInfo {
+  org:   string;
+  name:  string;
+  title: string;
+}
 
 type TemplateType = "report" | "email" | "meeting" | "plan";
 
@@ -41,7 +50,7 @@ const TEMPLATES: TemplateOption[] = [
     placeholder: "예: 신규 프로젝트 킥오프 미팅 일정 조율. 다음 주 화요일이나 목요일 오후 2시~4시 가능.",
     systemPrompt: `당신은 비즈니스 이메일 전문가입니다. 사용자가 제공한 내용으로 격식 있는 비즈니스 이메일을 작성해주세요.
 이메일 구조: 수신자 (담당자 귀중), 제목, 인사말, 본문 (목적 → 세부 내용 → 요청/안내), 마무리 인사, 서명란.
-정중하고 명확하게 작성하세요.${KO_RULES}`,
+정중하고 명확하게 작성하세요. 서명란에는 반드시 발신자 정보를 사용하세요.${KO_RULES}`,
   },
   {
     id: "meeting",
@@ -65,13 +74,34 @@ const TEMPLATES: TemplateOption[] = [
 
 export default function TemplateGen() {
   const [selectedType, setSelectedType] = useState<TemplateType>("report");
-  const [content, setContent] = useState("");
-  const [result, setResult] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [content, setContent]           = useState("");
+  const [result, setResult]             = useState("");
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState("");
+  const [copied, setCopied]             = useState(false);
+  const [sender, setSender]             = useState<SenderInfo>({ org: "", name: "", title: "" });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SENDER_KEY);
+      if (raw) setSender(JSON.parse(raw));
+    } catch {}
+  }, []);
 
   const selectedTemplate = TEMPLATES.find((t) => t.id === selectedType)!;
+
+  const buildPrompt = () => {
+    const hasSender = sender.org || sender.name || sender.title;
+    const senderLine = hasSender
+      ? [sender.org, sender.name, sender.title].filter(Boolean).join(" ")
+      : null;
+
+    if (selectedType === "email" && senderLine) {
+      return selectedTemplate.systemPrompt +
+        `\n발신자 정보: ${senderLine}\n서명은 반드시 "감사합니다.\\n${senderLine}" 형식으로 고정하세요. 플레이스홀더 사용 금지.`;
+    }
+    return selectedTemplate.systemPrompt;
+  };
 
   const handleGenerate = async () => {
     if (!content.trim()) return;
@@ -85,7 +115,7 @@ export default function TemplateGen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [{ role: "user", content }],
-          systemPrompt: selectedTemplate.systemPrompt,
+          systemPrompt: buildPrompt(),
         }),
       });
       const data = await res.json();
@@ -114,8 +144,25 @@ export default function TemplateGen() {
     URL.revokeObjectURL(url);
   };
 
+  const hasSender = sender.org || sender.name || sender.title;
+
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full">
+
+      {/* 이메일 탭 선택 시 발신자 없으면 안내 */}
+      {selectedType === "email" && !hasSender && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
+          <span>이메일 서명에 사용할 내 정보가 없습니다.</span>
+          <Link
+            href="/settings"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors shrink-0"
+          >
+            <IconSettings className="w-3.5 h-3.5" />
+            설정에서 입력
+          </Link>
+        </div>
+      )}
+
       {/* 유형 선택 — Bento 스타일 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {TEMPLATES.map((tpl) => (
