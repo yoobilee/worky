@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse } from "@tabler/icons-react";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 
 interface SidebarProps {
@@ -102,6 +102,11 @@ const navItems = [
           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
     ),
+  },
+  {
+    href: "/insight",
+    label: "데이터 인사이트",
+    icon: <IconChartBar className="w-4 h-4" />,
   },
   {
     href: "/glossary",
