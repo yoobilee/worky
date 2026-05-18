@@ -207,7 +207,7 @@ export default function DocSummary() {
       </div>
 
       {/* 입력 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
         {inputMode === "text" ? (
           <>
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
@@ -217,7 +217,7 @@ export default function DocSummary() {
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               placeholder="요약할 내용을 붙여넣으세요..."
-              className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             {textInput && (
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5 text-right">
@@ -273,9 +273,11 @@ export default function DocSummary() {
             {extractedText && !extracting && (
               <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
                 <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">추출된 텍스트 미리보기</p>
-                <p className="text-xs text-slate-600 dark:text-zinc-400 line-clamp-4 leading-relaxed">
-                  {extractedText}
-                </p>
+                <div className="max-h-[80px] overflow-hidden">
+                  <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+                    {extractedText}
+                  </p>
+                </div>
                 <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">
                   총 {extractedText.length.toLocaleString()}자 추출됨
                 </p>
