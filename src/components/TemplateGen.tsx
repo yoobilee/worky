@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { IconReport, IconMail, IconNotes, IconBulb, IconSettings } from "@tabler/icons-react";
+import { IconReport, IconMail, IconNotes, IconBulb, IconSettings, IconAlertTriangle } from "@tabler/icons-react";
 
 const SENDER_KEY = "worky_sender_info";
 
@@ -88,6 +88,7 @@ export default function TemplateGen() {
   const [error, setError]               = useState("");
   const [copied, setCopied]             = useState(false);
   const [sender, setSender]             = useState<SenderInfo>({ org: "", name: "", title: "" });
+  const [pendingTab, setPendingTab]     = useState<TemplateType | null>(null);
 
   useEffect(() => {
     try {
@@ -121,13 +122,19 @@ export default function TemplateGen() {
   const handleTabChange = (type: TemplateType) => {
     if (type === selectedType) return;
     if (content.trim() || result) {
-      const ok = confirm("작성 중인 내용이 있습니다. 탭을 이동하면 내용이 삭제됩니다. 이동하시겠습니까?");
-      if (!ok) return;
+      setPendingTab(type); // 모달 표시
+    } else {
+      setSelectedType(type);
     }
-    setSelectedType(type);
+  };
+
+  const confirmTabChange = () => {
+    if (!pendingTab) return;
+    setSelectedType(pendingTab);
     setContent("");
     setResult("");
     setError("");
+    setPendingTab(null);
   };
 
   const handleGenerate = async () => {
@@ -175,6 +182,38 @@ export default function TemplateGen() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full">
+
+      {/* 탭 이동 확인 모달 */}
+      {pendingTab && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-6 w-full max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                <IconAlertTriangle className="w-5 h-5 text-[#6C63FF]" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-zinc-100">탭 이동 확인</h3>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed mb-6">
+              작성 중인 내용이 있습니다. 탭을 이동하면 내용이 삭제됩니다. 이동하시겠습니까?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setPendingTab(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmTabChange}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-colors"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                이동하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 이메일 탭 선택 시 발신자 없으면 안내 */}
       {selectedType === "email" && !hasSender && (
