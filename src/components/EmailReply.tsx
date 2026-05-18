@@ -43,8 +43,16 @@ function buildSystemPrompt(sender: SenderInfo, tone: Tone): string {
   return `당신은 비즈니스 이메일 작성 전문가입니다.
 사용자가 받은 이메일 내용과 원하는 답장 톤을 제공하면, 해당 톤에 맞는 한국어 답장 초안 3가지를 작성하세요.
 ${senderInfo}
-반드시 아래 JSON 형식으로만 응답하세요. 마크다운 코드블록, 설명 텍스트는 절대 포함하지 마세요.
-{"drafts":["초안1 전체 내용","초안2 전체 내용","초안3 전체 내용"]}
+응답은 반드시 아래 구분자 형식으로만 작성하세요. JSON, 마크다운, 설명 텍스트는 절대 포함하지 마세요.
+
+[초안 1]
+(첫 번째 이메일 본문 전체)
+
+[초안 2]
+(두 번째 이메일 본문 전체)
+
+[초안 3]
+(세 번째 이메일 본문 전체)
 
 각 초안은 완성된 이메일 본문이어야 합니다. 인사말 포함, 200자 내외로 작성하세요.
 각 초안 마지막에 반드시 아래 서명을 포함하세요:
@@ -53,15 +61,27 @@ ${senderLine}`;
 }
 
 function parseDrafts(raw: string): string[] {
+  // 1차: [초안 N] 구분자 파싱
+  const sections = raw.split(/\[초안\s*\d+\]/);
+  const drafts = sections
+    .map((s) => s.trim())
+    .filter((s) => s.length > 10);
+  if (drafts.length >= 2) return drafts.slice(0, 3);
+
+  // 2차: JSON 파싱 시도
   try {
     const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return [];
-    const parsed = JSON.parse(match[0]);
-    if (Array.isArray(parsed.drafts)) return parsed.drafts.slice(0, 3);
-    return [];
-  } catch {
-    return [];
-  }
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed.drafts) && parsed.drafts.length > 0)
+        return parsed.drafts.slice(0, 3);
+    }
+  } catch {}
+
+  // 3차: 전체 응답을 초안 1개로 fallback
+  const trimmed = raw.trim();
+  if (trimmed.length > 0) return [trimmed];
+  return [];
 }
 
 export default function EmailReply() {
@@ -123,7 +143,7 @@ export default function EmailReply() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       const parsed = parseDrafts(data.result);
-      if (parsed.length === 0) throw new Error("초안을 파싱하지 못했습니다. 다시 시도해주세요.");
+      if (parsed.length === 0) throw new Error("AI 응답이 비어 있습니다. 다시 시도해주세요.");
       setDrafts(parsed);
     } catch (e) {
       setError(e instanceof Error ? e.message : "이메일 생성 중 오류가 발생했습니다.");
