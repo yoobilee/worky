@@ -1,31 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   IconTie,
   IconBolt,
   IconBan,
   IconHeartHandshake,
   IconHeart,
+  IconUser,
+  IconChevronDown,
+  IconChevronUp,
+  IconCheck,
 } from "@tabler/icons-react";
 
 type Tone = "정중하게" | "간결하게" | "거절하기" | "사과하기" | "감사하기";
 
+interface SenderInfo {
+  org:   string;
+  name:  string;
+  title: string;
+}
+
+const SENDER_KEY = "worky_email_sender";
+
 const TONES: { id: Tone; Icon: React.ComponentType<{ className?: string }>; desc: string }[] = [
-  { id: "정중하게", Icon: IconTie,           desc: "격식 있고 공손한 톤" },
-  { id: "간결하게", Icon: IconBolt,          desc: "짧고 핵심만 전달" },
-  { id: "거절하기", Icon: IconBan,           desc: "정중히 거절하는 톤" },
+  { id: "정중하게", Icon: IconTie,            desc: "격식 있고 공손한 톤" },
+  { id: "간결하게", Icon: IconBolt,           desc: "짧고 핵심만 전달" },
+  { id: "거절하기", Icon: IconBan,            desc: "정중히 거절하는 톤" },
   { id: "사과하기", Icon: IconHeartHandshake, desc: "진심 어린 사과 표현" },
-  { id: "감사하기", Icon: IconHeart,         desc: "감사함을 전하는 톤" },
+  { id: "감사하기", Icon: IconHeart,          desc: "감사함을 전하는 톤" },
 ];
 
-const SYSTEM_PROMPT = `당신은 비즈니스 이메일 작성 전문가입니다.
-사용자가 받은 이메일 내용과 원하는 답장 톤을 제공하면, 해당 톤에 맞는 한국어 답장 초안 3가지를 작성하세요.
+function buildSystemPrompt(sender: SenderInfo, tone: Tone): string {
+  const hasSender = sender.org || sender.name || sender.title;
+  const senderLine = hasSender
+    ? `${[sender.org, sender.name, sender.title].filter(Boolean).join(" ")}`
+    : "[소속] [이름] [직급]";
+  const senderInfo = hasSender
+    ? `발신자 정보: ${senderLine}\n`
+    : "";
 
+  return `당신은 비즈니스 이메일 작성 전문가입니다.
+사용자가 받은 이메일 내용과 원하는 답장 톤을 제공하면, 해당 톤에 맞는 한국어 답장 초안 3가지를 작성하세요.
+${senderInfo}
 반드시 아래 JSON 형식으로만 응답하세요. 마크다운 코드블록, 설명 텍스트는 절대 포함하지 마세요.
 {"drafts":["초안1 전체 내용","초안2 전체 내용","초안3 전체 내용"]}
 
-각 초안은 완성된 이메일 본문이어야 합니다. 인사말과 서명 포함, 200자 내외로 작성하세요.`;
+각 초안은 완성된 이메일 본문이어야 합니다. 인사말 포함, 200자 내외로 작성하세요.
+각 초안 마지막에 반드시 아래 서명을 포함하세요:
+감사합니다.
+${senderLine}`;
+}
 
 function parseDrafts(raw: string): string[] {
   try {
@@ -40,12 +65,37 @@ function parseDrafts(raw: string): string[] {
 }
 
 export default function EmailReply() {
-  const [emailInput, setEmailInput] = useState("");
+  const [sender, setSender]           = useState<SenderInfo>({ org: "", name: "", title: "" });
+  const [collapsed, setCollapsed]     = useState(false);
+  const [hydrated, setHydrated]       = useState(false);
+  const [emailInput, setEmailInput]   = useState("");
   const [selectedTone, setSelectedTone] = useState<Tone>("정중하게");
-  const [drafts, setDrafts] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [drafts, setDrafts]           = useState<string[]>([]);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // 발신자 정보 로드
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SENDER_KEY);
+      if (saved) {
+        const parsed: SenderInfo = JSON.parse(saved);
+        setSender(parsed);
+        // 정보가 하나라도 있으면 접힌 상태로 시작
+        if (parsed.org || parsed.name || parsed.title) setCollapsed(true);
+      }
+    } catch {}
+    setHydrated(true);
+  }, []);
+
+  const handleSenderChange = (field: keyof SenderInfo, value: string) => {
+    const next = { ...sender, [field]: value };
+    setSender(next);
+    localStorage.setItem(SENDER_KEY, JSON.stringify(next));
+    // 세 필드 모두 입력 완료되면 자동 접기
+    if (next.org && next.name && next.title) setCollapsed(true);
+  };
 
   const handleGenerate = async () => {
     if (!emailInput.trim()) return;
@@ -64,7 +114,7 @@ export default function EmailReply() {
               content: `받은 이메일:\n${emailInput}\n\n답장 톤: ${selectedTone}`,
             },
           ],
-          systemPrompt: SYSTEM_PROMPT,
+          systemPrompt: buildSystemPrompt(sender, selectedTone),
         }),
       });
       const data = await res.json();
@@ -85,8 +135,60 @@ export default function EmailReply() {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  if (!hydrated) return null;
+
+  const hasSender = sender.org || sender.name || sender.title;
+  const senderSummary = hasSender
+    ? [sender.org, sender.name, sender.title].filter(Boolean).join(" · ")
+    : "미입력";
+
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
+
+      {/* 발신자 정보 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm shrink-0">
+        {/* 헤더 (항상 표시) */}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 text-left"
+        >
+          <div className="flex items-center gap-2">
+            <IconUser className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+            <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">발신자 정보</span>
+            {collapsed && (
+              <span className="text-xs text-slate-400 dark:text-zinc-500 ml-1">{senderSummary}</span>
+            )}
+          </div>
+          {collapsed
+            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500" />}
+        </button>
+
+        {/* 입력 필드 (접히면 숨김) */}
+        {!collapsed && (
+          <div className="px-4 pb-4 flex flex-col sm:flex-row gap-2">
+            {(["org", "name", "title"] as const).map((field) => (
+              <input
+                key={field}
+                value={sender[field]}
+                onChange={(e) => handleSenderChange(field, e.target.value)}
+                placeholder={field === "org" ? "소속 (예: 개발팀)" : field === "name" ? "이름" : "직급 (예: 사원)"}
+                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              />
+            ))}
+            {hasSender && (
+              <button
+                onClick={() => setCollapsed(true)}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition shrink-0"
+              >
+                <IconCheck className="w-3.5 h-3.5" />
+                완료
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
         <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
@@ -101,7 +203,7 @@ export default function EmailReply() {
       </div>
 
       {/* 톤 선택 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
         <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">답장 톤 선택</p>
         <div className="grid grid-cols-5 gap-2">
           {TONES.map((tone) => {
@@ -164,7 +266,7 @@ export default function EmailReply() {
         </div>
       )}
 
-      {/* 초안 결과 — Bento Grid */}
+      {/* 초안 결과 */}
       {drafts.length > 0 && (
         <div className="grid gap-3 lg:grid-cols-3">
           {drafts.map((draft, i) => (
