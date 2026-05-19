@@ -8,7 +8,11 @@ import {
   IconCircleCheck, IconMessageDots, IconNotes, IconPlus,
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
   IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
+  IconBuilding,
 } from "@tabler/icons-react";
+import {
+  loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
+} from "@/lib/menuSettings";
 import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
 import { loadCalendarEvents, type CalendarEvent } from "@/lib/calendarStorage";
 
@@ -47,6 +51,7 @@ const QUICK_LINKS = [
   { href: "/insight",   label: "데이터 인사이트", Icon: IconChartBar,       desc: "수치 분석" },
   { href: "/glossary",  label: "용어집",         Icon: IconBook,           desc: "사내 용어 관리" },
   { href: "/calendar",  label: "일정 관리",      Icon: IconCalendar,       desc: "월별 일정 관리" },
+  { href: "/clients",   label: "거래처 관리",    Icon: IconBuilding,       desc: "거래처 보고 관리" },
 ];
 
 /* ───────── 인사말 ───────── */
@@ -144,6 +149,7 @@ export default function HomePage() {
   const [geoStatus, setGeoStatus] = useState<"waiting" | "ok" | "denied">("waiting");
   const [weekStats, setWeekStats]         = useState<Partial<Record<FeatureKey, number>>>({});
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  const [menuSettings,   setMenuSettings]   = useState<MenuSettings>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 실시간 시계 + 시간대별 인사말
@@ -190,6 +196,12 @@ export default function HomePage() {
       const saved = localStorage.getItem("worky_todos");
       if (saved) setTodos(JSON.parse(saved));
     } catch {}
+
+    // 메뉴 설정
+    setMenuSettings(loadMenuSettings());
+    const onMenuChange = () => setMenuSettings(loadMenuSettings());
+    window.addEventListener(MENU_SETTINGS_EVENT, onMenuChange);
+    return () => window.removeEventListener(MENU_SETTINGS_EVENT, onMenuChange);
   }, []);
 
   // AI 연결 확인
@@ -384,7 +396,7 @@ export default function HomePage() {
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm lg:col-span-2">
           <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">빠른 접근</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {QUICK_LINKS.map(({ href, label, Icon, desc }) => (
+            {QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href)).map(({ href, label, Icon, desc }) => (
               <Link
                 key={href}
                 href={href}

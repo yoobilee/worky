@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
+import {
+  loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
+} from "@/lib/menuSettings";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -143,13 +146,19 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const { theme, toggle: toggleTheme } = useTheme();
   const st = statusConfig[aiStatus];
 
-  const [collapsed, setCollapsed] = useState(false);
-  const [mounted,   setMounted]   = useState(false);
+  const [collapsed,     setCollapsed]     = useState(false);
+  const [mounted,       setMounted]       = useState(false);
+  const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
 
   useEffect(() => {
     const saved = localStorage.getItem(COLLAPSED_KEY);
     if (saved === "true") setCollapsed(true);
+    setMenuSettings(loadMenuSettings());
     setMounted(true);
+
+    const handler = () => setMenuSettings(loadMenuSettings());
+    window.addEventListener(MENU_SETTINGS_EVENT, handler);
+    return () => window.removeEventListener(MENU_SETTINGS_EVENT, handler);
   }, []);
 
   const toggleCollapse = () => {
@@ -218,7 +227,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
 
       {/* ── 네비게이션 ── */}
       <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {navItems.map((item) => {
+        {navItems.filter((item) => isRouteEnabled(menuSettings, item.href)).map((item) => {
           const active = pathname === item.href;
           return (
             <Link

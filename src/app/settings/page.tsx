@@ -2,8 +2,13 @@
 
 import { useState, useEffect } from "react";
 import {
-  IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp,
+  IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp, IconApps,
 } from "@tabler/icons-react";
+import {
+  OPTIONAL_MENU_ITEMS, ALWAYS_VISIBLE_ITEMS,
+  loadMenuSettings, saveMenuSettings, isRouteEnabled,
+  MENU_SETTINGS_EVENT, type MenuSettings,
+} from "@/lib/menuSettings";
 
 const SENDER_KEY = "worky_sender_info";
 
@@ -14,10 +19,12 @@ interface SenderInfo {
 }
 
 export default function SettingsPage() {
-  const [info, setInfo]         = useState<SenderInfo>({ org: "", name: "", title: "" });
-  const [collapsed, setCollapsed] = useState(false);
-  const [saved, setSaved]       = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const [info,          setInfo]          = useState<SenderInfo>({ org: "", name: "", title: "" });
+  const [collapsed,     setCollapsed]     = useState(false);
+  const [saved,         setSaved]         = useState(false);
+  const [hydrated,      setHydrated]      = useState(false);
+  const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
+  const [menuCollapsed, setMenuCollapsed] = useState(false);
 
   useEffect(() => {
     try {
@@ -25,10 +32,10 @@ export default function SettingsPage() {
       if (raw) {
         const parsed: SenderInfo = JSON.parse(raw);
         setInfo(parsed);
-        // 저장된 정보가 있으면 접힌 상태로 시작
         if (parsed.org || parsed.name || parsed.title) setCollapsed(true);
       }
     } catch {}
+    setMenuSettings(loadMenuSettings());
     setHydrated(true);
   }, []);
 
@@ -42,6 +49,12 @@ export default function SettingsPage() {
     setSaved(true);
     if (info.org || info.name || info.title) setCollapsed(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleMenuToggle = (href: string) => {
+    const next = { ...menuSettings, [href]: !isRouteEnabled(menuSettings, href) };
+    setMenuSettings(next);
+    saveMenuSettings(next);
   };
 
   if (!hydrated) return null;
@@ -64,8 +77,6 @@ export default function SettingsPage() {
 
       {/* 내 정보 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-
-        {/* 헤더 (항상 표시) */}
         <button
           onClick={() => setCollapsed((v) => !v)}
           className="w-full flex items-center justify-between px-5 py-4 text-left"
@@ -91,7 +102,6 @@ export default function SettingsPage() {
             : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
         </button>
 
-        {/* 입력 영역 */}
         {!collapsed && (
           <div className="px-5 pb-5">
             <div className="flex flex-col sm:flex-row gap-3">
@@ -114,7 +124,6 @@ export default function SettingsPage() {
               ))}
             </div>
 
-            {/* 서명 미리보기 */}
             {hasSender && (
               <div className="mt-4 px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
                 <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 mb-1.5">서명 미리보기</p>
@@ -140,6 +149,85 @@ export default function SettingsPage() {
                 )}
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* 메뉴 설정 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <button
+          onClick={() => setMenuCollapsed((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+              <IconApps className="w-4 h-4 text-[#6C63FF]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">메뉴 설정</p>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                사이드바에 표시할 메뉴를 선택하세요
+              </p>
+            </div>
+          </div>
+          {menuCollapsed
+            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+        </button>
+
+        {!menuCollapsed && (
+          <div className="px-5 pb-5">
+
+            {/* 선택 메뉴 */}
+            <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
+              선택 표시
+            </p>
+            <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800 mb-4">
+              {OPTIONAL_MENU_ITEMS.map(({ href, label }) => {
+                const enabled = isRouteEnabled(menuSettings, href);
+                return (
+                  <div key={href} className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{label}</p>
+                      <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">{href}</p>
+                    </div>
+                    <button
+                      onClick={() => handleMenuToggle(href)}
+                      role="switch"
+                      aria-checked={enabled}
+                      className={[
+                        "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0",
+                        enabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                      ].join(" ")}
+                    >
+                      <span className={[
+                        "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                        enabled ? "translate-x-5" : "translate-x-1",
+                      ].join(" ")} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 공통 메뉴 (항상 표시) */}
+            <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
+              항상 표시
+            </p>
+            <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
+              {ALWAYS_VISIBLE_ITEMS.map(({ href, label }) => (
+                <div key={href} className="flex items-center justify-between px-4 py-3 opacity-60">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{label}</p>
+                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">{href}</p>
+                  </div>
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 font-medium shrink-0">
+                    항상 표시
+                  </span>
+                </div>
+              ))}
+            </div>
+
           </div>
         )}
       </div>
