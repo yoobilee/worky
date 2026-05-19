@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { IconTrash } from "@tabler/icons-react";
+import { IconTrash, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
 interface Todo {
   id: string;
@@ -19,75 +19,127 @@ const MEMO_TABS: { id: MemoTab; label: string }[] = [
   { id: "개인", label: "개인 메모" },
 ];
 
-const STORAGE_KEYS = {
-  todos:   "worky_todos",
-  memo_업무: "worky_memo_work",
-  memo_회의: "worky_memo_meeting",
-  memo_개인: "worky_memo_personal",
+const MEMO_KEYS: Record<MemoTab, string> = {
+  업무: "worky_memo_work",
+  회의: "worky_memo_meeting",
+  개인: "worky_memo_personal",
 };
 
+function toDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function todayKey(): string {
+  return toDateKey(new Date());
+}
+
+function todoStorageKey(dateKey: string): string {
+  return `worky_todos_${dateKey}`;
+}
+
+function formatDateLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dow = ["일", "월", "화", "수", "목", "금", "토"][new Date(y, m - 1, d).getDay()];
+  if (dateStr === todayKey()) return `오늘 · ${m}월 ${d}일 (${dow})`;
+  return `${m}월 ${d}일 (${dow})`;
+}
+
+function shiftDate(dateStr: string, delta: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + delta);
+  return toDateKey(d);
+}
+
 export default function TodoMemo() {
-  const [todos,    setTodos]    = useState<Todo[]>([]);
-  const [input,    setInput]    = useState("");
-  const [memoTab,  setMemoTab]  = useState<MemoTab>("업무");
-  const [memos,    setMemos]    = useState<Record<MemoTab, string>>({ 업무: "", 회의: "", 개인: "" });
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [hydrated, setHydrated] = useState(false);
+  const [todos,        setTodos]        = useState<Todo[]>([]);
+  const [input,        setInput]        = useState("");
+  const [memoTab,      setMemoTab]      = useState<MemoTab>("업무");
+  const [memos,        setMemos]        = useState<Record<MemoTab, string>>({ 업무: "", 회의: "", 개인: "" });
+  const [saveStatus,   setSaveStatus]   = useState<SaveStatus>("idle");
+  const [hydrated,     setHydrated]     = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>(todayKey);
 
-  const inputRef      = useRef<HTMLInputElement>(null);
-  const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef        = useRef<HTMLInputElement>(null);
+  const debounceRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const datePickerRef   = useRef<HTMLInputElement>(null);
+  const selectedDateRef = useRef<string>(selectedDate);
 
-  // localStorage 로드
+  // 초기 로드
   useEffect(() => {
     try {
-      const savedTodos = localStorage.getItem(STORAGE_KEYS.todos);
-      if (savedTodos) setTodos(JSON.parse(savedTodos));
+      const today = todayKey();
+      const key = todoStorageKey(today);
+      let todosData = localStorage.getItem(key);
+      // 레거시 worky_todos → 오늘 날짜 키로 마이그레이션
+      if (!todosData) {
+        const legacy = localStorage.getItem("worky_todos");
+        if (legacy) {
+          localStorage.setItem(key, legacy);
+          todosData = legacy;
+        }
+      }
+      if (todosData) setTodos(JSON.parse(todosData));
 
-      // 각 탭별 메모 로드 (레거시 worky_memo → 업무 메모로 마이그레이션)
       const legacy = localStorage.getItem("worky_memo");
       setMemos({
-        업무: localStorage.getItem(STORAGE_KEYS.memo_업무) ?? legacy ?? "",
-        회의: localStorage.getItem(STORAGE_KEYS.memo_회의) ?? "",
-        개인: localStorage.getItem(STORAGE_KEYS.memo_개인) ?? "",
+        업무: localStorage.getItem(MEMO_KEYS.업무) ?? legacy ?? "",
+        회의: localStorage.getItem(MEMO_KEYS.회의) ?? "",
+        개인: localStorage.getItem(MEMO_KEYS.개인) ?? "",
       });
     } catch {}
     setHydrated(true);
   }, []);
 
-  // 할 일 저장
+  // 할 일 저장 (ref로 정확한 날짜 키에 저장)
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEYS.todos, JSON.stringify(todos));
+    localStorage.setItem(todoStorageKey(selectedDateRef.current), JSON.stringify(todos));
   }, [todos, hydrated]);
 
-  // 메모 변경 핸들러 (debounce 500ms + 저장 상태 표시)
+  // 날짜 이동 + 해당 날짜 할 일 로드
+  const goToDate = (newDate: string) => {
+    selectedDateRef.current = newDate;
+    setSelectedDate(newDate);
+    try {
+      const saved = localStorage.getItem(todoStorageKey(newDate));
+      setTodos(saved ? JSON.parse(saved) : []);
+    } catch {
+      setTodos([]);
+    }
+  };
+
+  const openDatePicker = () => {
+    try {
+      (datePickerRef.current as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
+    } catch {
+      datePickerRef.current?.click();
+    }
+  };
+
+  // 메모 변경 (debounce 500ms)
   const handleMemoChange = (value: string) => {
     setMemos((prev) => ({ ...prev, [memoTab]: value }));
     setSaveStatus("saving");
-
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-
     debounceRef.current = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEYS[`memo_${memoTab}`], value);
+      localStorage.setItem(MEMO_KEYS[memoTab], value);
       setSaveStatus("saved");
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     }, 500);
   };
 
-  // 탭 전환
   const handleTabChange = (tab: MemoTab) => {
     setMemoTab(tab);
     setSaveStatus("idle");
     if (debounceRef.current) clearTimeout(debounceRef.current);
   };
 
-  // 메모 전체 삭제
   const clearMemo = () => {
     if (!confirm("메모를 전체 삭제할까요?")) return;
     setMemos((prev) => ({ ...prev, [memoTab]: "" }));
-    localStorage.removeItem(STORAGE_KEYS[`memo_${memoTab}`]);
+    localStorage.removeItem(MEMO_KEYS[memoTab]);
     setSaveStatus("idle");
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
@@ -114,6 +166,7 @@ export default function TodoMemo() {
   const total     = todos.length;
   const completed = todos.filter((t) => t.completed).length;
   const progress  = total === 0 ? 0 : Math.round((completed / total) * 100);
+  const isToday   = selectedDate === todayKey();
 
   if (!hydrated) return null;
 
@@ -149,8 +202,51 @@ export default function TodoMemo() {
 
         {/* 할 일 목록 */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4">
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">할 일 목록</h2>
 
+          {/* 날짜 네비게이션 */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => goToDate(shiftDate(selectedDate, -1))}
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
+              aria-label="이전 날짜"
+            >
+              <IconChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={openDatePicker}
+                className="text-sm font-semibold text-slate-700 dark:text-zinc-200 hover:text-[#6C63FF] dark:hover:text-[#8B85FF] transition-colors"
+              >
+                {formatDateLabel(selectedDate)}
+              </button>
+              {!isToday && (
+                <button
+                  onClick={() => goToDate(todayKey())}
+                  className="text-xs px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#6C63FF] hover:bg-[#6C63FF]/20 transition-colors font-medium"
+                >
+                  오늘로
+                </button>
+              )}
+              <input
+                ref={datePickerRef}
+                type="date"
+                value={selectedDate}
+                onChange={(e) => e.target.value && goToDate(e.target.value)}
+                className="sr-only"
+              />
+            </div>
+
+            <button
+              onClick={() => goToDate(shiftDate(selectedDate, 1))}
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
+              aria-label="다음 날짜"
+            >
+              <IconChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* 입력 */}
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -170,6 +266,7 @@ export default function TodoMemo() {
             </button>
           </div>
 
+          {/* 목록 */}
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {todos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-slate-300 dark:text-zinc-600">
@@ -224,10 +321,9 @@ export default function TodoMemo() {
           )}
         </div>
 
-        {/* 메모 */}
+        {/* 메모 (날짜 무관) */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-3">
 
-          {/* 헤더 */}
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">메모</h2>
             <div className="flex items-center gap-2">
@@ -247,7 +343,6 @@ export default function TodoMemo() {
             </div>
           </div>
 
-          {/* 탭 — 번역·다듬기와 동일 스타일 */}
           <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
             {MEMO_TABS.map(({ id, label }) => (
               <button
@@ -265,7 +360,6 @@ export default function TodoMemo() {
             ))}
           </div>
 
-          {/* textarea */}
           <textarea
             value={memos[memoTab]}
             onChange={(e) => handleMemoChange(e.target.value)}
@@ -273,11 +367,9 @@ export default function TodoMemo() {
             className="flex-1 min-h-[200px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
           />
 
-          {/* 글자 수 */}
           <p className="text-xs text-slate-400 dark:text-zinc-500 text-right">
             {memos[memoTab].length}자
           </p>
-
         </div>
       </div>
     </div>
