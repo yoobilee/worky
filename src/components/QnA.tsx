@@ -101,9 +101,9 @@ export default function QnA() {
   };
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col h-full max-w-4xl mx-auto w-full">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div />
         <button
           onClick={handleReset}
@@ -117,7 +117,7 @@ export default function QnA() {
       </div>
 
       {/* 채팅 영역 */}
-      <div className="overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm p-4 space-y-4 min-h-[220px] max-h-[55vh]">
+      <div className="flex-1 overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm p-4 space-y-4 mb-4">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             {msg.role === "assistant" && (
@@ -174,7 +174,7 @@ export default function QnA() {
       </div>
 
       {/* 추천 질문 */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap shrink-0">
         {["KPI가 뭔가요?", "상사에게 휴가 신청 메일 어떻게 써요?", "회의록 작성법 알려줘"].map((q) => (
           <button
             key={q}
@@ -187,7 +187,7 @@ export default function QnA() {
       </div>
 
       {/* 입력 영역 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-3">
+      <div className="shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-3">
         <div className="flex gap-2 items-end">
           <textarea
             ref={inputRef}
