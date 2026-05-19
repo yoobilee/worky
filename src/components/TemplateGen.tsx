@@ -183,7 +183,7 @@ export default function TemplateGen() {
   const hasSender = sender.org || sender.name || sender.title;
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto w-full">
+    <div className="space-y-4 max-w-4xl mx-auto w-full self-start">
 
       {/* 탭 이동 확인 모달 */}
       {pendingTab && (

@@ -46,6 +46,7 @@ const QUICK_LINKS = [
   { href: "/translate", label: "번역·다듬기",    Icon: IconLanguage,       desc: "번역 / 톤 조정" },
   { href: "/insight",   label: "데이터 인사이트", Icon: IconChartBar,       desc: "수치 분석" },
   { href: "/glossary",  label: "용어집",         Icon: IconBook,           desc: "사내 용어 관리" },
+  { href: "/calendar",  label: "일정 관리",      Icon: IconCalendar,       desc: "월별 일정 관리" },
 ];
 
 /* ───────── 인사말 ───────── */

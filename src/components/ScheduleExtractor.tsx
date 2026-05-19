@@ -130,17 +130,18 @@ export default function ScheduleExtractor() {
   };
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
       {/* 입력 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
-        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
+        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
           이메일 / 공지 / 메시지 붙여넣기
         </label>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={"안녕하세요,\n다음 주 수요일 오후 2시에 3층 회의실에서 전략 회의가 있습니다.\n참석 부탁드립니다."}
-          className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          rows={5}
+          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
         <div className="flex justify-end mt-3">
           <button
