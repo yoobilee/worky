@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   IconBuilding, IconPlus, IconPencil, IconTrash,
   IconUser, IconNotes, IconCalendar, IconArrowsSort,
@@ -93,11 +93,6 @@ const STATUS_ICONS: Record<ReportStatus, React.ReactNode> = {
   failed:     <IconCircleX      className="w-3.5 h-3.5 shrink-0" />,
 };
 
-const STATUS_CYCLE: Record<ReportStatus, ReportStatus> = {
-  incomplete: "complete",
-  complete:   "failed",
-  failed:     "incomplete",
-};
 
 /* ── 헬퍼 ── */
 function toDateKey(d: Date): string {
@@ -184,6 +179,8 @@ export default function ClientManager() {
   const [editingId,         setEditingId]         = useState<string | null>(null);
   const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
   const [expandedHistories, setExpandedHistories] = useState<Set<string>>(new Set());
+  const [openStatusId,      setOpenStatusId]      = useState<string | null>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const today = todayKey();
@@ -198,22 +195,32 @@ export default function ClientManager() {
     setHydrated(true);
   }, []);
 
-  /* ── 상태 토글 ── */
-  const toggleStatus = (id: string) => {
+  /* ── 상태 드롭다운 닫기 (외부 클릭) ── */
+  useEffect(() => {
+    if (!openStatusId) return;
+    const handler = (e: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node))
+        setOpenStatusId(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openStatusId]);
+
+  /* ── 상태 변경 ── */
+  const setStatus = (id: string, newStatus: ReportStatus) => {
     const today = todayKey();
     setClients((prev) => {
-      const updated = prev.map((c) => {
-        if (c.id !== id) return c;
-        const newStatus = STATUS_CYCLE[c.status];
-        return {
+      const updated = prev.map((c) =>
+        c.id !== id ? c : {
           ...c,
           status: newStatus,
           statusHistory: [...c.statusHistory, { date: today, status: newStatus }],
-        };
-      });
+        }
+      );
       saveClients(updated);
       return updated;
     });
+    setOpenStatusId(null);
   };
 
   /* ── 태그 ── */
@@ -565,16 +572,39 @@ export default function ClientManager() {
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={() => toggleStatus(c.id)}
-                    title="클릭하여 상태 변경"
-                    className={[
-                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all shrink-0 cursor-pointer active:scale-95",
-                      cfg.bgCls, cfg.borderCls, cfg.textCls, cfg.hoverCls,
-                    ].join(" ")}
-                  >
-                    {STATUS_ICONS[c.status]}{cfg.label}
-                  </button>
+                  {/* 상태 드롭다운 */}
+                  <div className="relative shrink-0" ref={openStatusId === c.id ? statusDropdownRef : null}>
+                    <button
+                      onClick={() => setOpenStatusId((prev) => prev === c.id ? null : c.id)}
+                      className={[
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer active:scale-95",
+                        cfg.bgCls, cfg.borderCls, cfg.textCls, cfg.hoverCls,
+                      ].join(" ")}
+                    >
+                      {STATUS_ICONS[c.status]}{cfg.label}
+                    </button>
+                    {openStatusId === c.id && (
+                      <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[100px]">
+                        {(["incomplete","complete","failed"] as ReportStatus[]).map((s) => {
+                          const sc = STATUS_CONFIG[s];
+                          return (
+                            <button
+                              key={s}
+                              onClick={() => setStatus(c.id, s)}
+                              className={[
+                                "flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold transition-colors",
+                                c.status === s
+                                  ? `${sc.bgCls} ${sc.textCls}`
+                                  : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                              ].join(" ")}
+                            >
+                              {STATUS_ICONS[s]}{sc.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* 태그 */}
