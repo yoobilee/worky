@@ -173,7 +173,7 @@ export default function EmailReply() {
           value={emailInput}
           onChange={(e) => setEmailInput(e.target.value)}
           placeholder={"안녕하세요,\n다음 주 회의 일정을 변경할 수 있을지 문의드립니다..."}
-          className="w-full h-36 px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          className="w-full h-52 px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
       </div>
 
