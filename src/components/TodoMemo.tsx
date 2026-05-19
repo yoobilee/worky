@@ -10,6 +10,7 @@ interface Todo {
   createdAt: number;
   carriedOver?: boolean;
   originalDate?: string;
+  originalId?: string;  // 이월 원본 todo의 id (중복 방지용)
 }
 
 type MemoTab = "업무" | "회의" | "개인";
@@ -62,37 +63,49 @@ function formatOriginalDate(dateStr: string): string {
   return `${m}월 ${d}일에서 이월`;
 }
 
-// 이전 날짜 미완료 항목 → 이월 처리
+// 과거 날짜 미완료 항목 → 오늘로 이월 (id 기반 중복 방지, 매번 재실행 가능)
 function doCarryover(targetDate: string, existingTodos: Todo[]): Todo[] {
-  const carryoverKey = `worky_carryover_done_${targetDate}`;
-  if (localStorage.getItem(carryoverKey)) return existingTodos;
+  // 이미 이월된 originalId 수집
+  const carriedIds = new Set(
+    existingTodos.filter((t) => t.carriedOver && t.originalId).map((t) => t.originalId!)
+  );
 
-  localStorage.setItem(carryoverKey, "done");
+  // localStorage에서 과거 날짜 키 전체 스캔
+  const pastKeys = Object.keys(localStorage).filter(
+    (k) => k.startsWith("worky_todos_") && k !== todoStorageKey(targetDate)
+  );
 
-  const yesterday = shiftDate(targetDate, -1);
-  let yTodos: Todo[] = [];
-  try {
-    const yData = localStorage.getItem(todoStorageKey(yesterday));
-    if (yData) yTodos = JSON.parse(yData);
-  } catch {}
+  const newCarryovers: Todo[] = [];
 
-  const incomplete = yTodos.filter((t) => !t.completed);
-  if (incomplete.length === 0) return existingTodos;
+  for (const key of pastKeys) {
+    try {
+      const data = localStorage.getItem(key);
+      if (!data) continue;
+      const pastTodos: Todo[] = JSON.parse(data);
+      const pastDate = key.replace("worky_todos_", "");
 
-  const alreadyTexts = new Set(existingTodos.filter((t) => t.carriedOver).map((t) => t.text));
-  const toCarry = incomplete.filter((t) => !alreadyTexts.has(t.text));
-  if (toCarry.length === 0) return existingTodos;
+      for (const t of pastTodos) {
+        // 완료됐거나 이미 이월된 항목은 이월 소스로 사용하지 않음
+        if (t.completed || t.carriedOver) continue;
+        if (carriedIds.has(t.id)) continue;
 
-  const carryItems: Todo[] = toCarry.map((t) => ({
-    id: crypto.randomUUID(),
-    text: t.text,
-    completed: false,
-    createdAt: Date.now(),
-    carriedOver: true,
-    originalDate: yesterday,
-  }));
+        newCarryovers.push({
+          id: crypto.randomUUID(),
+          text: t.text,
+          completed: false,
+          createdAt: Date.now(),
+          carriedOver: true,
+          originalDate: pastDate,
+          originalId: t.id,
+        });
+        carriedIds.add(t.id);
+      }
+    } catch {}
+  }
 
-  const merged = [...carryItems, ...existingTodos];
+  if (newCarryovers.length === 0) return existingTodos;
+
+  const merged = [...newCarryovers, ...existingTodos];
   localStorage.setItem(todoStorageKey(targetDate), JSON.stringify(merged));
   return merged;
 }
