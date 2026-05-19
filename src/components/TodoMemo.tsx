@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { IconTrash, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
 interface Todo {
@@ -8,6 +8,8 @@ interface Todo {
   text: string;
   completed: boolean;
   createdAt: number;
+  carriedOver?: boolean;
+  originalDate?: string;
 }
 
 type MemoTab = "업무" | "회의" | "개인";
@@ -25,6 +27,9 @@ const MEMO_KEYS: Record<MemoTab, string> = {
   개인: "worky_memo_personal",
 };
 
+const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+
 function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -37,17 +42,59 @@ function todoStorageKey(dateKey: string): string {
   return `worky_todos_${dateKey}`;
 }
 
-function formatDateLabel(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dow = ["일", "월", "화", "수", "목", "금", "토"][new Date(y, m - 1, d).getDay()];
-  if (dateStr === todayKey()) return `오늘 · ${m}월 ${d}일 (${dow})`;
-  return `${m}월 ${d}일 (${dow})`;
-}
-
 function shiftDate(dateStr: string, delta: number): string {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + delta);
   return toDateKey(d);
+}
+
+function formatDateLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dow = DAY_LABELS[new Date(y, m - 1, d).getDay()];
+  if (dateStr === todayKey()) return `오늘 · ${m}월 ${d}일 (${dow})`;
+  return `${m}월 ${d}일 (${dow})`;
+}
+
+function formatOriginalDate(dateStr: string): string {
+  const yesterday = shiftDate(todayKey(), -1);
+  if (dateStr === yesterday) return "어제에서 이월";
+  const [, m, d] = dateStr.split("-").map(Number);
+  return `${m}월 ${d}일에서 이월`;
+}
+
+// 이전 날짜 미완료 항목 → 이월 처리
+function doCarryover(targetDate: string, existingTodos: Todo[]): Todo[] {
+  const carryoverKey = `worky_carryover_done_${targetDate}`;
+  if (localStorage.getItem(carryoverKey)) return existingTodos;
+
+  localStorage.setItem(carryoverKey, "done");
+
+  const yesterday = shiftDate(targetDate, -1);
+  let yTodos: Todo[] = [];
+  try {
+    const yData = localStorage.getItem(todoStorageKey(yesterday));
+    if (yData) yTodos = JSON.parse(yData);
+  } catch {}
+
+  const incomplete = yTodos.filter((t) => !t.completed);
+  if (incomplete.length === 0) return existingTodos;
+
+  const alreadyTexts = new Set(existingTodos.filter((t) => t.carriedOver).map((t) => t.text));
+  const toCarry = incomplete.filter((t) => !alreadyTexts.has(t.text));
+  if (toCarry.length === 0) return existingTodos;
+
+  const carryItems: Todo[] = toCarry.map((t) => ({
+    id: crypto.randomUUID(),
+    text: t.text,
+    completed: false,
+    createdAt: Date.now(),
+    carriedOver: true,
+    originalDate: yesterday,
+  }));
+
+  const merged = [...carryItems, ...existingTodos];
+  localStorage.setItem(todoStorageKey(targetDate), JSON.stringify(merged));
+  return merged;
 }
 
 export default function TodoMemo() {
@@ -59,27 +106,45 @@ export default function TodoMemo() {
   const [hydrated,     setHydrated]     = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(todayKey);
 
+  // 커스텀 날짜 피커
+  const [pickerOpen,  setPickerOpen]  = useState(false);
+  const [pickerYear,  setPickerYear]  = useState(() => new Date().getFullYear());
+  const [pickerMonth, setPickerMonth] = useState(() => new Date().getMonth());
+
   const inputRef        = useRef<HTMLInputElement>(null);
   const debounceRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const datePickerRef   = useRef<HTMLInputElement>(null);
+  const pickerRef       = useRef<HTMLDivElement>(null);
   const selectedDateRef = useRef<string>(selectedDate);
+
+  // 피커 외부 클릭 닫기
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [pickerOpen]);
 
   // 초기 로드
   useEffect(() => {
     try {
       const today = todayKey();
       const key = todoStorageKey(today);
+      let todayTodos: Todo[] = [];
+
       let todosData = localStorage.getItem(key);
-      // 레거시 worky_todos → 오늘 날짜 키로 마이그레이션
       if (!todosData) {
         const legacy = localStorage.getItem("worky_todos");
-        if (legacy) {
-          localStorage.setItem(key, legacy);
-          todosData = legacy;
-        }
+        if (legacy) { localStorage.setItem(key, legacy); todosData = legacy; }
       }
-      if (todosData) setTodos(JSON.parse(todosData));
+      if (todosData) todayTodos = JSON.parse(todosData);
+
+      todayTodos = doCarryover(today, todayTodos);
+      setTodos(todayTodos);
 
       const legacy = localStorage.getItem("worky_memo");
       setMemos({
@@ -91,31 +156,47 @@ export default function TodoMemo() {
     setHydrated(true);
   }, []);
 
-  // 할 일 저장 (ref로 정확한 날짜 키에 저장)
+  // 할 일 저장
   useEffect(() => {
     if (!hydrated) return;
     localStorage.setItem(todoStorageKey(selectedDateRef.current), JSON.stringify(todos));
   }, [todos, hydrated]);
 
-  // 날짜 이동 + 해당 날짜 할 일 로드
-  const goToDate = (newDate: string) => {
+  // 날짜 이동 + 이월 처리
+  const goToDate = useCallback((newDate: string) => {
     selectedDateRef.current = newDate;
     setSelectedDate(newDate);
+    setPickerOpen(false);
     try {
       const saved = localStorage.getItem(todoStorageKey(newDate));
-      setTodos(saved ? JSON.parse(saved) : []);
+      let loaded: Todo[] = saved ? JSON.parse(saved) : [];
+      if (newDate === todayKey()) {
+        loaded = doCarryover(newDate, loaded);
+      }
+      setTodos(loaded);
     } catch {
       setTodos([]);
     }
+  }, []);
+
+  const openPicker = () => {
+    const [y, m] = selectedDate.split("-").map(Number);
+    setPickerYear(y);
+    setPickerMonth(m - 1);
+    setPickerOpen(true);
   };
 
-  const openDatePicker = () => {
-    try {
-      (datePickerRef.current as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
-    } catch {
-      datePickerRef.current?.click();
-    }
-  };
+  const prevPickerMonth = () => setPickerMonth((m) => m === 0 ? (setPickerYear((y) => y - 1), 11) : m - 1);
+  const nextPickerMonth = () => setPickerMonth((m) => m === 11 ? (setPickerYear((y) => y + 1), 0) : m + 1);
+
+  // 피커 날짜 그리드 계산
+  const pickerFirstDow    = new Date(pickerYear, pickerMonth, 1).getDay();
+  const pickerDaysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+  const pickerCells: (number | null)[] = [
+    ...Array(pickerFirstDow).fill(null),
+    ...Array.from({ length: pickerDaysInMonth }, (_, i) => i + 1),
+  ];
+  while (pickerCells.length % 7 !== 0) pickerCells.push(null);
 
   // 메모 변경 (debounce 500ms)
   const handleMemoChange = (value: string) => {
@@ -145,7 +226,6 @@ export default function TodoMemo() {
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
   };
 
-  // 할 일 CRUD
   const addTodo = () => {
     const text = input.trim();
     if (!text) return;
@@ -204,7 +284,7 @@ export default function TodoMemo() {
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4">
 
           {/* 날짜 네비게이션 */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between relative" ref={pickerRef}>
             <button
               onClick={() => goToDate(shiftDate(selectedDate, -1))}
               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
@@ -215,7 +295,7 @@ export default function TodoMemo() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={openDatePicker}
+                onClick={openPicker}
                 className="text-sm font-semibold text-slate-700 dark:text-zinc-200 hover:text-[#6C63FF] dark:hover:text-[#8B85FF] transition-colors"
               >
                 {formatDateLabel(selectedDate)}
@@ -228,13 +308,6 @@ export default function TodoMemo() {
                   오늘로
                 </button>
               )}
-              <input
-                ref={datePickerRef}
-                type="date"
-                value={selectedDate}
-                onChange={(e) => e.target.value && goToDate(e.target.value)}
-                className="sr-only"
-              />
             </div>
 
             <button
@@ -244,6 +317,71 @@ export default function TodoMemo() {
             >
               <IconChevronRight className="w-4 h-4" />
             </button>
+
+            {/* 커스텀 날짜 피커 드롭다운 */}
+            {pickerOpen && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3 w-64">
+                {/* 피커 헤더 */}
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <button
+                    onClick={prevPickerMonth}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
+                  >
+                    <IconChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200">
+                    {pickerYear}년 {MONTH_NAMES[pickerMonth]}
+                  </span>
+                  <button
+                    onClick={nextPickerMonth}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
+                  >
+                    <IconChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* 요일 헤더 */}
+                <div className="grid grid-cols-7 mb-1">
+                  {DAY_LABELS.map((d, i) => (
+                    <div key={d} className={`text-center text-[10px] font-medium py-1 ${
+                      i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-slate-400 dark:text-zinc-500"
+                    }`}>{d}</div>
+                  ))}
+                </div>
+
+                {/* 날짜 그리드 */}
+                <div className="grid grid-cols-7 gap-0.5">
+                  {pickerCells.map((day, idx) => {
+                    if (day === null) return <div key={idx} />;
+                    const key  = `${pickerYear}-${String(pickerMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const isSel   = key === selectedDate;
+                    const isToday = key === todayKey();
+                    const dow     = (pickerFirstDow + day - 1) % 7;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => goToDate(key)}
+                        className={[
+                          "h-7 w-full rounded-lg text-xs font-medium transition-all",
+                          isSel
+                            ? "text-white shadow-sm"
+                            : isToday
+                            ? "bg-[#6C63FF]/10 text-[#6C63FF]"
+                            : "hover:bg-slate-100 dark:hover:bg-zinc-800",
+                          !isSel && dow === 0 ? "text-red-400"
+                          : !isSel && dow === 6 ? "text-blue-400"
+                          : !isSel && !isToday ? "text-slate-700 dark:text-zinc-300"
+                          : "",
+                        ].join(" ")}
+                        style={isSel ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 입력 */}
@@ -280,11 +418,11 @@ export default function TodoMemo() {
               todos.map((todo) => (
                 <div
                   key={todo.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800/60 group transition"
+                  className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800/60 group transition"
                 >
                   <button
                     onClick={() => toggleTodo(todo.id)}
-                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all mt-0.5"
                     style={todo.completed
                       ? { background: "var(--primary)", borderColor: "var(--primary)" }
                       : { borderColor: "#cbd5e1" }}
@@ -295,12 +433,19 @@ export default function TodoMemo() {
                       </svg>
                     )}
                   </button>
-                  <span className={`flex-1 text-sm ${todo.completed ? "line-through text-slate-400 dark:text-zinc-500" : "text-slate-700 dark:text-zinc-200"}`}>
-                    {todo.text}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-sm ${todo.completed ? "line-through text-slate-400 dark:text-zinc-500" : "text-slate-700 dark:text-zinc-200"}`}>
+                      {todo.text}
+                    </span>
+                    {todo.carriedOver && todo.originalDate && (
+                      <p className="text-[10px] text-[#6C63FF]/60 dark:text-[#8B85FF]/60 mt-0.5">
+                        {formatOriginalDate(todo.originalDate)}
+                      </p>
+                    )}
+                  </div>
                   <button
                     onClick={() => deleteTodo(todo.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-400 transition"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-400 transition shrink-0"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
