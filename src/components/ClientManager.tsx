@@ -94,10 +94,12 @@ export default function ClientManager() {
         return {
           ...c,
           reportedToday: nowReported,
-          lastReportDate: nowReported ? today : c.lastReportDate,
-          reportHistory: nowReported && !history.includes(today)
-            ? [...history, today]
-            : history,
+          lastReportDate: nowReported
+            ? today
+            : c.lastReportDate === today ? null : c.lastReportDate,
+          reportHistory: nowReported
+            ? history.includes(today) ? history : [...history, today]
+            : history.filter((d) => d !== today),
         };
       });
       saveClients(updated);
@@ -281,19 +283,21 @@ export default function ClientManager() {
         </div>
       )}
 
-      {/* 통계 */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">전체</p>
-          <p className="text-2xl font-bold mt-1 text-slate-800 dark:text-slate-100">{total}</p>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">완료</p>
-          <p className="text-2xl font-bold mt-1 text-emerald-500">{reported}</p>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">미보고</p>
-          <p className="text-2xl font-bold mt-1 text-red-400">{unre}</p>
+      {/* 통계 — 하나의 카드 안에 묶기 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <div className="grid grid-cols-3 divide-x divide-slate-100 dark:divide-zinc-800">
+          <div className="px-6 py-4">
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">전체</p>
+            <p className="text-2xl font-bold mt-1 text-slate-800 dark:text-slate-100">{total}</p>
+          </div>
+          <div className="px-6 py-4">
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">보고완료</p>
+            <p className="text-2xl font-bold mt-1 text-emerald-500">{reported}</p>
+          </div>
+          <div className="px-6 py-4">
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">미보고</p>
+            <p className="text-2xl font-bold mt-1 text-red-400">{unre}</p>
+          </div>
         </div>
       </div>
 
