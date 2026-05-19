@@ -229,22 +229,36 @@ export default function DataInsight() {
       </div>
 
       {/* 입력 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col flex-1 min-h-0">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
         {inputMode === "text" ? (
           <>
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
               숫자 데이터 입력
             </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={"월별 매출 (단위: 만원)\n1월: 1,200 / 2월: 1,450 / 3월: 980\n4월: 1,700 / 5월: 2,100 / 6월: 1,890\n\nCSV, 표, 자유형식 모두 가능합니다."}
-              className="w-full flex-1 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full h-40 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={handleAnalyze}
+                disabled={loading || !input.trim()}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                {loading ? (
+                  <><IconLoader2 className="w-4 h-4 animate-spin" />분석 중...</>
+                ) : (
+                  <><IconChartBar className="w-4 h-4" />AI로 분석하기</>
+                )}
+              </button>
+            </div>
           </>
         ) : (
           <>
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
+            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
               CSV 또는 Excel 파일 업로드
             </label>
             <button
@@ -275,13 +289,13 @@ export default function DataInsight() {
               className="hidden"
             />
             {extracting && (
-              <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400 shrink-0">
+              <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
                 <span className="w-4 h-4 border-2 border-slate-300 border-t-[#6C63FF] rounded-full animate-spin shrink-0" />
                 데이터 추출 중...
               </div>
             )}
             {fileText && !extracting && (
-              <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shrink-0">
+              <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
                 <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">추출된 데이터 미리보기</p>
                 <div className="max-h-[80px] overflow-hidden">
                   <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">{fileText}</p>
@@ -291,28 +305,22 @@ export default function DataInsight() {
                 </p>
               </div>
             )}
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={handleAnalyze}
+                disabled={loading || !fileText.trim() || extracting}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                {loading ? (
+                  <><IconLoader2 className="w-4 h-4 animate-spin" />분석 중...</>
+                ) : (
+                  <><IconChartBar className="w-4 h-4" />AI로 분석하기</>
+                )}
+              </button>
+            </div>
           </>
         )}
-        <div className="flex justify-end mt-3 shrink-0">
-          <button
-            onClick={handleAnalyze}
-            disabled={loading || !sourceText.trim() || extracting}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-          >
-            {loading ? (
-              <>
-                <IconLoader2 className="w-4 h-4 animate-spin" />
-                분석 중...
-              </>
-            ) : (
-              <>
-                <IconChartBar className="w-4 h-4" />
-                AI로 분석하기
-              </>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* 에러 */}
