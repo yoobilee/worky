@@ -14,6 +14,7 @@ const routeMeta: Record<string, { title: string; desc: string; aiChip: boolean }
   "/summary":  { title: "문서 요약",    desc: "텍스트나 PDF를 붙여넣으면 AI가 요약해드립니다",        aiChip: true  },
   "/schedule":  { title: "일정 추출",   desc: "이메일·공지·메시지에서 일정 정보를 자동으로 추출합니다",  aiChip: true  },
   "/translate": { title: "번역·다듬기", desc: "텍스트를 번역하거나 비즈니스 톤으로 다듬어드립니다",        aiChip: true  },
+  "/calendar":  { title: "일정 관리",   desc: "월별 캘린더로 일정을 관리하세요",                              aiChip: false },
   "/insight":   { title: "데이터 인사이트", desc: "숫자 데이터를 붙여넣으면 AI가 핵심 수치와 트렌드를 분석합니다", aiChip: true  },
   "/glossary":  { title: "용어집",      desc: "사내 용어를 등록하고 AI로 뜻을 설명받아 보세요",            aiChip: true  },
   "/settings":  { title: "설정",        desc: "내 정보와 앱 환경설정을 관리하세요",                        aiChip: false },

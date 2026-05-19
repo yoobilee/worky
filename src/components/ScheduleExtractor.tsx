@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { trackUsage } from "@/lib/usageStats";
+import { addCalendarEvent, parseKoreanDate } from "@/lib/calendarStorage";
 import {
   IconCalendarEvent,
   IconClock,
@@ -10,6 +11,7 @@ import {
   IconCopy,
   IconCheck,
   IconClipboardList,
+  IconCalendarPlus,
 } from "@tabler/icons-react";
 
 interface Schedule {
@@ -57,6 +59,19 @@ export default function ScheduleExtractor() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | "all" | null>(null);
+  const [savedIndex, setSavedIndex]   = useState<number | null>(null);
+
+  const handleSaveToCalendar = (s: Schedule, index: number) => {
+    const date = parseKoreanDate(s.date) ?? new Date().toISOString().slice(0, 10);
+    addCalendarEvent({
+      date,
+      title: s.content,
+      time:  s.time     || undefined,
+      location: s.location || undefined,
+    });
+    setSavedIndex(index);
+    setTimeout(() => setSavedIndex(null), 2000);
+  };
 
   const handleExtract = async () => {
     if (!input.trim()) return;
@@ -189,22 +204,28 @@ export default function ScheduleExtractor() {
                   >
                     일정 {i + 1}
                   </span>
-                  <button
-                    onClick={() => handleCopyOne(s, i)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-                  >
-                    {copiedIndex === i ? (
-                      <>
-                        <IconCheck className="w-3.5 h-3.5 text-emerald-500" />
-                        복사됨!
-                      </>
-                    ) : (
-                      <>
-                        <IconCopy className="w-3.5 h-3.5" />
-                        복사
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleSaveToCalendar(s, i)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+                    >
+                      {savedIndex === i ? (
+                        <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />저장됨!</>
+                      ) : (
+                        <><IconCalendarPlus className="w-3.5 h-3.5" />일정 저장</>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleCopyOne(s, i)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+                    >
+                      {copiedIndex === i ? (
+                        <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</>
+                      ) : (
+                        <><IconCopy className="w-3.5 h-3.5" />복사</>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* 일정 필드 */}

@@ -7,9 +7,10 @@ import {
   IconListCheck, IconBulb, IconWifi, IconWifiOff, IconArrowRight,
   IconCircleCheck, IconMessageDots, IconNotes, IconPlus,
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
-  IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook,
+  IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
 } from "@tabler/icons-react";
 import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
+import { loadCalendarEvents, type CalendarEvent } from "@/lib/calendarStorage";
 
 /* ───────── 상수 ───────── */
 
@@ -140,7 +141,8 @@ export default function HomePage() {
   const [weather, setWeather]   = useState<WeatherInfo | null>(null);
   const [locationName, setLocationName] = useState("");
   const [geoStatus, setGeoStatus] = useState<"waiting" | "ok" | "denied">("waiting");
-  const [weekStats, setWeekStats] = useState<Partial<Record<FeatureKey, number>>>({});
+  const [weekStats, setWeekStats]         = useState<Partial<Record<FeatureKey, number>>>({});
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 실시간 시계 + 시간대별 인사말
@@ -173,6 +175,14 @@ export default function HomePage() {
 
     // 이번 주 사용 통계
     setWeekStats(getThisWeekStats());
+
+    // 다가오는 일정
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const upcoming = loadCalendarEvents()
+      .filter(e => e.date >= todayStr)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 3);
+    setUpcomingEvents(upcoming);
 
     // localStorage 할 일
     try {
@@ -396,7 +406,7 @@ export default function HomePage() {
       </div>
 
       {/* ── 하단 그리드 (flex-1로 나머지 공간 채움) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-h-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 flex-1 min-h-0">
 
         {/* 이번 주 활동 */}
         {(() => {
@@ -461,6 +471,43 @@ export default function HomePage() {
             </div>
           );
         })()}
+
+        {/* 다가오는 일정 */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
+              <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">다가오는 일정</span>
+            </div>
+            <Link href="/calendar"
+              className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] transition-colors">
+              전체 <IconArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          {upcomingEvents.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+              <p className="text-sm text-slate-400 dark:text-zinc-500">예정된 일정이 없습니다.</p>
+              <Link href="/calendar"
+                className="mt-2 text-xs text-[#6C63FF] hover:underline">
+                일정 추가하러 가기
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {upcomingEvents.map(ev => (
+                <div key={ev.id} className="flex items-start gap-2.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{ev.title}</p>
+                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <span>{ev.date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, d) => `${Number(m)}/${Number(d)}`)}</span>
+                      {ev.time && <><span className="opacity-40">·</span><span>{ev.time}</span></>}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* 오늘의 팁 */}
         <div
