@@ -198,7 +198,7 @@ export default function ClientManager() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
           >
             <IconArrowsSort className="w-3.5 h-3.5" />
-            {sortOrder === "unreported" ? "미보고 우선" : "이름순"}
+            {sortOrder === "unreported" ? "미보고 우선" : "거래처명순"}
           </button>
           <button
             onClick={openAddForm}
@@ -309,7 +309,7 @@ export default function ClientManager() {
           {sorted.map((c) => (
             <div
               key={c.id}
-              className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3"
+              className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3 group"
             >
               {/* 카드 헤더 */}
               <div className="flex items-start justify-between gap-2">
@@ -324,21 +324,27 @@ export default function ClientManager() {
                     </div>
                   )}
                 </div>
-                {/* 보고 상태 토글 */}
+                {/* 보고 상태 토글 — 클릭 가능한 체크박스 스타일 */}
                 <button
                   onClick={() => toggleReport(c.id)}
+                  title={c.reportedToday ? "클릭하여 미보고로 변경" : "클릭하여 보고완료 처리"}
                   className={[
-                    "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer select-none",
                     c.reportedToday
-                      ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                      : "bg-red-100 dark:bg-red-950/40 text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800",
+                      ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 active:scale-95"
+                      : "bg-red-100 dark:bg-red-950/40 text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-200 dark:hover:bg-red-900/50 active:scale-95",
                   ].join(" ")}
                 >
-                  {c.reportedToday ? (
-                    <><IconCheck className="w-3 h-3" />완료</>
-                  ) : (
-                    <><IconAlertCircle className="w-3 h-3" />미보고</>
-                  )}
+                  {/* 커스텀 체크박스 */}
+                  <span className={[
+                    "w-4 h-4 rounded flex items-center justify-center border transition-all",
+                    c.reportedToday
+                      ? "bg-emerald-500 border-emerald-500"
+                      : "bg-white dark:bg-zinc-800 border-red-300 dark:border-red-700",
+                  ].join(" ")}>
+                    {c.reportedToday && <IconCheck className="w-2.5 h-2.5 text-white" />}
+                  </span>
+                  {c.reportedToday ? "보고완료" : "미보고"}
                 </button>
               </div>
 
@@ -363,8 +369,8 @@ export default function ClientManager() {
                 </p>
               </div>
 
-              {/* 수정/삭제 */}
-              <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-zinc-800">
+              {/* 수정/삭제 — 호버 시에만 노출 */}
+              <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 <button
                   onClick={() => startEdit(c)}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
