@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   IconChevronLeft, IconChevronRight, IconPlus,
   IconTrash, IconCalendar, IconClock, IconMapPin,
-  IconPencil, IconCheck, IconX,
+  IconPencil, IconCheck, IconX, IconChevronUp,
 } from "@tabler/icons-react";
 import {
   CalendarEvent, loadCalendarEvents, saveCalendarEvents,
@@ -31,6 +31,11 @@ const HOLIDAYS: Record<string, string> = {
   "2026-09-24": "추석 연휴",
   "2026-09-25": "추석",
   "2026-09-26": "추석 연휴",
+  // 2026년 대체공휴일
+  "2026-03-02": "대체공휴일",   // 삼일절(일) → 월
+  "2026-05-25": "대체공휴일",   // 부처님오신날(일) → 월
+  "2026-08-17": "대체공휴일",   // 광복절(토) → 월
+  "2026-10-05": "대체공휴일",   // 개천절(토) → 월
 };
 
 function toKey(y: number, m: number, d: number): string {
@@ -161,7 +166,7 @@ export default function CalendarComponent() {
             const isSun    = dow === 0;
             const isSat    = dow === 6;
             return (
-              <button key={idx} onClick={() => setSelected(key)}
+              <button key={idx} onClick={() => setSelected(prev => prev === key ? null : key)}
                 className={[
                   "flex flex-col items-center justify-start pt-1.5 pb-1 px-0.5 rounded-xl transition-all min-h-[64px]",
                   isSel
@@ -205,11 +210,20 @@ export default function CalendarComponent() {
         style={{ maxHeight: selected ? "1200px" : "0px", opacity: selected ? 1 : 0 }}
       >
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
-              {selected ? formatKey(selected) : ""}
-            </h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+                {selected ? formatKey(selected) : ""}
+              </h2>
+            </div>
+            <button
+              onClick={() => setSelected(null)}
+              className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
+              aria-label="접기"
+            >
+              <IconChevronUp className="w-4 h-4" />
+            </button>
           </div>
 
           {/* 일정 목록 */}
