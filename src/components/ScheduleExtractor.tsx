@@ -21,14 +21,26 @@ interface Schedule {
   content: string;
 }
 
-const SYSTEM_PROMPT = `당신은 일정 추출 전문가입니다. 사용자가 붙여넣은 이메일, 공지, 메시지 텍스트에서 일정 정보를 모두 추출하세요.
+function buildSystemPrompt(): string {
+  const now = new Date();
+  const y   = now.getFullYear();
+  const m   = String(now.getMonth() + 1).padStart(2, "0");
+  const d   = String(now.getDate()).padStart(2, "0");
+  const dow = ["일요일","월요일","화요일","수요일","목요일","금요일","토요일"][now.getDay()];
+  const today = `${y}년 ${Number(m)}월 ${Number(d)}일 (${dow})`;
+
+  return `당신은 일정 추출 전문가입니다. 사용자가 붙여넣은 이메일, 공지, 메시지 텍스트에서 일정 정보를 모두 추출하세요.
+
+오늘 날짜: ${today}
+"다음 주 월요일", "이번 주 목요일", "내일", "모레" 등 상대적 날짜 표현은 반드시 위 오늘 날짜를 기준으로 실제 날짜(YYYY년 MM월 DD일)로 변환해서 반환하세요.
 
 반드시 아래 JSON 형식으로만 응답하세요. 마크다운 코드블록이나 설명 텍스트는 절대 포함하지 마세요.
-{"schedules":[{"date":"날짜(예: 2025년 1월 15일)","time":"시간(예: 오후 3시, 없으면 빈 문자열)","location":"장소(없으면 빈 문자열)","content":"일정 내용"}]}
+{"schedules":[{"date":"날짜(예: ${y}년 ${Number(m)}월 ${Number(d)}일)","time":"시간(예: 오후 3시, 없으면 빈 문자열)","location":"장소(없으면 빈 문자열)","content":"일정 내용"}]}
 
-- 날짜가 명확하지 않으면 문맥에서 유추하세요 (예: "다음 주 월요일" → 구체적 날짜로 변환).
+- 날짜는 항상 구체적인 날짜로 변환하세요. 상대적 표현을 그대로 두지 마세요.
 - 일정이 없으면 {"schedules":[]} 를 반환하세요.
 - 복수의 일정이 있으면 모두 추출하세요.`;
+}
 
 function parseSchedules(raw: string): Schedule[] {
   try {
@@ -85,7 +97,7 @@ export default function ScheduleExtractor() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [{ role: "user", content: input }],
-          systemPrompt: SYSTEM_PROMPT,
+          systemPrompt: buildSystemPrompt(),
         }),
       });
       const data = await res.json();
