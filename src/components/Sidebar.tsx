@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar } from "@tabler/icons-react";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 
 interface SidebarProps {
@@ -107,6 +107,11 @@ const navItems = [
     href: "/calendar",
     label: "일정 관리",
     icon: <IconCalendar className="w-4 h-4" />,
+  },
+  {
+    href: "/clients",
+    label: "거래처 관리",
+    icon: <IconBuilding className="w-4 h-4" />,
   },
   {
     href: "/insight",
