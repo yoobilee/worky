@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   IconChevronLeft, IconChevronRight, IconPlus,
   IconTrash, IconCalendar, IconClock, IconMapPin,
@@ -61,6 +61,8 @@ export default function CalendarComponent() {
   const [formLocation, setFormLocation] = useState("");
   const [hydrated,   setHydrated]   = useState(false);
   const [editingId,  setEditingId]  = useState<string | null>(null);
+  const panelWrapRef = useRef<HTMLDivElement>(null);
+  const panelRef     = useRef<HTMLDivElement>(null);
   const [editTitle,    setEditTitle]    = useState("");
   const [editTime,     setEditTime]     = useState("");
   const [editLocation, setEditLocation] = useState("");
@@ -69,6 +71,30 @@ export default function CalendarComponent() {
     setEvents(loadCalendarEvents());
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    const wrap  = panelWrapRef.current;
+    const inner = panelRef.current;
+    if (!wrap || !inner) return;
+
+    if (selected) {
+      wrap.style.height = inner.scrollHeight + "px";
+      const onEnd = () => {
+        wrap.style.height = "auto";
+        wrap.removeEventListener("transitionend", onEnd);
+      };
+      wrap.addEventListener("transitionend", onEnd);
+      return () => wrap.removeEventListener("transitionend", onEnd);
+    } else {
+      // height: auto → 숫자로 확정 → 0 으로 트랜지션
+      if (!wrap.style.height || wrap.style.height === "0px") return;
+      wrap.style.height = inner.scrollHeight + "px";
+      const raf = requestAnimationFrame(() =>
+        requestAnimationFrame(() => { wrap.style.height = "0px"; })
+      );
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [selected]);
 
   const prevMonth = () => { month === 0 ? (setYear(y => y-1), setMonth(11)) : setMonth(m => m-1); };
   const nextMonth = () => { month === 11 ? (setYear(y => y+1), setMonth(0))  : setMonth(m => m+1); };
@@ -206,10 +232,11 @@ export default function CalendarComponent() {
 
       {/* 선택 날짜 패널 — 날짜 미선택 시 숨김, 선택 시 사르르 펼침 */}
       <div
-        className="overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ maxHeight: selected ? "1200px" : "0px", opacity: selected ? 1 : 0 }}
+        ref={panelWrapRef}
+        className="overflow-hidden transition-[height,opacity] duration-300 ease-in-out"
+        style={{ height: 0, opacity: selected ? 1 : 0 }}
       >
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+        <div ref={panelRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
