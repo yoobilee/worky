@@ -282,7 +282,7 @@ export default function ClientManager() {
       )}
 
       {/* 통계 */}
-      <div className="grid grid-cols-3 gap-3 max-w-xs">
+      <div className="grid grid-cols-3 gap-3">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">전체</p>
           <p className="text-2xl font-bold mt-1 text-slate-800 dark:text-slate-100">{total}</p>
