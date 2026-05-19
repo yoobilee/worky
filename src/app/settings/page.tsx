@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const [hydrated,      setHydrated]      = useState(false);
   const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
   const [menuCollapsed, setMenuCollapsed] = useState(false);
+  const [menuSaved,     setMenuSaved]     = useState(false);
 
   useEffect(() => {
     try {
@@ -55,6 +56,8 @@ export default function SettingsPage() {
     const next = { ...menuSettings, [href]: !isRouteEnabled(menuSettings, href) };
     setMenuSettings(next);
     saveMenuSettings(next);
+    setMenuSaved(true);
+    setTimeout(() => setMenuSaved(false), 2500);
   };
 
   if (!hydrated) return null;
@@ -164,7 +167,14 @@ export default function SettingsPage() {
               <IconApps className="w-4 h-4 text-[#6C63FF]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">메뉴 설정</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">메뉴 설정</p>
+                {menuSaved && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                    <IconCheck className="w-3.5 h-3.5" />저장됨
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
                 사이드바에 표시할 메뉴를 선택하세요
               </p>

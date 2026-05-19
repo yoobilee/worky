@@ -150,6 +150,8 @@ export default function HomePage() {
   const [weekStats, setWeekStats]         = useState<Partial<Record<FeatureKey, number>>>({});
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [menuSettings,   setMenuSettings]   = useState<MenuSettings>({});
+  const [showMore,       setShowMore]       = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 실시간 시계 + 시간대별 인사말
@@ -203,6 +205,17 @@ export default function HomePage() {
     window.addEventListener(MENU_SETTINGS_EVENT, onMenuChange);
     return () => window.removeEventListener(MENU_SETTINGS_EVENT, onMenuChange);
   }, []);
+
+  // 더보기 드롭다운 외부 클릭 닫기
+  useEffect(() => {
+    if (!showMore) return;
+    const handler = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node))
+        setShowMore(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showMore]);
 
   // AI 연결 확인
   useEffect(() => {
@@ -395,26 +408,75 @@ export default function HomePage() {
         {/* 빠른 접근 */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm lg:col-span-2">
           <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">빠른 접근</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href)).map(({ href, label, Icon, desc }) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all group"
-              >
-                <span
-                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white"
-                  style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-                >
-                  <Icon className="w-4 h-4" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate">{label}</p>
-                  <p className="text-xs text-slate-400 dark:text-zinc-500 truncate">{desc}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {(() => {
+            const active = QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href));
+            const hasMore = active.length > 11;
+            const displayed = hasMore ? active.slice(0, 11) : active;
+            const rest      = hasMore ? active.slice(11) : [];
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {displayed.map(({ href, label, Icon, desc }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all group"
+                  >
+                    <span
+                      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white"
+                      style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate">{label}</p>
+                      <p className="text-xs text-slate-400 dark:text-zinc-500 truncate">{desc}</p>
+                    </div>
+                  </Link>
+                ))}
+
+                {hasMore && (
+                  <div className="relative" ref={moreRef}>
+                    <button
+                      onClick={() => setShowMore((v) => !v)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all"
+                    >
+                      <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-slate-100 dark:bg-zinc-800">
+                        <IconArrowRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+                      </span>
+                      <div className="min-w-0 text-left">
+                        <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">더보기</p>
+                        <p className="text-xs text-slate-400 dark:text-zinc-500">{rest.length}개</p>
+                      </div>
+                    </button>
+
+                    {showMore && (
+                      <div className="absolute right-0 bottom-full mb-1 z-50 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden min-w-[200px]">
+                        {rest.map(({ href, label, Icon, desc }) => (
+                          <Link
+                            key={href}
+                            href={href}
+                            onClick={() => setShowMore(false)}
+                            className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-0"
+                          >
+                            <span
+                              className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-white"
+                              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                            >
+                              <Icon className="w-3.5 h-3.5" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{label}</p>
+                              <p className="text-xs text-slate-400 dark:text-zinc-500 truncate">{desc}</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
