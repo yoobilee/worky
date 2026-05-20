@@ -249,21 +249,19 @@ function GrassGrid({
   const cumMap: Record<string, number> = {};
   for (const d of allDates) { if (dailyLog[d] === "done") cumDone++; cumMap[d] = cumDone; }
 
-  // 시작 주의 월요일부터 끝 주의 일요일까지 패딩 (Mon-first)
+  // 시작 주의 일요일부터 끝 주의 토요일까지 패딩 (Sun-first)
   const startDate = new Date(contractStart + "T00:00:00");
-  const startDow  = startDate.getDay(); // 0=Sun,1=Mon,...
-  const firstMon  = new Date(startDate);
-  firstMon.setDate(startDate.getDate() - (startDow === 0 ? 6 : startDow - 1));
+  const firstSun  = new Date(startDate);
+  firstSun.setDate(startDate.getDate() - startDate.getDay());
 
   const endDate  = new Date(contractEnd + "T00:00:00");
-  const endDow   = endDate.getDay();
-  const lastSun  = new Date(endDate);
-  lastSun.setDate(endDate.getDate() + (endDow === 0 ? 0 : 7 - endDow));
+  const lastSat  = new Date(endDate);
+  lastSat.setDate(endDate.getDate() + (6 - endDate.getDay()));
 
-  // 주(column) × 7요일(row) 2차원 배열 생성 (Mon=row0 … Sun=row6)
+  // 주(column) × 7요일(row) 2차원 배열 생성 (Sun=row0 … Sat=row6)
   const weeks: (string | null)[][] = [];
-  const iter = new Date(firstMon);
-  while (iter <= lastSun) {
+  const iter = new Date(firstSun);
+  while (iter <= lastSat) {
     const week: (string | null)[] = [];
     for (let row = 0; row < 7; row++) {
       const key = toDateKey(iter);
@@ -273,8 +271,8 @@ function GrassGrid({
     weeks.push(week);
   }
 
-  // DOW_LABELS: Mon=row0, Tue=row1, ..., Sun=row6
-  const DOW_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
+  // DOW_LABELS: Sun=row0, Mon=row1, Tue=row2, Wed=row3, Thu=row4, Fri=row5, Sat=row6
+  const DOW_LABELS = ["Sun", "", "", "Wed", "", "Fri", ""];
 
   const Cell = ({ date }: { date: string | null }) => {
     if (!date) return <div className="w-3.5 h-3.5 shrink-0" />;
@@ -314,7 +312,7 @@ function GrassGrid({
   };
 
   return (
-    <div className="w-full flex flex-col items-center">
+    <div className="w-full flex flex-col">
       <div className="flex items-stretch gap-1">
         {/* 요일 라벨 열 */}
         <div className="flex flex-col gap-0.5">
@@ -334,7 +332,7 @@ function GrassGrid({
         </div>
       </div>
       {/* 범례 */}
-      <div className="flex items-center gap-3 mt-2">
+      <div className="flex items-center gap-3 mt-2 self-start">
         {[
           { cls: "bg-emerald-500",                label: "완료"   },
           { cls: "bg-red-400",                    label: "미달성" },
