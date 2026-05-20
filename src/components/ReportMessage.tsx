@@ -173,7 +173,7 @@ export default function ReportMessage() {
           style={{ maxHeight: sampleOpen ? "280px" : "0px", opacity: sampleOpen ? 1 : 0 }}
           className="overflow-hidden transition-all duration-300 ease-in-out"
         >
-          <div className="px-5 pb-5">
+          <div className="px-5 pt-1 pb-5">
             <textarea
               value={customToneSample}
               onChange={(e) => handleCustomToneChange(e.target.value)}
