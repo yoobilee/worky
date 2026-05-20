@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Worky — AI 업무 보조 도구
 
-## Getting Started
+신입 사무직 직장인을 위한 AI 기반 업무 보조 웹 앱입니다.  
+반복적인 업무 문서 작성, 일정 정리, 거래처 관리 등을 AI가 빠르게 처리해 드립니다.
 
-First, run the development server:
+**배포 URL**: [https://worky-alpha.vercel.app](https://worky-alpha.vercel.app)
+
+---
+
+## 기술 스택
+
+| 항목 | 내용 |
+|------|------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| AI | Groq API (LLaMA 4) |
+| 배포 | Vercel |
+| 데이터 저장 | localStorage (서버 DB 없음) |
+
+---
+
+## 주요 기능
+
+### 홈
+오늘의 업무 현황을 한눈에 확인합니다. AI 기능 바로가기, 사용 통계, 오늘 할 일 요약을 제공합니다.
+
+### 할 일 / 메모
+날짜별 할 일 관리와 자유 메모를 지원합니다. 미완료 항목은 다음 날로 자동 이월됩니다.
+
+### Q&A
+업무 관련 질문을 AI에게 자유롭게 물어볼 수 있습니다. 대화 히스토리가 유지됩니다.
+
+### 이메일 작성
+받은 이메일을 붙여넣으면 AI가 톤에 맞는 답장 초안을 생성합니다.
+
+### 보고 메시지
+완료한 작업 내용을 입력하면 AI가 짧고 자연스러운 보고 메시지를 생성합니다.  
+정중하게 / 친근하게 / 간결하게 세 가지 톤을 선택하거나, 내 말투 샘플을 등록해 맞춤 스타일로 생성할 수 있습니다.
+
+### 템플릿 생성
+업무보고서, 이메일, 회의록, 기획안 등 업무 문서를 AI가 즉시 작성합니다.
+
+### 번역·다듬기
+텍스트를 원하는 언어로 번역하거나 비즈니스 톤으로 다듬어 드립니다.
+
+### 문서 요약
+텍스트 또는 PDF를 붙여넣으면 AI가 핵심 내용을 요약합니다.
+
+### 데이터 정리
+지저분한 텍스트 데이터를 AI가 분석해 정형화된 표로 변환합니다. CSV 다운로드를 지원합니다.
+
+### 일정 추출
+이메일·공지·메시지에서 일정 정보를 자동으로 추출해 정리합니다.
+
+### 일정 관리
+월별 캘린더로 일정을 등록하고 관리합니다. 한국 공휴일 및 대체공휴일이 표시됩니다.
+
+### 데이터 인사이트
+숫자 데이터를 붙여넣으면 AI가 핵심 수치와 트렌드를 분석합니다.
+
+### 용어집
+사내 용어를 등록하고 AI로 뜻을 설명받을 수 있습니다.
+
+### 거래처 관리
+거래처별 보고 현황, 담당자 정보, 계약 기간을 관리합니다.  
+진행 중인 거래처는 GitHub 스타일 잔디밭 그리드로 일별 진행 현황을 시각화합니다.
+
+### 설정
+내 정보, 다크모드, 사이드바 메뉴 표시 항목 등 앱 환경을 설정합니다.
+
+---
+
+## 로컬 실행 방법
 
 ```bash
+# 1. 저장소 클론
+git clone https://github.com/yoobilee/worky.git
+cd worky
+
+# 2. 의존성 설치
+npm install
+
+# 3. 환경변수 설정
+cp .env.example .env.local
+# .env.local에 GROQ_API_KEY 입력
+
+# 4. 개발 서버 실행
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 [http://localhost:3000](http://localhost:3000) 접속
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 환경변수
 
-## Learn More
+`.env.local` 파일에 아래 변수를 설정하세요.
 
-To learn more about Next.js, take a look at the following resources:
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Groq API 키는 [https://console.groq.com](https://console.groq.com) 에서 발급받을 수 있습니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> API 키는 서버 사이드(`/api/groq`)에서만 사용되며 클라이언트에 노출되지 않습니다.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 라이선스
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
