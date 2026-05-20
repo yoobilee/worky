@@ -147,7 +147,7 @@ export default function ReportMessage() {
       </div>
 
       {/* 내 말투 샘플 카드 — 접기/펼치기 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-[#6C63FF]/40 shadow-sm overflow-hidden bg-[#6C63FF]/[0.04] dark:bg-[#6C63FF]/[0.08]">
         {/* 헤더 토글 버튼 */}
         <button
           type="button"
