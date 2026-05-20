@@ -965,12 +965,12 @@ export default function ClientManager() {
                           next.has(c.id) ? next.delete(c.id) : next.add(c.id);
                           return next;
                         })}
-                        className="flex items-center gap-1.5 w-full mb-1"
+                        className="group/grass flex items-center gap-1.5 w-full mb-1 cursor-pointer"
                       >
-                        <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">진행 현황</p>
+                        <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider transition-colors group-hover/grass:text-[#6C63FF]">진행 현황</p>
                         {grassOpen
-                          ? <IconChevronUp   className="w-3 h-3 text-slate-400 dark:text-zinc-500" />
-                          : <IconChevronDown className="w-3 h-3 text-slate-400 dark:text-zinc-500" />}
+                          ? <IconChevronUp   className="w-3 h-3 text-slate-400 dark:text-zinc-500 transition-colors group-hover/grass:text-[#6C63FF]" />
+                          : <IconChevronDown className="w-3 h-3 text-slate-400 dark:text-zinc-500 transition-colors group-hover/grass:text-[#6C63FF]" />}
                       </button>
                       <div
                         style={{ maxHeight: grassOpen ? "400px" : "0px", opacity: grassOpen ? 1 : 0 }}
