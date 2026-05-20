@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp, IconApps,
+  IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
 } from "@tabler/icons-react";
 import {
   OPTIONAL_MENU_ITEMS, ALWAYS_VISIBLE_ITEMS,
@@ -10,13 +11,57 @@ import {
   MENU_SETTINGS_EVENT, type MenuSettings,
 } from "@/lib/menuSettings";
 
-const SENDER_KEY = "worky_sender_info";
+const SENDER_KEY  = "worky_sender_info";
+const JOB_KEY     = "worky_job_preset";
 
 interface SenderInfo {
   org:   string;
   name:  string;
   title: string;
 }
+
+const ALL_OPTIONAL_HREFS = OPTIONAL_MENU_ITEMS.map((i) => i.href);
+
+interface JobPreset {
+  id:    string;
+  label: string;
+  icon:  React.ElementType;
+  desc:  string;
+  on:    string[] | null; // null = 전체
+}
+
+const JOB_PRESETS: JobPreset[] = [
+  {
+    id: "marketing", label: "마케팅/영업",      icon: IconBriefcase,
+    desc: "영업·고객 관리 중심",
+    on: ["/report", "/clients", "/template", "/summary"],
+  },
+  {
+    id: "it",        label: "IT직군",            icon: IconCode,
+    desc: "개발자, QA, 기획자 등",
+    on: ["/data", "/insight", "/translate", "/summary", "/template", "/glossary"],
+  },
+  {
+    id: "admin",     label: "경영지원/총무",      icon: IconBuildingSkyscraper,
+    desc: "문서·일정 관리 중심",
+    on: ["/summary", "/template", "/translate", "/data"],
+  },
+  {
+    id: "office",    label: "사무직",             icon: IconFileText,
+    desc: "일반 사무 업무",
+    on: ["/summary", "/template", "/translate", "/glossary", "/data"],
+  },
+  {
+    id: "designer",  label: "디자이너",           icon: IconPalette,
+    desc: "크리에이티브 직군",
+    on: ["/translate", "/glossary", "/template", "/summary"],
+  },
+  {
+    id: "other",     label: "기타",               icon: IconApps,
+    desc: "전체 기능 사용",
+    on: null,
+  },
+];
 
 export default function SettingsPage() {
   const [info,          setInfo]          = useState<SenderInfo>({ org: "", name: "", title: "" });
@@ -26,6 +71,10 @@ export default function SettingsPage() {
   const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
   const [menuCollapsed, setMenuCollapsed] = useState(false);
   const [menuSaved,     setMenuSaved]     = useState(false);
+  const [jobPreset,     setJobPreset]     = useState<string | null>(null);
+  const [pendingPreset, setPendingPreset] = useState<string | null>(null);
+  const [jobSaved,      setJobSaved]      = useState(false);
+  const [jobCollapsed,  setJobCollapsed]  = useState(false);
 
   useEffect(() => {
     try {
@@ -37,6 +86,7 @@ export default function SettingsPage() {
       }
     } catch {}
     setMenuSettings(loadMenuSettings());
+    setJobPreset(localStorage.getItem(JOB_KEY));
     setHydrated(true);
   }, []);
 
@@ -60,12 +110,34 @@ export default function SettingsPage() {
     setTimeout(() => setMenuSaved(false), 2500);
   };
 
+  const handlePresetConfirm = () => {
+    if (!pendingPreset) return;
+    const preset = JOB_PRESETS.find((p) => p.id === pendingPreset);
+    if (!preset) return;
+
+    const next: MenuSettings = Object.fromEntries(
+      ALL_OPTIONAL_HREFS.map((href) => [
+        href,
+        preset.on === null ? true : preset.on.includes(href),
+      ])
+    );
+    setMenuSettings(next);
+    saveMenuSettings(next);
+    localStorage.setItem(JOB_KEY, pendingPreset);
+    setJobPreset(pendingPreset);
+    setPendingPreset(null);
+    setJobSaved(true);
+    setTimeout(() => setJobSaved(false), 2500);
+  };
+
   if (!hydrated) return null;
 
   const hasSender = info.org || info.name || info.title;
-  const summary = hasSender
+  const summary   = hasSender
     ? [info.org, info.name, info.title].filter(Boolean).join(" · ")
     : "미입력";
+
+  const pendingPresetLabel = JOB_PRESETS.find((p) => p.id === pendingPreset)?.label ?? "";
 
   return (
     <div className="max-w-2xl mx-auto w-full space-y-4">
@@ -156,6 +228,79 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* 직업군 설정 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <button
+          onClick={() => setJobCollapsed((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+              <IconBriefcase className="w-4 h-4 text-[#6C63FF]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">직업군 설정</p>
+                {jobSaved && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                    <IconCheck className="w-3.5 h-3.5" />저장됨
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                {jobPreset
+                  ? `현재: ${JOB_PRESETS.find((p) => p.id === jobPreset)?.label ?? ""}`
+                  : "직업군에 맞는 메뉴를 자동으로 설정합니다"}
+              </p>
+            </div>
+          </div>
+          {jobCollapsed
+            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+        </button>
+
+        {!jobCollapsed && (
+          <div className="px-5 pb-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {JOB_PRESETS.map((preset) => {
+                const Icon   = preset.icon;
+                const active = jobPreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setPendingPreset(preset.id)}
+                    className={[
+                      "flex flex-col gap-2 p-3.5 rounded-2xl border text-left transition-all",
+                      active
+                        ? "border-[#6C63FF] shadow-md"
+                        : "border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/40 hover:shadow-sm",
+                    ].join(" ")}
+                    style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}
+                  >
+                    <div className={[
+                      "w-7 h-7 rounded-xl flex items-center justify-center shrink-0",
+                      active ? "bg-[#6C63FF]/15" : "bg-slate-100 dark:bg-zinc-800",
+                    ].join(" ")}>
+                      <Icon className={`w-4 h-4 ${active ? "text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`} />
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold leading-tight ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-200"}`}>
+                        {preset.label}
+                      </p>
+                      <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 leading-snug">{preset.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-3">
+              직업군을 선택하면 추천 메뉴가 자동으로 적용됩니다. 이후 메뉴 설정에서 개별 수정 가능합니다.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* 메뉴 설정 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
         <button
@@ -241,6 +386,43 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* 확인 모달 */}
+      {pendingPreset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-6 w-full max-w-sm">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">직업군 설정 변경</h3>
+              <button
+                onClick={() => setPendingPreset(null)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+              >
+                <IconX className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
+              <span className="font-semibold text-[#6C63FF]">{pendingPresetLabel}</span> 직군으로 메뉴를 설정하시겠습니까?
+              <br />
+              <span className="text-slate-400 dark:text-zinc-500 text-xs">현재 메뉴 설정이 초기화됩니다.</span>
+            </p>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setPendingPreset(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+              >
+                취소
+              </button>
+              <button
+                onClick={handlePresetConfirm}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
