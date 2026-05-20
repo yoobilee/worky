@@ -272,7 +272,7 @@ function GrassGrid({
   }
 
   // DOW_LABELS: Sun=row0, Mon=row1, Tue=row2, Wed=row3, Thu=row4, Fri=row5, Sat=row6
-  const DOW_LABELS = ["Sun", "", "", "Wed", "", "Fri", ""];
+  const DOW_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
 
   const Cell = ({ date }: { date: string | null }) => {
     if (!date) return <div className="w-3.5 h-3.5 shrink-0" />;
