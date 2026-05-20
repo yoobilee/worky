@@ -343,34 +343,21 @@ function GrassGrid({
             ))}
           </div>
         </div>
-        {/* 통계 요약 */}
+        {/* 통계 + 범례 */}
         <div className="flex flex-col gap-1.5 pt-0.5">
           {[
-            { cls: "bg-emerald-500",                label: "완료",   count: statDone   },
-            { cls: "bg-red-400",                    label: "실패",   count: statFailed },
-            { cls: "bg-slate-200 dark:bg-zinc-700", label: "미확인", count: statNone   },
-          ].map(({ cls, label, count }) => (
+            { cls: "bg-emerald-500",                label: "완료",   count: statDone,   showCount: true  },
+            { cls: "bg-red-400",                    label: "실패",   count: statFailed, showCount: true  },
+            { cls: "bg-slate-200 dark:bg-zinc-700", label: "미확인", count: statNone,   showCount: true  },
+            { cls: "bg-slate-300 dark:bg-zinc-600", label: "휴일",   count: 0,          showCount: false },
+          ].map(({ cls, label, count, showCount }) => (
             <div key={label} className="flex items-center gap-1.5">
               <div className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cls}`} />
               <span className="text-[9px] text-slate-500 dark:text-zinc-400">{label}</span>
-              <span className="text-[9px] font-semibold text-slate-700 dark:text-zinc-200">{count}</span>
+              {showCount && <span className="text-[9px] font-semibold text-slate-700 dark:text-zinc-200">{count}</span>}
             </div>
           ))}
         </div>
-      </div>
-      {/* 범례 */}
-      <div className="flex items-center gap-3 mt-2">
-        {[
-          { cls: "bg-emerald-500",                label: "완료"   },
-          { cls: "bg-red-400",                    label: "실패"   },
-          { cls: "bg-slate-200 dark:bg-zinc-700", label: "미확인" },
-          { cls: "bg-slate-300 dark:bg-zinc-600", label: "휴일"   },
-        ].map(({ cls, label }) => (
-          <div key={label} className="flex items-center gap-1">
-            <div className={`w-2.5 h-2.5 rounded-sm ${cls}`} />
-            <span className="text-[9px] text-slate-400 dark:text-zinc-500">{label}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
