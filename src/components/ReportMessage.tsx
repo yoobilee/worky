@@ -1,18 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
-  IconSend, IconCopy, IconCheck, IconBuilding, IconMessage, IconChevronDown,
+  IconSend, IconCopy, IconCheck, IconChevronDown,
 } from "@tabler/icons-react";
 import { trackUsage } from "@/lib/usageStats";
-
-/* ── 타입 ── */
-interface ClientOption {
-  id:         string;
-  name:       string;
-  contact:    string;
-  reportTone: string;
-}
 
 type ToneId = "formal" | "friendly" | "concise";
 
@@ -42,21 +34,6 @@ const TONE_GUIDE: Record<ToneId, string> = {
 };
 
 /* ── 헬퍼 ── */
-function loadClients(): ClientOption[] {
-  try {
-    const raw = localStorage.getItem("worky_clients");
-    if (!raw) return [];
-    return (JSON.parse(raw) as ClientOption[]).map((c) => ({
-      id:         c.id         ?? "",
-      name:       c.name       ?? "",
-      contact:    c.contact    ?? "",
-      reportTone: c.reportTone ?? "",
-    }));
-  } catch {
-    return [];
-  }
-}
-
 function buildSystemPrompt(tone: ToneId, clientTone: string, customSample?: string): string {
   let prompt: string;
 
@@ -92,22 +69,18 @@ ${TONE_GUIDE[tone]}`;
 
 /* ── 컴포넌트 ── */
 export default function ReportMessage() {
-  const [clients,    setClients]    = useState<ClientOption[]>([]);
-  const [clientId,   setClientId]   = useState("");
-  const [workInput,  setWorkInput]  = useState("");
-  const [tone,       setTone]       = useState<ToneId>("formal");
-  const [result,     setResult]     = useState("");
-  const [loading,    setLoading]    = useState(false);
-  const [error,      setError]      = useState("");
-  const [copied,        setCopied]        = useState(false);
-  const [hydrated,      setHydrated]      = useState(false);
-  const [dropdownOpen,    setDropdownOpen]    = useState(false);
+  const [workInput,        setWorkInput]        = useState("");
+  const [tone,             setTone]             = useState<ToneId>("formal");
+  const [result,           setResult]           = useState("");
+  const [loading,          setLoading]          = useState(false);
+  const [error,            setError]            = useState("");
+  const [copied,           setCopied]           = useState(false);
+  const [hydrated,         setHydrated]         = useState(false);
   const [customToneSample, setCustomToneSample] = useState("");
   const [useCustomTone,    setUseCustomTone]    = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [sampleOpen,       setSampleOpen]       = useState(false);
 
   useEffect(() => {
-    setClients(loadClients());
     try {
       const saved = localStorage.getItem("worky_report_tone_sample");
       if (saved) setCustomToneSample(saved);
@@ -121,25 +94,11 @@ export default function ReportMessage() {
     if (!v.trim()) setUseCustomTone(false);
   };
 
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
-        setDropdownOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [dropdownOpen]);
-
-  const selectedClient = clients.find((c) => c.id === clientId) ?? null;
-
   const handleGenerate = async () => {
     if (!workInput.trim()) return;
     setLoading(true);
     setError("");
     setResult("");
-
-    const clientTone = selectedClient?.reportTone ?? "";
 
     try {
       const res = await fetch("/api/groq", {
@@ -147,7 +106,7 @@ export default function ReportMessage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [{ role: "user", content: workInput.trim() }],
-          systemPrompt: buildSystemPrompt(tone, clientTone, useCustomTone ? customToneSample : undefined),
+          systemPrompt: buildSystemPrompt(tone, "", useCustomTone ? customToneSample : undefined),
         }),
       });
       const data = await res.json();
@@ -173,82 +132,6 @@ export default function ReportMessage() {
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full self-start">
 
-      {/* 거래처 선택 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 flex items-center gap-2">
-          <IconBuilding className="w-4 h-4 text-[#6C63FF]" />
-          거래처 선택
-        </label>
-        <div className="relative" ref={dropdownRef}>
-          {/* 트리거 버튼 */}
-          <button
-            type="button"
-            onClick={() => setDropdownOpen((v) => !v)}
-            className={[
-              "w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all",
-              dropdownOpen
-                ? "border-[#6C63FF]/60 ring-2 ring-[#6C63FF]/40 bg-white dark:bg-zinc-900"
-                : "border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:border-[#6C63FF]/40",
-            ].join(" ")}
-          >
-            <span className={clientId ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500"}>
-              {selectedClient ? selectedClient.name : "직접 입력 (거래처 선택 안 함)"}
-            </span>
-            <IconChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
-          </button>
-
-          {/* 드롭다운 목록 */}
-          {dropdownOpen && (
-            <div className="absolute left-0 top-full mt-1 z-50 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden">
-              {/* 직접 입력 */}
-              <button
-                type="button"
-                onClick={() => { setClientId(""); setDropdownOpen(false); }}
-                className={[
-                  "w-full flex items-center px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-zinc-800",
-                  !clientId
-                    ? "bg-[#6C63FF]/8 text-[#6C63FF] font-medium"
-                    : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                ].join(" ")}
-              >
-                직접 입력
-              </button>
-              {/* 거래처 목록 */}
-              {clients.length === 0 ? (
-                <p className="px-4 py-3 text-xs text-slate-400 dark:text-zinc-500">등록된 거래처가 없습니다</p>
-              ) : (
-                clients.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => { setClientId(c.id); setDropdownOpen(false); }}
-                    className={[
-                      "w-full flex items-center px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-0",
-                      clientId === c.id
-                        ? "bg-[#6C63FF]/8 text-[#6C63FF] font-semibold"
-                        : "text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                    ].join(" ")}
-                  >
-                    {c.name}
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* 거래처 선호사항 */}
-        {selectedClient?.reportTone && (
-          <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-[#6C63FF]/5 border border-[#6C63FF]/20">
-            <IconMessage className="w-3.5 h-3.5 text-[#6C63FF] mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-[#6C63FF] uppercase tracking-wider mb-0.5">보고 선호사항</p>
-              <p className="text-xs text-slate-600 dark:text-zinc-300">{selectedClient.reportTone}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* 작업 내용 입력 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
         <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
@@ -263,42 +146,63 @@ export default function ReportMessage() {
         />
       </div>
 
-      {/* 내 말투 샘플 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-            내 말투 샘플
-          </label>
-          {/* 사용자 설정 톤 사용 토글 */}
-          <button
-            type="button"
-            disabled={!customToneSample.trim()}
-            onClick={() => setUseCustomTone((v) => !v)}
-            className={`flex items-center gap-2 ${!customToneSample.trim() ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
-          >
+      {/* 내 말투 샘플 카드 — 접기/펼치기 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        {/* 헤더 토글 버튼 */}
+        <button
+          type="button"
+          onClick={() => setSampleOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">내 말투 샘플</span>
             <span className={[
-              "w-4 h-4 rounded flex items-center justify-center border-2 transition-all shrink-0",
-              useCustomTone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+              "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+              customToneSample.trim()
+                ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
+                : "bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500",
             ].join(" ")}>
-              {useCustomTone && <IconCheck className="w-2.5 h-2.5 text-white" />}
+              {customToneSample.trim() ? "설정됨" : "미설정"}
             </span>
-            <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">
-              사용자 설정 톤 사용
-            </span>
-          </button>
+          </div>
+          <IconChevronDown className={`w-4 h-4 text-slate-400 dark:text-zinc-500 transition-transform duration-200 ${sampleOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        {/* 접기/펼치기 본문 */}
+        <div
+          style={{ maxHeight: sampleOpen ? "280px" : "0px", opacity: sampleOpen ? 1 : 0 }}
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+        >
+          <div className="px-5 pb-5">
+            <textarea
+              value={customToneSample}
+              onChange={(e) => handleCustomToneChange(e.target.value)}
+              rows={3}
+              placeholder={"안녕하세요 대표님, 오늘 업로드 완료됐고 노출 확인했습니다. 감사합니다!"}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+            />
+            {/* 사용자 설정 톤 사용 체크박스 */}
+            <div className="mt-3 flex items-center justify-between">
+              <button
+                type="button"
+                disabled={!customToneSample.trim()}
+                onClick={() => setUseCustomTone((v) => !v)}
+                className={`flex items-center gap-2 ${!customToneSample.trim() ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+              >
+                <span className={[
+                  "w-4 h-4 rounded flex items-center justify-center border-2 transition-all shrink-0",
+                  useCustomTone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+                ].join(" ")}>
+                  {useCustomTone && <IconCheck className="w-2.5 h-2.5 text-white" />}
+                </span>
+                <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">사용자 설정 톤 사용</span>
+              </button>
+              {useCustomTone && (
+                <p className="text-xs text-[#6C63FF]/70">위 샘플 스타일로 생성됩니다</p>
+              )}
+            </div>
+          </div>
         </div>
-        <textarea
-          value={customToneSample}
-          onChange={(e) => handleCustomToneChange(e.target.value)}
-          rows={3}
-          placeholder={"안녕하세요 대표님, 오늘 업로드 완료됐고 노출 확인했습니다. 감사합니다!"}
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-        />
-        {useCustomTone && customToneSample.trim() && (
-          <p className="text-xs text-[#6C63FF]/70 mt-2">
-            위 말투 샘플 스타일로 메시지가 생성됩니다
-          </p>
-        )}
       </div>
 
       {/* 톤 선택 — 커스텀 톤 사용 시 숨김 */}
