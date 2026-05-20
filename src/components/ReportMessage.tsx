@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  IconSend, IconCopy, IconCheck, IconBuilding, IconMessage,
+  IconSend, IconCopy, IconCheck, IconBuilding, IconMessage, IconChevronDown,
 } from "@tabler/icons-react";
 import { trackUsage } from "@/lib/usageStats";
 
@@ -24,9 +24,21 @@ const TONES: { id: ToneId; label: string; desc: string }[] = [
 ];
 
 const TONE_GUIDE: Record<ToneId, string> = {
-  formal:   "정중하고 격식 있는 어투로 작성하세요. 존댓말과 형식을 갖추세요.",
-  friendly: "친근하고 따뜻한 어투로 작성하세요. 편안하지만 예의 바르게 표현하세요.",
-  concise:  "매우 간결하게 핵심만 3문장 이내로 전달하세요.",
+  formal: `격식체로 작성하세요.
+- "~드립니다", "~드렸습니다", "~해 드렸습니다", "~확인했습니다" 등 정중한 종결어미를 사용하세요.
+- 문장 끝을 "~습니다"로만 반복하지 말고 "~드립니다", "~드렸습니다", "~말씀드립니다" 등 다양하게 사용하세요.
+- 3~5문장으로 구성하세요.`,
+
+  friendly: `구어체에 가까운 따뜻한 어투로 작성하세요.
+- "~했어요", "~됐어요", "~드렸어요", "~확인했어요" 등 부드러운 종결어미를 사용하세요.
+- 실제 카톡 보고 메시지처럼 자연스럽고 가볍게 작성하세요.
+- 지나치게 딱딱하거나 사무적이지 않게, 사람 냄새 나게 쓰세요.
+- 2~4문장으로 구성하세요.`,
+
+  concise: `핵심만 1~2문장으로 매우 짧게 전달하세요.
+- 주어·설명 없이 완료된 사실만 나열하세요.
+- 군더더기 표현 없이 최대한 압축하세요.
+- "~완료", "~처리", "~전달" 등 단호한 종결 표현을 사용하세요.`,
 };
 
 /* ── 헬퍼 ── */
@@ -46,22 +58,23 @@ function loadClients(): ClientOption[] {
 }
 
 function buildSystemPrompt(tone: ToneId, clientTone: string): string {
-  let prompt = `당신은 한국 비즈니스 보고 메시지 작성 전문가입니다.
-완료한 업무 내용을 바탕으로 거래처 또는 상사에게 전달할 짧은 보고 메시지를 작성하세요.
+  let prompt = `당신은 실무 경험이 풍부한 한국 비즈니스 보고 메시지 작성 전문가입니다.
+완료한 업무 내용을 바탕으로 실제로 쓰이는 자연스러운 보고 메시지를 작성하세요.
 
-톤 지침: ${TONE_GUIDE[tone]}`;
+[톤 지침]
+${TONE_GUIDE[tone]}`;
 
   if (clientTone.trim()) {
-    prompt += `\n추가 선호사항: ${clientTone.trim()}`;
+    prompt += `\n\n[거래처 선호사항]\n${clientTone.trim()}`;
   }
 
   prompt += `
 
-규칙:
-- 4문장 이내의 짧은 보고 메시지
-- 인사말·맺음말 없이 보고 내용만
-- 마크다운 사용 금지
-- 반드시 한국어로만 작성`;
+[공통 규칙]
+- 인사말("안녕하세요" 등)·맺음말("감사합니다" 등) 없이 보고 내용만 작성
+- 마크다운(**, ## 등) 사용 금지
+- 반드시 한국어로만 작성
+- 같은 종결어미 반복 금지 — 문장마다 다른 표현 사용`;
 
   return prompt;
 }
@@ -75,13 +88,25 @@ export default function ReportMessage() {
   const [result,     setResult]     = useState("");
   const [loading,    setLoading]    = useState(false);
   const [error,      setError]      = useState("");
-  const [copied,     setCopied]     = useState(false);
-  const [hydrated,   setHydrated]   = useState(false);
+  const [copied,        setCopied]        = useState(false);
+  const [hydrated,      setHydrated]      = useState(false);
+  const [dropdownOpen,  setDropdownOpen]  = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setClients(loadClients());
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
+        setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [dropdownOpen]);
 
   const selectedClient = clients.find((c) => c.id === clientId) ?? null;
 
@@ -131,24 +156,62 @@ export default function ReportMessage() {
           <IconBuilding className="w-4 h-4 text-[#6C63FF]" />
           거래처 선택
         </label>
-        <div className="relative">
-          <select
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition appearance-none cursor-pointer"
+        <div className="relative" ref={dropdownRef}>
+          {/* 트리거 버튼 */}
+          <button
+            type="button"
+            onClick={() => setDropdownOpen((v) => !v)}
+            className={[
+              "w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all",
+              dropdownOpen
+                ? "border-[#6C63FF]/60 ring-2 ring-[#6C63FF]/40 bg-white dark:bg-zinc-900"
+                : "border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:border-[#6C63FF]/40",
+            ].join(" ")}
           >
-            <option value="">직접 입력 (거래처 선택 안 함)</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}{c.contact ? ` — ${c.contact}` : ""}
-              </option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
+            <span className={clientId ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500"}>
+              {selectedClient ? selectedClient.name : "직접 입력 (거래처 선택 안 함)"}
+            </span>
+            <IconChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {/* 드롭다운 목록 */}
+          {dropdownOpen && (
+            <div className="absolute left-0 top-full mt-1 z-50 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden">
+              {/* 직접 입력 */}
+              <button
+                type="button"
+                onClick={() => { setClientId(""); setDropdownOpen(false); }}
+                className={[
+                  "w-full flex items-center px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-zinc-800",
+                  !clientId
+                    ? "bg-[#6C63FF]/8 text-[#6C63FF] font-medium"
+                    : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                ].join(" ")}
+              >
+                직접 입력
+              </button>
+              {/* 거래처 목록 */}
+              {clients.length === 0 ? (
+                <p className="px-4 py-3 text-xs text-slate-400 dark:text-zinc-500">등록된 거래처가 없습니다</p>
+              ) : (
+                clients.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { setClientId(c.id); setDropdownOpen(false); }}
+                    className={[
+                      "w-full flex items-center px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-0",
+                      clientId === c.id
+                        ? "bg-[#6C63FF]/8 text-[#6C63FF] font-semibold"
+                        : "text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                    ].join(" ")}
+                  >
+                    {c.name}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         {/* 거래처 선호사항 */}
