@@ -13,7 +13,7 @@ import {
 /* ── 타입 ── */
 type ReportStatus = "pending" | "inprogress" | "complete" | "stopped";
 type DayStatus    = "done" | "failed";
-type SortOrder    = "pending" | "name" | "expiry";
+type SortOrder    = "inprogress" | "pending" | "expiry" | "name";
 
 interface HistoryEntry {
   date:   string;
@@ -195,7 +195,7 @@ function saveClients(clients: Client[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
 }
 
-/* ── 잔디밭 그리드 ── */
+/* ── 잔디밭 그리드 (가로 흐름) ── */
 function GrassGrid({
   contractStart,
   contractEnd,
@@ -209,7 +209,6 @@ function GrassGrid({
 }) {
   const today = todayKey();
 
-  // 전체 날짜 배열
   const allDates: string[] = [];
   const cur = new Date(contractStart + "T00:00:00");
   const end = new Date(contractEnd   + "T00:00:00");
@@ -218,7 +217,7 @@ function GrassGrid({
     cur.setDate(cur.getDate() + 1);
   }
 
-  // 누적 완료 수
+  // 누적 완료 수 (done 날짜 카운트)
   let cumDone = 0;
   const cumMap: Record<string, number> = {};
   for (const d of allDates) {
@@ -226,68 +225,43 @@ function GrassGrid({
     cumMap[d] = cumDone;
   }
 
-  // GitHub 스타일: 일요일 시작, 열 = 주
-  const firstDow = new Date(contractStart + "T00:00:00").getDay(); // 0=일
-  const padded: (string | null)[] = [...Array(firstDow).fill(null), ...allDates];
-  while (padded.length % 7 !== 0) padded.push(null);
-
-  // 7행 × N열 (행 = 요일, 열 = 주)
-  const weeks: (string | null)[][] = [];
-  for (let i = 0; i < padded.length; i += 7)
-    weeks.push(padded.slice(i, i + 7));
-
-  const DAY_INITIALS = ["일","월","화","수","목","금","토"];
-
   return (
-    <div className="overflow-x-auto pb-1">
-      <div className="flex gap-1 min-w-max">
-        {/* 요일 레이블 */}
-        <div className="flex flex-col gap-0.5 mr-0.5">
-          {DAY_INITIALS.map((d, i) => (
-            <div key={i} className="w-4 h-4 flex items-center justify-end">
-              {i % 2 === 1 && <span className="text-[8px] text-slate-400 dark:text-zinc-500">{d}</span>}
-            </div>
-          ))}
-        </div>
-        {/* 주 열 */}
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-0.5">
-            {week.map((date, di) => {
-              if (!date) return <div key={di} className="w-4 h-4" />;
-              const ds       = dailyLog[date];
-              const isFuture = date > today;
-              const isToday  = date === today;
-              const count    = ds === "done" ? cumMap[date] : 0;
-              return (
-                <button
-                  key={di}
-                  type="button"
-                  onClick={() => { if (!isFuture) onToggle(date); }}
-                  title={`${date}${ds === "done" ? ` · 누적 ${count}일` : ds === "failed" ? " · 미달성" : ""}`}
-                  className={[
-                    "w-4 h-4 rounded-sm transition-all flex items-center justify-center",
-                    isToday ? "ring-1 ring-[#6C63FF] ring-offset-1" : "",
-                    isFuture ? "opacity-25 cursor-not-allowed" : "cursor-pointer hover:opacity-80",
-                    ds === "done"   ? "bg-emerald-500"
-                    : ds === "failed" ? "bg-red-400"
-                    : "bg-slate-200 dark:bg-zinc-700",
-                  ].join(" ")}
-                >
-                  {ds === "done" && (
-                    <span className="text-[6px] font-bold text-white leading-none">{count}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+    <div>
+      {/* 날짜 칸 (가로 흐름, 자동 줄바꿈) */}
+      <div className="flex flex-wrap gap-0.5">
+        {allDates.map((date) => {
+          const ds       = dailyLog[date];
+          const isFuture = date > today;
+          const isToday  = date === today;
+          const count    = ds === "done" ? cumMap[date] : 0;
+          return (
+            <button
+              key={date}
+              type="button"
+              onClick={() => { if (!isFuture) onToggle(date); }}
+              title={`${date}${ds === "done" ? ` · 누적 ${count}일` : ds === "failed" ? " · 미달성" : ""}`}
+              className={[
+                "w-4 h-4 rounded-sm transition-all flex items-center justify-center shrink-0",
+                isToday  ? "ring-1 ring-[#6C63FF] ring-offset-1" : "",
+                isFuture ? "opacity-25 cursor-not-allowed" : "cursor-pointer hover:opacity-80",
+                ds === "done"   ? "bg-emerald-500"
+                : ds === "failed" ? "bg-red-400"
+                : "bg-slate-200 dark:bg-zinc-700",
+              ].join(" ")}
+            >
+              {ds === "done" && (
+                <span className="text-[6px] font-bold text-white leading-none">{count}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
       {/* 범례 */}
       <div className="flex items-center gap-3 mt-2">
         {[
-          { cls: "bg-emerald-500", label: "완료" },
-          { cls: "bg-red-400",     label: "미달성" },
-          { cls: "bg-slate-200 dark:bg-zinc-700", label: "미확인" },
+          { cls: "bg-emerald-500",                       label: "완료" },
+          { cls: "bg-red-400",                           label: "미달성" },
+          { cls: "bg-slate-200 dark:bg-zinc-700",        label: "미확인" },
         ].map(({ cls, label }) => (
           <div key={label} className="flex items-center gap-1">
             <div className={`w-3 h-3 rounded-sm ${cls}`} />
@@ -395,7 +369,7 @@ function DatePickerInput({ value, onChange }: { value: string; onChange: (v: str
 export default function ClientManager() {
   const [clients,           setClients]           = useState<Client[]>([]);
   const [hydrated,          setHydrated]          = useState(false);
-  const [sortOrder,         setSortOrder]         = useState<SortOrder>("pending");
+  const [sortOrder,         setSortOrder]         = useState<SortOrder>("inprogress");
   const [showForm,          setShowForm]          = useState(false);
   const [editingId,         setEditingId]         = useState<string | null>(null);
   const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
@@ -527,6 +501,10 @@ export default function ClientManager() {
   };
 
   const sorted = [...clients].sort((a, b) => {
+    if (sortOrder === "inprogress") {
+      const order: Record<ReportStatus, number> = { inprogress: 0, pending: 1, stopped: 2, complete: 3 };
+      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+    }
     if (sortOrder === "pending") {
       const order: Record<ReportStatus, number> = { pending: 0, inprogress: 1, stopped: 2, complete: 3 };
       if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
@@ -554,11 +532,12 @@ export default function ClientManager() {
   if (!hydrated) return null;
 
   const SORT_LABELS: Record<SortOrder, string> = {
-    pending: "대기 우선",
-    name:    "거래처명순",
-    expiry:  "만료 임박순",
+    inprogress: "진행 중 우선",
+    pending:    "대기 중 우선",
+    expiry:     "만료 임박순",
+    name:       "거래처명순",
   };
-  const SORT_CYCLE: SortOrder[] = ["pending", "name", "expiry"];
+  const SORT_CYCLE: SortOrder[] = ["inprogress", "pending", "expiry", "name"];
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full">
@@ -692,7 +671,7 @@ export default function ClientManager() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">계약 정보</label>
-                {/* 잔디밭 표시 체크박스 */}
+                {/* 진행 현황 체크박스 */}
                 <button
                   type="button"
                   disabled={!form.contractStart || !form.contractDays}
@@ -709,7 +688,7 @@ export default function ClientManager() {
                       </svg>
                     )}
                   </span>
-                  <span className="text-slate-500 dark:text-zinc-400">잔디밭 표시</span>
+                  <span className="text-slate-500 dark:text-zinc-400">진행 현황</span>
                 </button>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
