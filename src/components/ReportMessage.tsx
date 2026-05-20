@@ -57,12 +57,24 @@ function loadClients(): ClientOption[] {
   }
 }
 
-function buildSystemPrompt(tone: ToneId, clientTone: string): string {
-  let prompt = `당신은 실무 경험이 풍부한 한국 비즈니스 보고 메시지 작성 전문가입니다.
+function buildSystemPrompt(tone: ToneId, clientTone: string, customSample?: string): string {
+  let prompt: string;
+
+  if (customSample?.trim()) {
+    prompt = `당신은 실무 경험이 풍부한 한국 비즈니스 보고 메시지 작성 전문가입니다.
+완료한 업무 내용을 바탕으로 보고 메시지를 작성하세요.
+
+[말투 샘플 — 아래 문체를 최대한 그대로 따라 작성하세요]
+"${customSample.trim()}"
+
+위 샘플에서 사용된 어투, 종결어미, 문장 길이, 표현 방식을 분석하여 동일한 스타일로 작성하세요.`;
+  } else {
+    prompt = `당신은 실무 경험이 풍부한 한국 비즈니스 보고 메시지 작성 전문가입니다.
 완료한 업무 내용을 바탕으로 실제로 쓰이는 자연스러운 보고 메시지를 작성하세요.
 
 [톤 지침]
 ${TONE_GUIDE[tone]}`;
+  }
 
   if (clientTone.trim()) {
     prompt += `\n\n[거래처 선호사항]\n${clientTone.trim()}`;
@@ -73,8 +85,7 @@ ${TONE_GUIDE[tone]}`;
 [공통 규칙]
 - 인사말("안녕하세요" 등)·맺음말("감사합니다" 등) 없이 보고 내용만 작성
 - 마크다운(**, ## 등) 사용 금지
-- 반드시 한국어로만 작성
-- 같은 종결어미 반복 금지 — 문장마다 다른 표현 사용`;
+- 반드시 한국어로만 작성${customSample?.trim() ? "" : "\n- 같은 종결어미 반복 금지 — 문장마다 다른 표현 사용"}`;
 
   return prompt;
 }
@@ -90,13 +101,25 @@ export default function ReportMessage() {
   const [error,      setError]      = useState("");
   const [copied,        setCopied]        = useState(false);
   const [hydrated,      setHydrated]      = useState(false);
-  const [dropdownOpen,  setDropdownOpen]  = useState(false);
+  const [dropdownOpen,    setDropdownOpen]    = useState(false);
+  const [customToneSample, setCustomToneSample] = useState("");
+  const [useCustomTone,    setUseCustomTone]    = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setClients(loadClients());
+    try {
+      const saved = localStorage.getItem("worky_report_tone_sample");
+      if (saved) setCustomToneSample(saved);
+    } catch {}
     setHydrated(true);
   }, []);
+
+  const handleCustomToneChange = (v: string) => {
+    setCustomToneSample(v);
+    localStorage.setItem("worky_report_tone_sample", v);
+    if (!v.trim()) setUseCustomTone(false);
+  };
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -124,7 +147,7 @@ export default function ReportMessage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [{ role: "user", content: workInput.trim() }],
-          systemPrompt: buildSystemPrompt(tone, clientTone),
+          systemPrompt: buildSystemPrompt(tone, clientTone, useCustomTone ? customToneSample : undefined),
         }),
       });
       const data = await res.json();
@@ -240,31 +263,74 @@ export default function ReportMessage() {
         />
       </div>
 
-      {/* 톤 선택 */}
+      {/* 내 말투 샘플 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">톤 선택</p>
-        <div className="grid grid-cols-3 gap-3">
-          {TONES.map((t) => {
-            const active = tone === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTone(t.id)}
-                className={[
-                  "flex flex-col gap-1.5 p-4 rounded-2xl border text-left transition-all",
-                  active
-                    ? "border-[#6C63FF] shadow-md"
-                    : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
-                ].join(" ")}
-                style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}
-              >
-                <span className={`text-sm font-semibold ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>
-                  {t.label}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-zinc-400">{t.desc}</span>
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+            내 말투 샘플
+          </label>
+          {/* 사용자 설정 톤 사용 토글 */}
+          <button
+            type="button"
+            disabled={!customToneSample.trim()}
+            onClick={() => setUseCustomTone((v) => !v)}
+            className={`flex items-center gap-2 ${!customToneSample.trim() ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <span className={[
+              "w-4 h-4 rounded flex items-center justify-center border-2 transition-all shrink-0",
+              useCustomTone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+            ].join(" ")}>
+              {useCustomTone && <IconCheck className="w-2.5 h-2.5 text-white" />}
+            </span>
+            <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">
+              사용자 설정 톤 사용
+            </span>
+          </button>
+        </div>
+        <textarea
+          value={customToneSample}
+          onChange={(e) => handleCustomToneChange(e.target.value)}
+          rows={3}
+          placeholder={"안녕하세요 대표님, 오늘 업로드 완료됐고 노출 확인했습니다. 감사합니다!"}
+          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+        />
+        {useCustomTone && customToneSample.trim() && (
+          <p className="text-xs text-[#6C63FF]/70 mt-2">
+            위 말투 샘플 스타일로 메시지가 생성됩니다
+          </p>
+        )}
+      </div>
+
+      {/* 톤 선택 — 커스텀 톤 사용 시 숨김 */}
+      <div
+        style={{ maxHeight: useCustomTone ? 0 : "300px", opacity: useCustomTone ? 0 : 1 }}
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+      >
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+          <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">톤 선택</p>
+          <div className="grid grid-cols-3 gap-3">
+            {TONES.map((t) => {
+              const active = tone === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTone(t.id)}
+                  className={[
+                    "flex flex-col gap-1.5 p-4 rounded-2xl border text-left transition-all",
+                    active
+                      ? "border-[#6C63FF] shadow-md"
+                      : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
+                  ].join(" ")}
+                  style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}
+                >
+                  <span className={`text-sm font-semibold ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>
+                    {t.label}
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-zinc-400">{t.desc}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
