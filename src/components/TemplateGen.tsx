@@ -154,9 +154,12 @@ export default function TemplateGen() {
   const handleInstaClientSelect = (clientId: string) => {
     setInstaClientId(clientId);
     setInstaClientOpen(false);
+    setInstaTagInput("");
     if (clientId) {
       const client = instaClients.find((c) => c.id === clientId);
-      if (client?.tags.length) setInstaHashtags(client.tags);
+      setInstaHashtags(client?.tags.length ? [...client.tags] : []);
+    } else {
+      setInstaHashtags([]);
     }
   };
 
