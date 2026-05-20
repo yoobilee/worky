@@ -195,6 +195,36 @@ function saveClients(clients: Client[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
 }
 
+/* ── 한국 공휴일 (2026) ── */
+const GRASS_HOLIDAYS: Record<string, string> = {
+  "2026-01-01": "신정",
+  "2026-02-16": "설날 연휴",
+  "2026-02-17": "설날",
+  "2026-02-18": "설날 연휴",
+  "2026-03-01": "삼일절",
+  "2026-03-02": "대체공휴일",
+  "2026-05-05": "어린이날",
+  "2026-05-24": "부처님오신날",
+  "2026-05-25": "대체공휴일",
+  "2026-06-06": "현충일",
+  "2026-08-15": "광복절",
+  "2026-08-17": "대체공휴일",
+  "2026-09-24": "추석 연휴",
+  "2026-09-25": "추석",
+  "2026-09-26": "추석 연휴",
+  "2026-10-03": "개천절",
+  "2026-10-05": "대체공휴일",
+  "2026-10-09": "한글날",
+  "2026-12-25": "크리스마스",
+};
+
+function isOffDay(dateKey: string): boolean {
+  if (GRASS_HOLIDAYS[dateKey]) return true;
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dow = new Date(y, m - 1, d).getDay();
+  return dow === 0 || dow === 6;
+}
+
 /* ── 잔디밭 그리드 (GitHub 스타일) ── */
 function GrassGrid({
   contractStart,
@@ -209,7 +239,7 @@ function GrassGrid({
 }) {
   const today = todayKey();
 
-  // 전체 날짜 + 누적 완료 수
+  // 전체 날짜 + 누적 완료 수 (주말/공휴일 제외)
   const allDates: string[] = [];
   const cur = new Date(contractStart + "T00:00:00");
   const end = new Date(contractEnd   + "T00:00:00");
@@ -219,45 +249,58 @@ function GrassGrid({
   const cumMap: Record<string, number> = {};
   for (const d of allDates) { if (dailyLog[d] === "done") cumDone++; cumMap[d] = cumDone; }
 
-  // 시작 주의 일요일부터 끝 주의 토요일까지 패딩
+  // 시작 주의 월요일부터 끝 주의 일요일까지 패딩 (Mon-first)
   const startDate = new Date(contractStart + "T00:00:00");
-  const firstSun  = new Date(startDate);
-  firstSun.setDate(startDate.getDate() - startDate.getDay());
+  const startDow  = startDate.getDay(); // 0=Sun,1=Mon,...
+  const firstMon  = new Date(startDate);
+  firstMon.setDate(startDate.getDate() - (startDow === 0 ? 6 : startDow - 1));
 
-  const endDate   = new Date(contractEnd + "T00:00:00");
-  const lastSat   = new Date(endDate);
-  lastSat.setDate(endDate.getDate() + (6 - endDate.getDay()));
+  const endDate  = new Date(contractEnd + "T00:00:00");
+  const endDow   = endDate.getDay();
+  const lastSun  = new Date(endDate);
+  lastSun.setDate(endDate.getDate() + (endDow === 0 ? 0 : 7 - endDow));
 
-  // 주(column) × 7요일(row) 2차원 배열 생성
+  // 주(column) × 7요일(row) 2차원 배열 생성 (Mon=row0 … Sun=row6)
   const weeks: (string | null)[][] = [];
-  const d = new Date(firstSun);
-  while (d <= lastSat) {
+  const iter = new Date(firstMon);
+  while (iter <= lastSun) {
     const week: (string | null)[] = [];
-    for (let dow = 0; dow < 7; dow++) {
-      const key = toDateKey(d);
+    for (let row = 0; row < 7; row++) {
+      const key = toDateKey(iter);
       week.push(key >= contractStart && key <= contractEnd ? key : null);
-      d.setDate(d.getDate() + 1);
+      iter.setDate(iter.getDate() + 1);
     }
     weeks.push(week);
   }
 
-  // Mon~Sun 순서로 재정렬 (weeks는 Sun=0 기준)
-  const weeksMon = weeks.map((w) => [...w.slice(1), w[0]]);
-  const DOW_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
+  // DOW_LABELS: Mon=row0, Tue=row1, ..., Sun=row6
+  const DOW_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
 
   const Cell = ({ date }: { date: string | null }) => {
-    if (!date) return <div className="w-full h-full" />;
-    const ds       = dailyLog[date];
-    const isFuture = date > today;
-    const isToday  = date === today;
-    const count    = ds === "done" ? cumMap[date] : 0;
+    if (!date) return <div className="w-3.5 h-3.5 shrink-0" />;
+    const ds         = dailyLog[date];
+    const isFuture   = date > today;
+    const isToday    = date === today;
+    const off        = isOffDay(date);
+    const holidayName = GRASS_HOLIDAYS[date];
+    const count      = ds === "done" ? cumMap[date] : 0;
+
+    if (off) {
+      return (
+        <div
+          title={holidayName ? `${date} · ${holidayName}` : date}
+          className="w-3.5 h-3.5 rounded-sm shrink-0 bg-slate-300 dark:bg-zinc-600"
+        />
+      );
+    }
+
     return (
       <button
         type="button"
         onClick={() => { if (!isFuture) onToggle(date); }}
         title={`${date}${ds === "done" ? ` · 누적 ${count}일` : ds === "failed" ? " · 미달성" : ""}`}
         className={[
-          "w-full h-full rounded-sm transition-all flex items-center justify-center",
+          "w-3.5 h-3.5 rounded-sm transition-all flex items-center justify-center shrink-0",
           isToday  ? "ring-1 ring-[#6C63FF]" : "",
           isFuture ? "opacity-25 cursor-not-allowed" : "cursor-pointer hover:opacity-80",
           ds === "done"    ? "bg-emerald-500"
@@ -271,38 +314,23 @@ function GrassGrid({
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full flex flex-col items-center">
       <div className="flex items-stretch gap-1">
         {/* 요일 라벨 열 */}
-        <div
-          className="shrink-0 w-6"
-          style={{
-            display: "grid",
-            gridTemplateRows: "repeat(7, 1fr)",
-            gap: "2px",
-          }}
-        >
+        <div className="flex flex-col gap-0.5">
           {DOW_LABELS.map((label, i) => (
-            <div key={i} className="flex items-center justify-end">
+            <div key={i} className="w-6 h-3.5 flex items-center justify-end">
               <span className="text-[8px] text-slate-400 dark:text-zinc-500">{label}</span>
             </div>
           ))}
         </div>
-        {/* 잔디밭 그리드 — flex-1로 나머지 너비 채움, aspect-ratio로 정사각 칸 */}
-        <div
-          className="flex-1"
-          style={{
-            display: "grid",
-            gridTemplateRows: "repeat(7, 1fr)",
-            gridAutoFlow: "column",
-            gridAutoColumns: "1fr",
-            aspectRatio: `${weeksMon.length} / 7`,
-            gap: "2px",
-          }}
-        >
-          {weeksMon.map((week, wi) =>
-            week.map((date, di) => <Cell key={`${wi}-${di}`} date={date} />)
-          )}
+        {/* 주 열 */}
+        <div className="flex gap-0.5">
+          {weeks.map((week, wi) => (
+            <div key={wi} className="flex flex-col gap-0.5">
+              {week.map((date, di) => <Cell key={di} date={date} />)}
+            </div>
+          ))}
         </div>
       </div>
       {/* 범례 */}
@@ -311,6 +339,7 @@ function GrassGrid({
           { cls: "bg-emerald-500",                label: "완료"   },
           { cls: "bg-red-400",                    label: "미달성" },
           { cls: "bg-slate-200 dark:bg-zinc-700", label: "미확인" },
+          { cls: "bg-slate-300 dark:bg-zinc-600", label: "휴일"   },
         ].map(({ cls, label }) => (
           <div key={label} className="flex items-center gap-1">
             <div className={`w-3 h-3 rounded-sm ${cls}`} />
