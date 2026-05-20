@@ -1,6 +1,6 @@
 export type FeatureKey =
   | "data" | "email" | "template" | "translate"
-  | "summary" | "schedule" | "insight" | "qa";
+  | "summary" | "schedule" | "insight" | "qa" | "report";
 
 const STORAGE_KEY = "worky_usage_stats";
 
