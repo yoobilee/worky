@@ -195,7 +195,7 @@ function saveClients(clients: Client[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
 }
 
-/* ── 잔디밭 그리드 (가로 흐름) ── */
+/* ── 잔디밭 그리드 (GitHub 스타일) ── */
 function GrassGrid({
   contractStart,
   contractEnd,
@@ -209,59 +209,90 @@ function GrassGrid({
 }) {
   const today = todayKey();
 
+  // 전체 날짜 + 누적 완료 수
   const allDates: string[] = [];
   const cur = new Date(contractStart + "T00:00:00");
   const end = new Date(contractEnd   + "T00:00:00");
-  while (cur <= end) {
-    allDates.push(toDateKey(cur));
-    cur.setDate(cur.getDate() + 1);
-  }
+  while (cur <= end) { allDates.push(toDateKey(cur)); cur.setDate(cur.getDate() + 1); }
 
-  // 누적 완료 수 (done 날짜 카운트)
   let cumDone = 0;
   const cumMap: Record<string, number> = {};
-  for (const d of allDates) {
-    if (dailyLog[d] === "done") cumDone++;
-    cumMap[d] = cumDone;
+  for (const d of allDates) { if (dailyLog[d] === "done") cumDone++; cumMap[d] = cumDone; }
+
+  // 시작 주의 일요일부터 끝 주의 토요일까지 패딩
+  const startDate = new Date(contractStart + "T00:00:00");
+  const firstSun  = new Date(startDate);
+  firstSun.setDate(startDate.getDate() - startDate.getDay());
+
+  const endDate   = new Date(contractEnd + "T00:00:00");
+  const lastSat   = new Date(endDate);
+  lastSat.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+  // 주(column) × 7요일(row) 2차원 배열 생성
+  const weeks: (string | null)[][] = [];
+  const d = new Date(firstSun);
+  while (d <= lastSat) {
+    const week: (string | null)[] = [];
+    for (let dow = 0; dow < 7; dow++) {
+      const key = toDateKey(d);
+      week.push(key >= contractStart && key <= contractEnd ? key : null);
+      d.setDate(d.getDate() + 1);
+    }
+    weeks.push(week);
   }
 
+  // 요일 라벨 (Mon=1, Wed=3, Fri=5만 표시)
+  const DOW_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
+
+  const Cell = ({ date }: { date: string | null }) => {
+    if (!date) return <div className="w-3.5 h-3.5" />;
+    const ds       = dailyLog[date];
+    const isFuture = date > today;
+    const isToday  = date === today;
+    const count    = ds === "done" ? cumMap[date] : 0;
+    return (
+      <button
+        type="button"
+        onClick={() => { if (!isFuture) onToggle(date); }}
+        title={`${date}${ds === "done" ? ` · 누적 ${count}일` : ds === "failed" ? " · 미달성" : ""}`}
+        className={[
+          "w-3.5 h-3.5 rounded-sm transition-all flex items-center justify-center shrink-0",
+          isToday  ? "ring-1 ring-[#6C63FF]" : "",
+          isFuture ? "opacity-25 cursor-not-allowed" : "cursor-pointer hover:opacity-80",
+          ds === "done"    ? "bg-emerald-500"
+          : ds === "failed" ? "bg-red-400"
+          : "bg-slate-200 dark:bg-zinc-700",
+        ].join(" ")}
+      >
+        {ds === "done" && <span className="text-[5px] font-bold text-white leading-none">{count}</span>}
+      </button>
+    );
+  };
+
   return (
-    <div>
-      {/* 날짜 칸 (가로 흐름, 자동 줄바꿈) */}
-      <div className="flex flex-wrap gap-0.5">
-        {allDates.map((date) => {
-          const ds       = dailyLog[date];
-          const isFuture = date > today;
-          const isToday  = date === today;
-          const count    = ds === "done" ? cumMap[date] : 0;
-          return (
-            <button
-              key={date}
-              type="button"
-              onClick={() => { if (!isFuture) onToggle(date); }}
-              title={`${date}${ds === "done" ? ` · 누적 ${count}일` : ds === "failed" ? " · 미달성" : ""}`}
-              className={[
-                "w-4 h-4 rounded-sm transition-all flex items-center justify-center shrink-0",
-                isToday  ? "ring-1 ring-[#6C63FF] ring-offset-1" : "",
-                isFuture ? "opacity-25 cursor-not-allowed" : "cursor-pointer hover:opacity-80",
-                ds === "done"   ? "bg-emerald-500"
-                : ds === "failed" ? "bg-red-400"
-                : "bg-slate-200 dark:bg-zinc-700",
-              ].join(" ")}
-            >
-              {ds === "done" && (
-                <span className="text-[6px] font-bold text-white leading-none">{count}</span>
-              )}
-            </button>
-          );
-        })}
+    <div className="overflow-x-auto">
+      <div className="flex gap-0.5 min-w-max">
+        {/* 요일 라벨 열 */}
+        <div className="flex flex-col gap-0.5 mr-1">
+          {DOW_LABELS.map((label, i) => (
+            <div key={i} className="w-6 h-3.5 flex items-center justify-end">
+              <span className="text-[8px] text-slate-400 dark:text-zinc-500">{label}</span>
+            </div>
+          ))}
+        </div>
+        {/* 주 열 (x축) × 요일 행 (y축) */}
+        {weeks.map((week, wi) => (
+          <div key={wi} className="flex flex-col gap-0.5">
+            {week.map((date, di) => <Cell key={di} date={date} />)}
+          </div>
+        ))}
       </div>
       {/* 범례 */}
       <div className="flex items-center gap-3 mt-2">
         {[
-          { cls: "bg-emerald-500",                       label: "완료" },
-          { cls: "bg-red-400",                           label: "미달성" },
-          { cls: "bg-slate-200 dark:bg-zinc-700",        label: "미확인" },
+          { cls: "bg-emerald-500",                label: "완료"   },
+          { cls: "bg-red-400",                    label: "미달성" },
+          { cls: "bg-slate-200 dark:bg-zinc-700", label: "미확인" },
         ].map(({ cls, label }) => (
           <div key={label} className="flex items-center gap-1">
             <div className={`w-3 h-3 rounded-sm ${cls}`} />
