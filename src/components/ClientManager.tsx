@@ -450,6 +450,7 @@ export default function ClientManager() {
   const [editingId,         setEditingId]         = useState<string | null>(null);
   const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
   const [expandedHistories, setExpandedHistories] = useState<Set<string>>(new Set());
+  const [expandedGrass,     setExpandedGrass]     = useState<Set<string>>(new Set());
   const [openStatusId,      setOpenStatusId]      = useState<string | null>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -953,17 +954,38 @@ export default function ClientManager() {
                 )}
 
                 {/* 잔디밭 */}
-                {showGrass && (
-                  <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
-                    <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">진행 현황</p>
-                    <GrassGrid
-                      contractStart={c.contractStart}
-                      contractEnd={contractEnd!}
-                      dailyLog={c.dailyLog}
-                      onToggle={(date) => toggleDailyLog(c.id, date)}
-                    />
-                  </div>
-                )}
+                {showGrass && (() => {
+                  const grassOpen = expandedGrass.has(c.id);
+                  return (
+                    <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedGrass((prev) => {
+                          const next = new Set(prev);
+                          next.has(c.id) ? next.delete(c.id) : next.add(c.id);
+                          return next;
+                        })}
+                        className="flex items-center gap-1.5 w-full mb-1"
+                      >
+                        <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">진행 현황</p>
+                        {grassOpen
+                          ? <IconChevronUp   className="w-3 h-3 text-slate-400 dark:text-zinc-500" />
+                          : <IconChevronDown className="w-3 h-3 text-slate-400 dark:text-zinc-500" />}
+                      </button>
+                      <div
+                        style={{ maxHeight: grassOpen ? "400px" : "0px", opacity: grassOpen ? 1 : 0 }}
+                        className="overflow-hidden transition-all duration-300 ease-in-out"
+                      >
+                        <GrassGrid
+                          contractStart={c.contractStart}
+                          contractEnd={contractEnd!}
+                          dailyLog={c.dailyLog}
+                          onToggle={(date) => toggleDailyLog(c.id, date)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* 링크 */}
                 {c.link && (
