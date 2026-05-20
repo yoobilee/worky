@@ -241,14 +241,12 @@ function GrassGrid({
     weeks.push(week);
   }
 
-  const DOW_HEADERS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-
-  // 주차를 행으로: weeks[weekIndex][dayOfWeek], dayOfWeek 0=Sun → 재정렬해 Mon=0
-  // weeks 배열은 Sun=0 기준이므로 Mon-first로 재배열
-  const weeksMon = weeks.map((w) => [...w.slice(1), w[0]]); // Sun을 마지막으로
+  // Mon~Sun 순서로 재정렬 (weeks는 Sun=0 기준)
+  const weeksMon = weeks.map((w) => [...w.slice(1), w[0]]);
+  const DOW_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
 
   const Cell = ({ date }: { date: string | null }) => {
-    if (!date) return <div className="w-4 h-4" />;
+    if (!date) return <div className="w-full h-full" />;
     const ds       = dailyLog[date];
     const isFuture = date > today;
     const isToday  = date === today;
@@ -259,7 +257,7 @@ function GrassGrid({
         onClick={() => { if (!isFuture) onToggle(date); }}
         title={`${date}${ds === "done" ? ` · 누적 ${count}일` : ds === "failed" ? " · 미달성" : ""}`}
         className={[
-          "w-4 h-4 rounded-sm transition-all flex items-center justify-center shrink-0",
+          "w-full h-full rounded-sm transition-all flex items-center justify-center",
           isToday  ? "ring-1 ring-[#6C63FF]" : "",
           isFuture ? "opacity-25 cursor-not-allowed" : "cursor-pointer hover:opacity-80",
           ds === "done"    ? "bg-emerald-500"
@@ -267,24 +265,45 @@ function GrassGrid({
           : "bg-slate-200 dark:bg-zinc-700",
         ].join(" ")}
       >
-        {ds === "done" && <span className="text-[6px] font-bold text-white leading-none">{count}</span>}
+        {ds === "done" && <span className="text-[5px] font-bold text-white leading-none">{count}</span>}
       </button>
     );
   };
 
   return (
-    <div>
-      <div className="inline-grid gap-0.5" style={{ gridTemplateColumns: `repeat(7, 1rem)` }}>
-        {/* 요일 헤더 행 */}
-        {DOW_HEADERS.map((d) => (
-          <div key={d} className="h-4 flex items-center justify-center">
-            <span className="text-[8px] font-medium text-slate-400 dark:text-zinc-500">{d}</span>
-          </div>
-        ))}
-        {/* 주차 행 */}
-        {weeksMon.map((week, wi) =>
-          week.map((date, di) => <Cell key={`${wi}-${di}`} date={date} />)
-        )}
+    <div className="w-full">
+      <div className="flex items-stretch gap-1">
+        {/* 요일 라벨 열 */}
+        <div
+          className="shrink-0 w-6"
+          style={{
+            display: "grid",
+            gridTemplateRows: "repeat(7, 1fr)",
+            gap: "2px",
+          }}
+        >
+          {DOW_LABELS.map((label, i) => (
+            <div key={i} className="flex items-center justify-end">
+              <span className="text-[8px] text-slate-400 dark:text-zinc-500">{label}</span>
+            </div>
+          ))}
+        </div>
+        {/* 잔디밭 그리드 — flex-1로 나머지 너비 채움, aspect-ratio로 정사각 칸 */}
+        <div
+          className="flex-1"
+          style={{
+            display: "grid",
+            gridTemplateRows: "repeat(7, 1fr)",
+            gridAutoFlow: "column",
+            gridAutoColumns: "1fr",
+            aspectRatio: `${weeksMon.length} / 7`,
+            gap: "2px",
+          }}
+        >
+          {weeksMon.map((week, wi) =>
+            week.map((date, di) => <Cell key={`${wi}-${di}`} date={date} />)
+          )}
+        </div>
       </div>
       {/* 범례 */}
       <div className="flex items-center gap-3 mt-2">
