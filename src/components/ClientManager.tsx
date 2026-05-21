@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
@@ -1062,6 +1064,15 @@ export default function ClientManager() {
           })}
         </div>
       )}
+      <HelpButton
+        title="거래처 관리 사용법"
+        steps={[
+          { step: "거래처 추가", desc: "이름·상태·계약 기간·담당자 정보를 입력합니다." },
+          { step: "상태 변경", desc: "상태 배지를 클릭하면 진행 중·완료·중단으로 변경합니다." },
+          { step: "진행 현황", desc: "잔디밭 그리드로 일별 보고 활동을 기록합니다." },
+          { step: "정렬", desc: "상단 정렬 버튼으로 진행 중 우선·만료 임박 순으로 정렬합니다." },
+        ]}
+      />
     </div>
   );
 }

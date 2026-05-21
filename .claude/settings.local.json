@@ -9,7 +9,8 @@
       "Bash(npm install *)",
       "Bash(node -e ' *)",
       "Bash(grep -n \"min-h\\\\|max-h\\\\|flex-1\\\\|h-\\\\[\\\\\\\\|rows=\\\\|textarea\\\\|shrink-0\\\\|overflow\" src/components/EmailReply.tsx)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(node -e \"const icons=require\\('@tabler/icons-react'\\); const keys=Object.keys\\(icons\\).filter\\(k=>k.includes\\('Brand'\\)\\); console.log\\(keys.filter\\(k=>k.match\\(/Openai|Google|Anthropic|Perplexity/i\\)\\).join\\('\\\\n'\\)\\);\")"
     ]
   }
 }

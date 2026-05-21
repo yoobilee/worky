@@ -8,7 +8,7 @@ import {
   IconCircleCheck, IconMessageDots, IconNotes, IconPlus,
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
   IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
-  IconBuilding,
+  IconBuilding, IconSparkles, IconBrandOpenai, IconBrandGoogle, IconSearch, IconX,
 } from "@tabler/icons-react";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
@@ -610,6 +610,82 @@ export default function HomePage() {
         </div>
 
       </div>
+
+      {/* ── AI 스피드 다이얼 ── */}
+      <SpeedDial />
+
+    </div>
+  );
+}
+
+const AI_LINKS = [
+  { name: "Claude",     href: "https://claude.ai",           icon: null,             letter: "C" },
+  { name: "ChatGPT",    href: "https://chatgpt.com",          icon: IconBrandOpenai,  letter: null },
+  { name: "Gemini",     href: "https://gemini.google.com",    icon: IconBrandGoogle,  letter: null },
+  { name: "Perplexity", href: "https://perplexity.ai",        icon: IconSearch,       letter: null },
+] as const;
+
+function SpeedDial() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2" ref={ref}>
+      {/* AI 버튼 목록 */}
+      <div className="flex flex-col items-end gap-2">
+        {[...AI_LINKS].reverse().map((ai, revIdx) => {
+          const idx = AI_LINKS.length - 1 - revIdx;
+          const Icon = ai.icon as React.ComponentType<{ className?: string }> | null;
+          return (
+            <div
+              key={ai.name}
+              className="flex items-center gap-2 transition-all duration-200"
+              style={{
+                opacity: open ? 1 : 0,
+                transform: open ? "translateY(0) scale(1)" : "translateY(16px) scale(0.8)",
+                transitionDelay: open ? `${idx * 50}ms` : `${(AI_LINKS.length - 1 - idx) * 30}ms`,
+                pointerEvents: open ? "auto" : "none",
+              }}
+            >
+              <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-200 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
+                {ai.name}
+              </span>
+              <a
+                href={ai.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                {Icon
+                  ? <Icon className="w-4.5 h-4.5" />
+                  : <span className="text-sm font-bold">{ai.letter}</span>}
+              </a>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 메인 토글 버튼 */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="AI 바로가기"
+        className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 active:scale-95 transition-all duration-150"
+        style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+      >
+        <div className={`transition-transform duration-200 ${open ? "rotate-45" : "rotate-0"}`}>
+          {open ? <IconX className="w-5 h-5" /> : <IconSparkles className="w-5 h-5" />}
+        </div>
+      </button>
     </div>
   );
 }

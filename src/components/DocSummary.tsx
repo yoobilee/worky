@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useRef } from "react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
@@ -382,6 +384,15 @@ export default function DocSummary() {
           </EditableResult>
         </div>
       )}
+      <HelpButton
+        title="문서 요약 사용법"
+        steps={[
+          { step: "내용 입력", desc: "텍스트를 붙여넣거나 PDF 파일을 업로드하세요." },
+          { step: "스타일 선택", desc: "요약 방식과 길이를 선택합니다." },
+          { step: "요약 생성", desc: "AI가 핵심 내용을 추출합니다." },
+          { step: "편집", desc: "결과를 클릭하면 직접 편집할 수 있습니다." },
+        ]}
+      />
     </div>
   );
 }

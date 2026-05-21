@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState } from "react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
@@ -392,6 +394,15 @@ export default function Translator() {
           </EditableResult>
         </div>
       )}
+      <HelpButton
+        title="번역·다듬기 사용법"
+        steps={[
+          { step: "모드 선택", desc: "번역 또는 비즈니스 문체 다듬기 모드를 선택하세요." },
+          { step: "텍스트 입력", desc: "변환할 텍스트를 입력합니다." },
+          { step: "설정", desc: "번역은 대상 언어, 다듬기는 원하는 톤을 선택합니다." },
+          { step: "변환", desc: "버튼 클릭으로 결과를 생성하고 편집 후 복사하세요." },
+        ]}
+      />
     </div>
   );
 }

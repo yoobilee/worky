@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
@@ -380,6 +382,15 @@ export default function CalendarComponent() {
           </div>
         </div>
       </div>
+      <HelpButton
+        title="일정 관리 사용법"
+        steps={[
+          { step: "날짜 클릭", desc: "달력의 날짜를 클릭하면 하단 일정 패널이 열립니다." },
+          { step: "일정 추가", desc: "제목·시간·장소를 입력하고 추가 버튼을 클릭합니다." },
+          { step: "편집/삭제", desc: "등록된 일정의 연필 아이콘으로 수정하거나 삭제합니다." },
+          { step: "월 이동", desc: "좌우 화살표로 이전/다음 달로 이동합니다." },
+        ]}
+      />
     </div>
   );
 }

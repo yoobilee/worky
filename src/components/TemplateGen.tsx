@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useEffect } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
@@ -296,6 +298,15 @@ export default function TemplateGen() {
           </EditableResult>
         </div>
       )}
+      <HelpButton
+        title="템플릿 생성 사용법"
+        steps={[
+          { step: "유형 선택", desc: "업무보고서·이메일·회의록·기획안 중 원하는 유형을 선택합니다." },
+          { step: "내용 입력", desc: "주요 내용과 핵심 사항을 자유롭게 입력합니다." },
+          { step: "생성", desc: "버튼 클릭으로 완성 문서를 생성합니다." },
+          { step: "저장", desc: "복사 또는 txt 파일로 다운로드하세요." },
+        ]}
+      />
     </div>
   );
 }

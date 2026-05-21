@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import EditableResult from "./EditableResult";
@@ -531,6 +533,15 @@ export default function DataInsight() {
 
         </div>
       )}
+      <HelpButton
+        title="데이터 인사이트 사용법"
+        steps={[
+          { step: "데이터 입력", desc: "숫자 데이터를 텍스트로 입력하거나 파일을 업로드하세요." },
+          { step: "AI 분석", desc: "핵심 수치·트렌드·이상치를 자동으로 분석합니다." },
+          { step: "보고서 생성", desc: "'보고서로 생성' 버튼으로 실무용 보고서를 작성합니다." },
+          { step: "편집", desc: "결과 텍스트를 클릭하면 직접 수정할 수 있습니다." },
+        ]}
+      />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef, useCallback } from "react";
 import ConfirmModal from "./ConfirmModal";
 import { IconTrash, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
@@ -548,6 +550,15 @@ export default function TodoMemo() {
           </p>
         </div>
       </div>
+      <HelpButton
+        title="할 일 / 메모 사용법"
+        steps={[
+          { step: "날짜 선택", desc: "상단 날짜 버튼으로 원하는 날짜로 이동하세요." },
+          { step: "할 일 추가", desc: "입력란에 작업을 입력하고 Enter를 누르세요." },
+          { step: "완료 체크", desc: "체크박스 클릭으로 완료/미완료를 전환합니다." },
+          { step: "자동 이월", desc: "미완료 항목은 다음 날 자동으로 이월됩니다." },
+        ]}
+      />
     </div>
   );
 }

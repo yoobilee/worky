@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useRef, useEffect } from "react";
 import { trackUsage } from "@/lib/usageStats";
 
@@ -213,6 +215,14 @@ export default function QnA() {
         </div>
         <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2 px-1">Enter로 전송 · Shift+Enter로 줄바꿈</p>
       </div>
+      <HelpButton
+        title="Q&A 사용법"
+        steps={[
+          { step: "질문 입력", desc: "채팅창에 업무 관련 질문을 자유롭게 입력하세요." },
+          { step: "전송", desc: "Enter 또는 전송 버튼으로 AI에게 질문을 보냅니다." },
+          { step: "대화 유지", desc: "이전 대화가 맥락으로 유지되어 이어서 대화할 수 있습니다." },
+        ]}
+      />
     </div>
   );
 }

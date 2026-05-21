@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState } from "react";
 import {
   IconFileCertificate, IconCopy, IconCheck,
@@ -211,6 +213,15 @@ export default function DocumentWriter() {
           </EditableResult>
         </div>
       )}
+      <HelpButton
+        title="공문서 작성 사용법"
+        steps={[
+          { step: "유형 선택", desc: "품의서·공문·지출결의서·업무협조 요청서 중 선택합니다." },
+          { step: "정보 입력", desc: "요청 부서·내용·금액 등 필수 항목(*)을 입력합니다." },
+          { step: "문서 생성", desc: "버튼 클릭으로 실무용 공문서가 자동 작성됩니다." },
+          { step: "편집·복사", desc: "생성된 문서를 클릭하여 수정하거나 복사하세요." },
+        ]}
+      />
     </div>
   );
 }
