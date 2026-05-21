@@ -5,7 +5,7 @@ import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
 import {
   IconReport, IconMail, IconNotes, IconBulb, IconSettings, IconAlertTriangle,
-  IconBrandInstagram, IconX, IconCopy, IconCheck, IconChevronDown,
+  IconBrandInstagram, IconX, IconCopy, IconCheck, IconChevronDown, IconFileCertificate,
 } from "@tabler/icons-react";
 
 const SENDER_KEY   = "worky_sender_info";
@@ -14,8 +14,9 @@ const CLIENTS_KEY  = "worky_clients";
 interface SenderInfo { org: string; name: string; title: string; }
 interface InstaClient { id: string; name: string; tags: string[]; }
 
-type TemplateType  = "report" | "email" | "meeting" | "plan" | "instagram";
-type InstaTone     = "bright" | "emotional" | "info";
+type TemplateType    = "report" | "email" | "meeting" | "plan" | "instagram" | "official";
+type InstaTone       = "bright" | "emotional" | "info";
+type OfficialDocType = "approval" | "official_doc" | "expense" | "cooperation";
 
 interface TemplateOption {
   id: TemplateType;
@@ -112,6 +113,60 @@ ${INSTA_TONE_GUIDE[tone]}
 - 마크다운(**, ## 등) 사용 금지`;
 }
 
+/* ── 공문서 설정 ── */
+interface OfficialField { key: string; label: string; placeholder: string; optional?: boolean; }
+interface OfficialDoc   { id: OfficialDocType; label: string; desc: string; fields: OfficialField[]; systemPrompt: string; }
+
+const OFFICIAL_DOCS: OfficialDoc[] = [
+  {
+    id: "approval", label: "품의서", desc: "내부 결재 요청",
+    fields: [
+      { key: "dept",    label: "요청 부서",  placeholder: "예: 마케팅팀" },
+      { key: "content", label: "요청 내용",  placeholder: "예: 외부 강사 초빙 비용 집행 요청" },
+      { key: "amount",  label: "금액",        placeholder: "예: 500,000원", optional: true },
+      { key: "reason",  label: "사유",        placeholder: "예: 팀 역량 강화를 위한 교육 프로그램 진행" },
+    ],
+    systemPrompt: `당신은 공문서 작성 전문가입니다. 입력된 내용을 바탕으로 내부 결재용 품의서를 작성해주세요.
+형식: 제목(○○ 품의서), 작성일, 요청 부서, 요청 내용, 금액(있는 경우만), 사유, 기대 효과(간략히).
+격식 있는 공문서 문체로 작성하세요.${KO_RULES}`,
+  },
+  {
+    id: "official_doc", label: "공문", desc: "대외/대내 공식 문서",
+    fields: [
+      { key: "sender",   label: "발신 기관/부서", placeholder: "예: (주)워키 마케팅팀" },
+      { key: "receiver", label: "수신 기관/부서", placeholder: "예: ○○구청 문화체육과" },
+      { key: "title",    label: "제목",            placeholder: "예: 업무 협약 체결 요청" },
+      { key: "content",  label: "주요 내용",       placeholder: "예: 양 기관 간 마케팅 협력을 위한 MOU 체결 요청" },
+    ],
+    systemPrompt: `당신은 공문서 작성 전문가입니다. 입력된 내용을 바탕으로 공식 공문을 작성해주세요.
+형식: 수신, 발신, 제목, 본문(목적·내용·요청사항 순), 끝.
+표준 공문 형식을 정확히 따르고 격식체로 작성하세요.${KO_RULES}`,
+  },
+  {
+    id: "expense", label: "지출결의서", desc: "비용 집행 승인 요청",
+    fields: [
+      { key: "item",    label: "지출 항목",  placeholder: "예: 외부 교육비" },
+      { key: "amount",  label: "금액",        placeholder: "예: 300,000원" },
+      { key: "purpose", label: "사용 목적",  placeholder: "예: 신입사원 역량 강화 교육 수강" },
+      { key: "date",    label: "사용 날짜",  placeholder: "예: 2026-05-20" },
+    ],
+    systemPrompt: `당신은 공문서 작성 전문가입니다. 입력된 내용을 바탕으로 지출결의서를 작성해주세요.
+형식: 제목(지출결의서), 작성일, 지출 항목, 금액, 사용 목적, 사용 날짜, 결재 요청 내용.
+격식 있는 공문서 문체로 간결하게 작성하세요.${KO_RULES}`,
+  },
+  {
+    id: "cooperation", label: "업무협조 요청서", desc: "타 부서 협조 요청",
+    fields: [
+      { key: "dept",     label: "요청 부서",  placeholder: "예: IT팀" },
+      { key: "content",  label: "협조 내용",  placeholder: "예: 신규 서비스 서버 환경 세팅 지원" },
+      { key: "deadline", label: "기한",        placeholder: "예: 2026년 6월 15일까지" },
+    ],
+    systemPrompt: `당신은 공문서 작성 전문가입니다. 입력된 내용을 바탕으로 업무협조 요청서를 작성해주세요.
+형식: 제목(업무협조 요청), 작성일, 요청 부서, 협조 요청 내용, 기한, 협조 요청 사유.
+격식 있는 공문서 문체로 작성하세요.${KO_RULES}`,
+  },
+];
+
 export default function TemplateGen() {
   /* ── 공통 상태 ── */
   const [selectedType, setSelectedType] = useState<TemplateType>("report");
@@ -122,6 +177,14 @@ export default function TemplateGen() {
   const [copied,       setCopied]       = useState(false);
   const [sender,       setSender]       = useState<SenderInfo>({ org: "", name: "", title: "" });
   const [pendingTab,   setPendingTab]   = useState<TemplateType | null>(null);
+
+  /* ── 공문서 전용 상태 ── */
+  const [officialDocType,  setOfficialDocType]  = useState<OfficialDocType>("approval");
+  const [officialFields,   setOfficialFields]   = useState<Record<string, string>>({});
+  const [officialResult,   setOfficialResult]   = useState("");
+  const [officialLoading,  setOfficialLoading]  = useState(false);
+  const [officialError,    setOfficialError]    = useState("");
+  const [officialCopied,   setOfficialCopied]   = useState(false);
 
   /* ── 인스타 전용 상태 ── */
   const [instaClients,      setInstaClients]      = useState<InstaClient[]>([]);
@@ -195,6 +258,7 @@ export default function TemplateGen() {
 
   const hasUnsaved = () => {
     if (selectedType === "instagram") return !!(instaContent.trim() || instaResult);
+    if (selectedType === "official")  return !!(Object.values(officialFields).some((v) => v.trim()) || officialResult);
     return !!(content.trim() || result);
   };
 
@@ -212,6 +276,7 @@ export default function TemplateGen() {
     setContent(""); setResult(""); setError("");
     setInstaContent(""); setInstaResult(""); setInstaError("");
     setInstaClientId(""); setInstaHashtags([]); setInstaTagInput("");
+    setOfficialFields({}); setOfficialResult(""); setOfficialError("");
   };
 
   const confirmTabChange = () => {
@@ -277,6 +342,39 @@ export default function TemplateGen() {
     setInstaCopied(true); setTimeout(() => setInstaCopied(false), 2000);
   };
 
+  const handleOfficialGenerate = async () => {
+    const doc = OFFICIAL_DOCS.find((d) => d.id === officialDocType)!;
+    const requiredEmpty = doc.fields.filter((f) => !f.optional).some((f) => !officialFields[f.key]?.trim());
+    if (requiredEmpty) return;
+    setOfficialLoading(true); setOfficialError(""); setOfficialResult("");
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+    const userMsg = [
+      `오늘 날짜: ${todayStr}`,
+      ...doc.fields.map((f) => `${f.label}: ${officialFields[f.key]?.trim() ?? "(없음)"}`),
+    ].join("\n");
+    try {
+      const res = await fetch("/api/groq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: userMsg }], systemPrompt: doc.systemPrompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
+      setOfficialResult(data.result);
+      trackUsage("template");
+    } catch (e) {
+      setOfficialError(e instanceof Error ? e.message : "문서 생성 중 오류가 발생했습니다.");
+    } finally {
+      setOfficialLoading(false);
+    }
+  };
+
+  const handleOfficialCopy = async () => {
+    await navigator.clipboard.writeText(officialResult);
+    setOfficialCopied(true); setTimeout(() => setOfficialCopied(false), 2000);
+  };
+
   const handleDownload = () => {
     const blob = new Blob([result], { type: "text/plain;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -291,6 +389,7 @@ export default function TemplateGen() {
   const ALL_TABS = [
     ...TEMPLATES.map((t) => ({ id: t.id as TemplateType, label: t.label, Icon: t.Icon })),
     { id: "instagram" as TemplateType, label: "인스타 게시글", Icon: IconBrandInstagram },
+    { id: "official"  as TemplateType, label: "공문서",         Icon: IconFileCertificate },
   ];
 
   return (
@@ -337,7 +436,7 @@ export default function TemplateGen() {
       )}
 
       {/* 탭 선택 */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {ALL_TABS.map((tab) => (
           <button key={tab.id} onClick={() => handleTabChange(tab.id)}
             className={[
@@ -503,6 +602,93 @@ export default function TemplateGen() {
               <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
                 {instaResult}
               </p>
+            </div>
+          )}
+        </>
+
+      ) : selectedType === "official" ? (
+        /* ── 공문서 UI ── */
+        <>
+          {/* 문서 유형 선택 */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {OFFICIAL_DOCS.map((doc) => {
+              const active = officialDocType === doc.id;
+              return (
+                <button key={doc.id} onClick={() => { setOfficialDocType(doc.id); setOfficialFields({}); setOfficialResult(""); setOfficialError(""); }}
+                  className={[
+                    "flex flex-col gap-1 p-4 rounded-2xl border text-left transition-all",
+                    active ? "border-[#6C63FF] shadow-md" : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
+                  ].join(" ")}
+                  style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}
+                >
+                  <span className={`text-sm font-semibold ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>{doc.label}</span>
+                  <span className="text-xs text-slate-400 dark:text-zinc-500">{doc.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 입력 필드 카드 */}
+          {(() => {
+            const doc = OFFICIAL_DOCS.find((d) => d.id === officialDocType)!;
+            const requiredEmpty = doc.fields.filter((f) => !f.optional).some((f) => !officialFields[f.key]?.trim());
+            return (
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm space-y-3">
+                <p className="text-sm font-medium text-slate-700 dark:text-zinc-300">{doc.label} 정보 입력</p>
+                {doc.fields.map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">
+                      {field.label}{field.optional && <span className="ml-1 text-slate-400">(선택)</span>}
+                      {!field.optional && <span className="text-red-400 ml-0.5">*</span>}
+                    </label>
+                    <input
+                      value={officialFields[field.key] ?? ""}
+                      onChange={(e) => setOfficialFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                      placeholder={field.placeholder}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                    />
+                  </div>
+                ))}
+                <div className="flex justify-end pt-1">
+                  <button onClick={handleOfficialGenerate} disabled={officialLoading || requiredEmpty}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+                    {officialLoading
+                      ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />생성 중...</>
+                      : <><IconFileCertificate className="w-4 h-4" />{doc.label} 생성</>}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 에러 */}
+          {officialError && (
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
+              <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {officialError}
+            </div>
+          )}
+
+          {/* 결과 */}
+          {officialResult && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+                  생성된 {OFFICIAL_DOCS.find((d) => d.id === officialDocType)!.label}
+                </h2>
+                <button onClick={handleOfficialCopy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                  {officialCopied
+                    ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</>
+                    : <><IconCopy className="w-3.5 h-3.5" />복사</>}
+                </button>
+              </div>
+              <textarea readOnly value={officialResult} rows={16}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 resize-none focus:outline-none font-mono leading-relaxed"
+              />
             </div>
           )}
         </>
