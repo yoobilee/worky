@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
 import { IconReport, IconMail, IconNotes, IconBulb, IconSettings, IconAlertTriangle } from "@tabler/icons-react";
+import EditableResult from "@/components/EditableResult";
 
 const SENDER_KEY = "worky_sender_info";
 
@@ -288,9 +289,11 @@ export default function TemplateGen() {
               </button>
             </div>
           </div>
-          <textarea readOnly value={result} rows={16}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 resize-none focus:outline-none font-mono leading-relaxed"
-          />
+          <EditableResult value={result} onChange={setResult} rows={16} textareaClassName="font-mono">
+            <pre className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 font-mono leading-relaxed whitespace-pre-wrap">
+              {result}
+            </pre>
+          </EditableResult>
         </div>
       )}
     </div>

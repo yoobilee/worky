@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 import {
   IconWorld,
@@ -384,9 +385,11 @@ export default function Translator() {
               )}
             </button>
           </div>
-          <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed min-h-[120px] break-words">
-            {result}
-          </div>
+          <EditableResult value={result} onChange={setResult} rows={8}>
+            <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed min-h-[120px] break-words">
+              {result}
+            </div>
+          </EditableResult>
         </div>
       )}
     </div>

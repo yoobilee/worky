@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
 import {
@@ -265,9 +266,15 @@ export default function EmailReply() {
                   {copiedIndex === i ? "복사됨!" : "복사"}
                 </button>
               </div>
-              <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed flex-1">
-                {draft}
-              </p>
+              <EditableResult
+                value={draft}
+                onChange={(v) => setDrafts((prev) => prev.map((d, j) => j === i ? v : d))}
+                rows={10}
+              >
+                <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed flex-1">
+                  {draft}
+                </p>
+              </EditableResult>
             </div>
           ))}
         </div>

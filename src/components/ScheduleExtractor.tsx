@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 import { addCalendarEvent, parseKoreanDate } from "@/lib/calendarStorage";
 import {
@@ -67,7 +68,8 @@ function formatScheduleText(s: Schedule): string {
 
 export default function ScheduleExtractor() {
   const [input, setInput] = useState("");
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [schedules,     setSchedules]     = useState<Schedule[]>([]);
+  const [editableText,  setEditableText]  = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | "all" | null>(null);
@@ -107,6 +109,7 @@ export default function ScheduleExtractor() {
         setError("추출된 일정이 없습니다. 날짜나 시간이 포함된 텍스트를 입력해주세요.");
       } else {
         setSchedules(parsed);
+        setEditableText(parsed.map((s, i) => `[일정 ${i + 1}]\n${formatScheduleText(s)}`).join("\n\n"));
         trackUsage("schedule");
       }
     } catch (e) {
@@ -269,6 +272,16 @@ export default function ScheduleExtractor() {
               </div>
             ))}
           </div>
+
+          {/* 편집 가능한 전체 텍스트 */}
+          {editableText && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+              <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">편집 가능한 전체 일정</p>
+              <EditableResult value={editableText} onChange={setEditableText} rows={10}>
+                <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{editableText}</p>
+              </EditableResult>
+            </div>
+          )}
         </>
       )}
     </div>

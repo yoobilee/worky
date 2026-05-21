@@ -5,6 +5,7 @@ import {
   IconMessageCheck, IconAlertCircle, IconCircleCheck, IconBulb,
   IconLoader2, IconAlertTriangle, IconCopy, IconCheck,
 } from "@tabler/icons-react";
+import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 
 interface FeedbackResult {
@@ -49,7 +50,8 @@ function parseResult(raw: string): FeedbackResult {
 
 export default function FeedbackOrganizer() {
   const [input,   setInput]   = useState("");
-  const [result,  setResult]  = useState<FeedbackResult | null>(null);
+  const [result,        setResult]        = useState<FeedbackResult | null>(null);
+  const [editableText,  setEditableText]  = useState("");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
   const [copied,  setCopied]  = useState(false);
@@ -68,7 +70,14 @@ export default function FeedbackOrganizer() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-      setResult(parseResult(data.result));
+      const parsed = parseResult(data.result);
+      setResult(parsed);
+      // initialize editable text from formatted output
+      const lines: string[] = [];
+      if (parsed.required.length) { lines.push("[필수 수정사항]"); parsed.required.forEach((r) => lines.push(`• ${r}`)); }
+      if (parsed.optional.length) { lines.push("", "[선택 수정사항]"); parsed.optional.forEach((r) => lines.push(`• ${r}`)); }
+      if (parsed.clarified.length) { lines.push("", "[구체화된 피드백]"); parsed.clarified.forEach(({ original, clarified }) => lines.push(`• "${original}" → ${clarified}`)); }
+      setEditableText(lines.join("\n"));
       trackUsage("qa");
     } catch (e) {
       setError(e instanceof Error ? e.message : "피드백 분석 중 오류가 발생했습니다.");
@@ -223,6 +232,16 @@ export default function FeedbackOrganizer() {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* 편집 가능한 전체 텍스트 */}
+          {editableText && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+              <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">편집 가능한 정리 결과</p>
+              <EditableResult value={editableText} onChange={setEditableText} rows={10}>
+                <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{editableText}</p>
+              </EditableResult>
             </div>
           )}
 
