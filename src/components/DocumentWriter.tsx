@@ -190,9 +190,17 @@ export default function DocumentWriter() {
                 : <><IconCopy className="w-3.5 h-3.5" />복사</>}
             </button>
           </div>
-          <textarea readOnly value={result} rows={16}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 resize-none focus:outline-none font-mono leading-relaxed"
-          />
+          <div className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed space-y-1.5">
+            {result.split("\n").map((line, i) => {
+              if (line.startsWith("### ")) return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-2 first:mt-0">{line.slice(4)}</p>;
+              if (line.startsWith("## "))  return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{line.slice(3)}</p>;
+              if (line.startsWith("* ") || line.startsWith("- ")) return (
+                <p key={i} className="flex gap-1.5"><span className="text-[#6C63FF] shrink-0">•</span><span>{line.slice(2)}</span></p>
+              );
+              if (!line.trim()) return <div key={i} className="h-1" />;
+              return <p key={i}>{line}</p>;
+            })}
+          </div>
         </div>
       )}
     </div>
