@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(grep -n \"systemPrompt\\\\|SYSTEM_PROMPT\\\\|return\\\\`\\\\|return \\\\`\" src/components/Translator.tsx)",
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "Bash(grep -n \"min-h\\\\|max-h\\\\|flex-1\\\\|h-\\\\[\\\\\\\\|rows=\\\\|textarea\\\\|shrink-0\\\\|overflow\" src/components/EmailReply.tsx)",
+      "Bash(git commit *)"
+    ]
+  }
+}

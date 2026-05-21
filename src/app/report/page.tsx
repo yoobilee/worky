@@ -1,5 +1,5 @@
-import ReportMessage from "@/components/ReportMessage";
+import { redirect } from "next/navigation";
 
 export default function ReportPage() {
-  return <ReportMessage />;
+  redirect("/content");
 }

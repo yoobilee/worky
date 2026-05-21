@@ -7,7 +7,8 @@ export const OPTIONAL_MENU_ITEMS = [
   { href: "/glossary",  label: "용어집" },
   { href: "/feedback",  label: "피드백 정리" },
   { href: "/clients",   label: "거래처 관리" },
-  { href: "/report",    label: "보고 메시지" },
+  { href: "/content",   label: "콘텐츠 작성" },
+  { href: "/document",  label: "공문서 작성" },
 ] as const;
 
 export const ALWAYS_VISIBLE_ITEMS = [

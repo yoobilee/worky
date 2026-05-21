@@ -34,7 +34,7 @@ const JOB_PRESETS: JobPreset[] = [
   {
     id: "marketing", label: "마케팅/영업",      icon: IconBriefcase,
     desc: "영업·고객 관리 중심",
-    on: ["/report", "/clients", "/template", "/summary"],
+    on: ["/content", "/clients", "/template", "/summary"],
   },
   {
     id: "it",        label: "IT직군",            icon: IconCode,
@@ -44,7 +44,7 @@ const JOB_PRESETS: JobPreset[] = [
   {
     id: "admin",     label: "경영지원/총무",      icon: IconBuildingSkyscraper,
     desc: "문서·일정 관리 중심",
-    on: ["/summary", "/template", "/translate", "/data"],
+    on: ["/summary", "/template", "/translate", "/data", "/document"],
   },
   {
     id: "office",    label: "사무직",             icon: IconFileText,
