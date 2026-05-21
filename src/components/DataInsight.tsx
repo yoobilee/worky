@@ -121,17 +121,17 @@ const REPORT_SYSTEM_PROMPT = `당신은 데이터 분석 보고서 작성 전문
 
 보고서 형식 (순서대로 작성):
 1. 제목
-2. 분석 기간 (데이터에서 유추, 불분명하면 '해당 기간')
-3. 핵심 성과 (주요 수치 3~5개 bullet)
+2. 분석 기간 (데이터에 명확한 날짜·연도 정보가 있을 때만 표기. 없으면 반드시 "입력된 데이터 기준"으로만 표시하고 임의 연도 추정 절대 금지)
+3. 핵심 성과 (주요 수치 3~5개, 각 항목 앞에 * 붙여 목록 형식으로)
 4. 트렌드 분석 (2~3문장)
-5. 개선 제안 (2~3가지 실천 가능한 제안)
+5. 개선 제안 (2~3가지 실천 가능한 제안, 각 항목 앞에 * 붙여 목록 형식으로)
 
 규칙:
 - 한국어로 작성
 - 비즈니스 문서 톤 (격식체)
-- 마크다운(**, ## 등) 사용 금지
-- 각 섹션 제목은 [섹션명] 형식으로 표기
-- 간결하고 실용적으로 작성`;
+- 각 섹션 제목은 ## 섹션명 형식으로 표기
+- 간결하고 실용적으로 작성
+- 데이터에 없는 날짜·연도를 절대 추정하거나 임의로 작성하지 마세요`;
 
 export default function DataInsight() {
   const [inputMode, setInputMode]   = useState<InputMode>("text");
@@ -511,9 +511,18 @@ export default function DataInsight() {
                     : <><IconCopy className="w-3.5 h-3.5" />복사</>}
                 </button>
               </div>
-              <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                {report}
-              </p>
+              <div className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed space-y-1.5">
+                {report.split("\n").map((line, i) => {
+                  if (line.startsWith("## ")) return (
+                    <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{line.slice(3)}</p>
+                  );
+                  if (line.startsWith("* ") || line.startsWith("- ")) return (
+                    <p key={i} className="flex gap-1.5"><span className="text-[#6C63FF] shrink-0">•</span><span>{line.slice(2)}</span></p>
+                  );
+                  if (!line.trim()) return <div key={i} className="h-1" />;
+                  return <p key={i}>{line}</p>;
+                })}
+              </div>
             </div>
           )}
 
