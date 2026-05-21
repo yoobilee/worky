@@ -24,19 +24,14 @@ export default function EditableResult({
 
   if (editing) {
     return (
-      <div className="relative">
-        <textarea
-          ref={taRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={() => setEditing(false)}
-          rows={rows}
-          className={`w-full px-4 py-3 rounded-xl border-2 border-[#6C63FF]/60 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 resize-none focus:outline-none leading-relaxed ${textareaClassName}`}
-        />
-        <span className="absolute top-2 right-2 text-[10px] text-[#6C63FF] font-semibold bg-[#6C63FF]/10 px-1.5 py-0.5 rounded pointer-events-none">
-          편집 중
-        </span>
-      </div>
+      <textarea
+        ref={taRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => setEditing(false)}
+        rows={rows}
+        className={`w-full px-4 py-3 rounded-xl border-2 border-[#6C63FF]/60 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 resize-none focus:outline-none leading-relaxed ${textareaClassName}`}
+      />
     );
   }
 
