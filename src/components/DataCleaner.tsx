@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import EditableResult from "./EditableResult";
 import { IconAlignLeft, IconFileUpload } from "@tabler/icons-react";
 import { trackUsage } from "@/lib/usageStats";
 
@@ -342,23 +343,22 @@ export default function DataCleaner() {
           </div>
 
           {/* 테이블 렌더링 */}
-          <div
-            ref={resultRef}
-            className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 [&_table]:w-full [&_table]:text-sm [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-white [&_td]:px-4 [&_td]:py-2.5 [&_td]:text-slate-700 dark:[&_td]:text-zinc-300 [&_tr:nth-child(even)_td]:bg-slate-50 dark:[&_tr:nth-child(even)_td]:bg-zinc-800/50"
-            style={{
-              // th 배경
-            }}
-          >
-            <style>{`
-              table { border-collapse: collapse; }
-              th { background: #6C63FF; }
-              td { border-bottom: 1px solid #e2e8f0; }
-              @media (prefers-color-scheme: dark) {
-                td { border-bottom: 1px solid #3f3f46; }
-              }
-            `}</style>
-            <div dangerouslySetInnerHTML={{ __html: tableHtml }} />
-          </div>
+          <EditableResult value={tableHtml} onChange={setTableHtml} rows={14} textareaClassName="font-mono text-xs">
+            <div
+              ref={resultRef}
+              className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 [&_table]:w-full [&_table]:text-sm [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-white [&_td]:px-4 [&_td]:py-2.5 [&_td]:text-slate-700 dark:[&_td]:text-zinc-300 [&_tr:nth-child(even)_td]:bg-slate-50 dark:[&_tr:nth-child(even)_td]:bg-zinc-800/50"
+            >
+              <style>{`
+                table { border-collapse: collapse; }
+                th { background: #6C63FF; }
+                td { border-bottom: 1px solid #e2e8f0; }
+                @media (prefers-color-scheme: dark) {
+                  td { border-bottom: 1px solid #3f3f46; }
+                }
+              `}</style>
+              <div dangerouslySetInnerHTML={{ __html: tableHtml }} />
+            </div>
+          </EditableResult>
         </div>
       )}
     </div>

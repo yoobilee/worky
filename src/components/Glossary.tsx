@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import EditableResult from "./EditableResult";
 import {
   IconBook,
   IconSearch,
@@ -249,9 +250,11 @@ export default function Glossary() {
             <p className="text-xs text-red-500 dark:text-red-400">{aiError}</p>
           )}
           {aiResult && (
-            <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
-              {aiResult}
-            </div>
+            <EditableResult value={aiResult} onChange={setAiResult} rows={6}>
+              <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                {aiResult}
+              </div>
+            </EditableResult>
           )}
           {!aiResult && !aiError && (
             <p className="text-xs text-slate-400 dark:text-zinc-500">

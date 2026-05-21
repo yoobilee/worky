@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
+import EditableResult from "./EditableResult";
 import {
   IconChartBar,
   IconArrowUpRight,
@@ -511,7 +512,8 @@ export default function DataInsight() {
                     : <><IconCopy className="w-3.5 h-3.5" />복사</>}
                 </button>
               </div>
-              <div className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed space-y-1.5">
+              <EditableResult value={report} onChange={setReport} rows={16}>
+                <div className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed space-y-1.5">
                 {report.split("\n").map((line, i) => {
                   if (line.startsWith("## ")) return (
                     <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{line.slice(3)}</p>
@@ -522,7 +524,8 @@ export default function DataInsight() {
                   if (!line.trim()) return <div key={i} className="h-1" />;
                   return <p key={i}>{line}</p>;
                 })}
-              </div>
+                </div>
+              </EditableResult>
             </div>
           )}
 

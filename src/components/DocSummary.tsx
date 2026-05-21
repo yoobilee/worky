@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 import {
   IconAlignLeft,
@@ -374,9 +375,11 @@ export default function DocSummary() {
               )}
             </button>
           </div>
-          <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-            {renderMarkdown(result)}
-          </div>
+          <EditableResult value={result} onChange={setResult} rows={14}>
+            <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+              {renderMarkdown(result)}
+            </div>
+          </EditableResult>
         </div>
       )}
     </div>

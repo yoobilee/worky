@@ -5,6 +5,7 @@ import {
   IconSend, IconBrandInstagram, IconCopy, IconCheck,
   IconChevronDown, IconX,
 } from "@tabler/icons-react";
+import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 
 /* ── 보고 메시지 ── */
@@ -349,7 +350,9 @@ export default function ContentCreator() {
                   {reportCopied ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</> : <><IconCopy className="w-3.5 h-3.5" />복사</>}
                 </button>
               </div>
-              <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{reportResult}</p>
+              <EditableResult value={reportResult} onChange={setReportResult} rows={8}>
+                <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{reportResult}</p>
+              </EditableResult>
             </div>
           )}
         </>
@@ -483,7 +486,9 @@ export default function ContentCreator() {
                   {instaCopied ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</> : <><IconCopy className="w-3.5 h-3.5" />복사</>}
                 </button>
               </div>
-              <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{instaResult}</p>
+              <EditableResult value={instaResult} onChange={setInstaResult} rows={10}>
+                <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{instaResult}</p>
+              </EditableResult>
             </div>
           )}
         </>
