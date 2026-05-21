@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconSend, IconMessageCheck } from "@tabler/icons-react";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconEdit, IconFileText, IconMessageCheck } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
@@ -57,9 +57,14 @@ const navItems = [
     ),
   },
   {
-    href: "/report",
-    label: "보고 메시지",
-    icon: <IconSend className="w-4 h-4" />,
+    href: "/content",
+    label: "콘텐츠 작성",
+    icon: <IconEdit className="w-4 h-4" />,
+  },
+  {
+    href: "/document",
+    label: "공문서 작성",
+    icon: <IconFileText className="w-4 h-4" />,
   },
   {
     href: "/template",
