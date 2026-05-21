@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   IconSend, IconBrandInstagram, IconCopy, IconCheck,
-  IconChevronDown, IconX,
+  IconChevronDown, IconX, IconPencil,
 } from "@tabler/icons-react";
-import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 
 /* ── 보고 메시지 ── */
@@ -107,6 +106,7 @@ export default function ContentCreator() {
   const [reportLoading,    setReportLoading]    = useState(false);
   const [reportError,      setReportError]      = useState("");
   const [reportCopied,     setReportCopied]     = useState(false);
+  const [reportEditing,    setReportEditing]    = useState(false);
   const [customToneSample, setCustomToneSample] = useState("");
   const [useCustomTone,    setUseCustomTone]    = useState(false);
   const [sampleOpen,       setSampleOpen]       = useState(false);
@@ -123,6 +123,7 @@ export default function ContentCreator() {
   const [instaLoading,    setInstaLoading]    = useState(false);
   const [instaError,      setInstaError]      = useState("");
   const [instaCopied,     setInstaCopied]     = useState(false);
+  const [instaEditing,    setInstaEditing]    = useState(false);
 
   useEffect(() => {
     try {
@@ -342,17 +343,29 @@ export default function ContentCreator() {
           )}
 
           {reportResult && (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+            <div className={`bg-white dark:bg-zinc-900 rounded-2xl border p-5 shadow-sm ${reportEditing ? "border-[#6C63FF]/60" : "border-slate-200 dark:border-zinc-800"}`}>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 보고 메시지</h2>
-                <button onClick={async () => { await navigator.clipboard.writeText(reportResult); setReportCopied(true); setTimeout(() => setReportCopied(false), 2000); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-                  {reportCopied ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</> : <><IconCopy className="w-3.5 h-3.5" />복사</>}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => setReportEditing((v) => !v)}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${reportEditing ? "border-[#6C63FF] text-[#6C63FF] bg-[#6C63FF]/5" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+                    <IconPencil className="w-3.5 h-3.5" />{reportEditing ? "편집 중" : "편집"}
+                  </button>
+                  <button onClick={async () => { await navigator.clipboard.writeText(reportResult); setReportCopied(true); setTimeout(() => setReportCopied(false), 2000); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                    {reportCopied ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</> : <><IconCopy className="w-3.5 h-3.5" />복사</>}
+                  </button>
+                </div>
               </div>
-              <EditableResult value={reportResult} onChange={setReportResult} rows={8}>
+              {reportEditing ? (
+                <textarea
+                  value={reportResult} onChange={(e) => setReportResult(e.target.value)}
+                  onBlur={() => setReportEditing(false)} autoFocus rows={8}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-[#6C63FF]/40 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 resize-none focus:outline-none leading-relaxed"
+                />
+              ) : (
                 <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{reportResult}</p>
-              </EditableResult>
+              )}
             </div>
           )}
         </>
@@ -478,17 +491,29 @@ export default function ContentCreator() {
           )}
 
           {instaResult && (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+            <div className={`bg-white dark:bg-zinc-900 rounded-2xl border p-5 shadow-sm ${instaEditing ? "border-[#6C63FF]/60" : "border-slate-200 dark:border-zinc-800"}`}>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 인스타 게시글</h2>
-                <button onClick={async () => { await navigator.clipboard.writeText(instaResult); setInstaCopied(true); setTimeout(() => setInstaCopied(false), 2000); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-                  {instaCopied ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</> : <><IconCopy className="w-3.5 h-3.5" />복사</>}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => setInstaEditing((v) => !v)}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${instaEditing ? "border-[#6C63FF] text-[#6C63FF] bg-[#6C63FF]/5" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+                    <IconPencil className="w-3.5 h-3.5" />{instaEditing ? "편집 중" : "편집"}
+                  </button>
+                  <button onClick={async () => { await navigator.clipboard.writeText(instaResult); setInstaCopied(true); setTimeout(() => setInstaCopied(false), 2000); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                    {instaCopied ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</> : <><IconCopy className="w-3.5 h-3.5" />복사</>}
+                  </button>
+                </div>
               </div>
-              <EditableResult value={instaResult} onChange={setInstaResult} rows={10}>
+              {instaEditing ? (
+                <textarea
+                  value={instaResult} onChange={(e) => setInstaResult(e.target.value)}
+                  onBlur={() => setInstaEditing(false)} autoFocus rows={10}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-[#6C63FF]/40 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 resize-none focus:outline-none leading-relaxed"
+                />
+              ) : (
                 <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{instaResult}</p>
-              </EditableResult>
+              )}
             </div>
           )}
         </>
