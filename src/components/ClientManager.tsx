@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import ConfirmModal from "./ConfirmModal";
 import {
   IconBuilding, IconPlus, IconPencil, IconTrash,
   IconUser, IconNotes, IconCalendar, IconArrowsSort,
@@ -466,6 +467,7 @@ export default function ClientManager() {
   const [expandedHistories, setExpandedHistories] = useState<Set<string>>(new Set());
   const [expandedGrass,     setExpandedGrass]     = useState<Set<string>>(new Set());
   const [openStatusId,      setOpenStatusId]      = useState<string | null>(null);
+  const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -567,9 +569,11 @@ export default function ClientManager() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm("이 거래처를 삭제할까요?")) return;
-    setClients((prev) => { const u = prev.filter((c) => c.id !== id); saveClients(u); return u; });
+  const handleDelete = (id: string) => setConfirmDeleteId(id);
+  const doDelete = () => {
+    if (!confirmDeleteId) return;
+    setClients((prev) => { const u = prev.filter((c) => c.id !== confirmDeleteId); saveClients(u); return u; });
+    setConfirmDeleteId(null);
   };
 
   const closeForm = () => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); };
@@ -630,8 +634,18 @@ export default function ClientManager() {
   };
   const SORT_CYCLE: SortOrder[] = ["inprogress", "pending", "expiry", "name"];
 
+  const confirmDeleteName = clients.find((c) => c.id === confirmDeleteId)?.name ?? "";
+
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full">
+
+      {confirmDeleteId && (
+        <ConfirmModal
+          message={`'${confirmDeleteName}'을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+          onConfirm={doDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
 
       {/* 헤더 */}
       <div className="flex items-center justify-between">

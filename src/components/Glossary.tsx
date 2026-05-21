@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ConfirmModal from "./ConfirmModal";
 import EditableResult from "./EditableResult";
 import {
   IconBook,
@@ -87,7 +88,8 @@ export default function Glossary() {
 
   // AI 설명
   const [aiQuery, setAiQuery]       = useState("");
-  const [aiResult, setAiResult]     = useState("");
+  const [aiResult,        setAiResult]        = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [aiLoading, setAiLoading]   = useState(false);
   const [aiError, setAiError]       = useState("");
 
@@ -146,8 +148,11 @@ export default function Glossary() {
     setShowForm(false);
   };
 
-  const handleDelete = (id: string) => {
-    setTerms((prev) => prev.filter((t) => t.id !== id));
+  const handleDelete = (id: string) => setConfirmDeleteId(id);
+  const doDelete = () => {
+    if (!confirmDeleteId) return;
+    setTerms((prev) => prev.filter((t) => t.id !== confirmDeleteId));
+    setConfirmDeleteId(null);
   };
 
   /* ── AI 설명 ── */
@@ -186,6 +191,14 @@ export default function Glossary() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-3 w-full">
+
+      {confirmDeleteId && (
+        <ConfirmModal
+          message="용어를 삭제하시겠습니까?"
+          onConfirm={doDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
 
       {/* ── Bento 상단: 통계 + AI 설명 ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
