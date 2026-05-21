@@ -17,6 +17,7 @@ import {
   IconCheck,
   IconAlignLeft,
   IconFileUpload,
+  IconFileAnalytics,
 } from "@tabler/icons-react";
 
 type InputMode = "text" | "file";
@@ -115,6 +116,23 @@ const statCards = (result: InsightResult) => [
   },
 ];
 
+const REPORT_SYSTEM_PROMPT = `당신은 데이터 분석 보고서 작성 전문가입니다.
+제공된 데이터 분석 결과(핵심 수치, 트렌드, 이상치, 인사이트)를 바탕으로 실무에서 바로 사용할 수 있는 성과 보고서를 작성해주세요.
+
+보고서 형식 (순서대로 작성):
+1. 제목
+2. 분석 기간 (데이터에서 유추, 불분명하면 '해당 기간')
+3. 핵심 성과 (주요 수치 3~5개 bullet)
+4. 트렌드 분석 (2~3문장)
+5. 개선 제안 (2~3가지 실천 가능한 제안)
+
+규칙:
+- 한국어로 작성
+- 비즈니스 문서 톤 (격식체)
+- 마크다운(**, ## 등) 사용 금지
+- 각 섹션 제목은 [섹션명] 형식으로 표기
+- 간결하고 실용적으로 작성`;
+
 export default function DataInsight() {
   const [inputMode, setInputMode]   = useState<InputMode>("text");
   const [input, setInput]           = useState("");
@@ -125,6 +143,10 @@ export default function DataInsight() {
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState("");
   const [copied, setCopied]         = useState(false);
+  const [report, setReport]         = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError]     = useState("");
+  const [reportCopied, setReportCopied]   = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sourceText = inputMode === "text" ? input : fileText;
@@ -159,6 +181,8 @@ export default function DataInsight() {
     setLoading(true);
     setError("");
     setResult(null);
+    setReport("");
+    setReportError("");
 
     try {
       const res = await fetch("/api/groq", {
@@ -178,6 +202,49 @@ export default function DataInsight() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!result) return;
+    setReportLoading(true);
+    setReportError("");
+    setReport("");
+    const summary = [
+      `[핵심 수치]`,
+      `최대: ${result.keyStats.max.value} — ${result.keyStats.max.context}`,
+      `최소: ${result.keyStats.min.value} — ${result.keyStats.min.context}`,
+      `평균: ${result.keyStats.avg.value} — ${result.keyStats.avg.context}`,
+      `합계: ${result.keyStats.total.value} — ${result.keyStats.total.context}`,
+      ``,
+      `[트렌드] ${result.trend}`,
+      ``,
+      `[이상치] ${result.outliers}`,
+      ``,
+      `[핵심 인사이트] ${result.insight}`,
+    ].join("\n");
+    try {
+      const res = await fetch("/api/groq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: summary }],
+          systemPrompt: REPORT_SYSTEM_PROMPT,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
+      setReport(data.result);
+    } catch (e) {
+      setReportError(e instanceof Error ? e.message : "보고서 생성 중 오류가 발생했습니다.");
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleReportCopy = async () => {
+    await navigator.clipboard.writeText(report);
+    setReportCopied(true);
+    setTimeout(() => setReportCopied(false), 2000);
   };
 
   const handleCopy = async () => {
@@ -400,6 +467,55 @@ export default function DataInsight() {
               {result.insight}
             </p>
           </div>
+
+          {/* 보고서로 생성 버튼 */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleGenerateReport}
+              disabled={reportLoading}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+            >
+              {reportLoading ? (
+                <><IconLoader2 className="w-4 h-4 animate-spin" />생성 중...</>
+              ) : (
+                <><IconFileAnalytics className="w-4 h-4" />보고서로 생성</>
+              )}
+            </button>
+          </div>
+
+          {/* 보고서 에러 */}
+          {reportError && (
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
+              <IconAlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              {reportError}
+            </div>
+          )}
+
+          {/* 생성된 보고서 */}
+          {report && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#6C63FF]/30 p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#6C63FF]/10 text-[#6C63FF]">
+                    <IconFileAnalytics className="w-4 h-4" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 성과 보고서</p>
+                </div>
+                <button
+                  onClick={handleReportCopy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+                >
+                  {reportCopied
+                    ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</>
+                    : <><IconCopy className="w-3.5 h-3.5" />복사</>}
+                </button>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                {report}
+              </p>
+            </div>
+          )}
 
         </div>
       )}
