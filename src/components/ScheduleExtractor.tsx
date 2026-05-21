@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import { addCalendarEvent, parseKoreanDate } from "@/lib/calendarStorage";
@@ -268,6 +270,15 @@ export default function ScheduleExtractor() {
 
         </>
       )}
+      <HelpButton
+        title="일정 추출 사용법"
+        steps={[
+          { step: "텍스트 붙여넣기", desc: "이메일·공지·메시지 원문을 그대로 입력합니다." },
+          { step: "일정 추출", desc: "AI가 날짜·시간·장소·내용을 자동으로 추출합니다." },
+          { step: "개별 저장", desc: "각 일정 카드의 '일정 저장' 버튼으로 캘린더에 저장합니다." },
+          { step: "전체 저장", desc: "'전체 일정 추가' 버튼으로 모든 일정을 한 번에 저장합니다." },
+        ]}
+      />
     </div>
   );
 }

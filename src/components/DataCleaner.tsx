@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useRef, useEffect } from "react";
 import EditableResult from "./EditableResult";
 import { IconAlignLeft, IconFileUpload } from "@tabler/icons-react";
@@ -361,6 +363,15 @@ export default function DataCleaner() {
           </EditableResult>
         </div>
       )}
+      <HelpButton
+        title="데이터 정리 사용법"
+        steps={[
+          { step: "데이터 입력", desc: "CSV·표·자유형식 텍스트를 붙여넣거나 파일을 업로드하세요." },
+          { step: "AI 분석", desc: "버튼 클릭으로 표 형태로 자동 정리됩니다." },
+          { step: "편집", desc: "생성된 표를 클릭하면 직접 수정할 수 있습니다." },
+          { step: "내보내기", desc: "HTML 복사 또는 CSV 파일로 다운로드하세요." },
+        ]}
+      />
     </div>
   );
 }

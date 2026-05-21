@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useEffect } from "react";
 import ConfirmModal from "./ConfirmModal";
 import EditableResult from "./EditableResult";
@@ -441,6 +443,15 @@ export default function Glossary() {
           </div>
         </div>
       )}
+      <HelpButton
+        title="용어집 사용법"
+        steps={[
+          { step: "용어 등록", desc: "새 용어와 설명을 입력하고 추가합니다." },
+          { step: "AI 설명", desc: "등록된 용어를 클릭하고 AI에게 상세 설명을 요청합니다." },
+          { step: "카테고리", desc: "카테고리별로 분류하여 용어를 정리합니다." },
+          { step: "검색", desc: "상단 검색창에서 원하는 용어를 빠르게 찾습니다." },
+        ]}
+      />
     </div>
   );
 }

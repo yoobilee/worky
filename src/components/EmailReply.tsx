@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useEffect } from "react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
@@ -279,6 +281,15 @@ export default function EmailReply() {
           ))}
         </div>
       )}
+      <HelpButton
+        title="이메일 작성 사용법"
+        steps={[
+          { step: "이메일 붙여넣기", desc: "답장할 이메일 원문을 입력란에 붙여넣으세요." },
+          { step: "스타일 선택", desc: "공식/친근/간결 등 원하는 답장 톤을 선택합니다." },
+          { step: "초안 생성", desc: "AI가 선택한 스타일의 3가지 답장 초안을 생성합니다." },
+          { step: "복사", desc: "마음에 드는 초안을 클릭하여 편집하거나 복사하세요." },
+        ]}
+      />
     </div>
   );
 }

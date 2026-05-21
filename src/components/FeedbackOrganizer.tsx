@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState } from "react";
 import {
   IconMessageCheck, IconAlertCircle, IconCircleCheck, IconBulb,
@@ -247,6 +249,15 @@ export default function FeedbackOrganizer() {
 
         </div>
       )}
+      <HelpButton
+        title="피드백 정리 사용법"
+        steps={[
+          { step: "피드백 입력", desc: "클라이언트 피드백 텍스트를 그대로 붙여넣으세요." },
+          { step: "AI 분류", desc: "필수·선택·구체화 항목으로 자동 분류됩니다." },
+          { step: "우선 처리", desc: "빨간 카드(필수 수정)부터 순서대로 처리하세요." },
+          { step: "편집·복사", desc: "정리된 내용을 편집하거나 전체 복사합니다." },
+        ]}
+      />
     </div>
   );
 }

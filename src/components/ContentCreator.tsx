@@ -1,5 +1,7 @@
 "use client";
 
+
+import HelpButton from "./HelpButton";
 import { useState, useEffect } from "react";
 import {
   IconSend, IconBrandInstagram, IconCopy, IconCheck,
@@ -493,6 +495,15 @@ export default function ContentCreator() {
           )}
         </>
       )}
+      <HelpButton
+        title="콘텐츠 작성 사용법"
+        steps={[
+          { step: "탭 선택", desc: "보고 메시지 또는 인스타 게시글 탭을 선택하세요." },
+          { step: "내용 입력", desc: "작업 내용 또는 게시글 주제를 입력합니다." },
+          { step: "톤 설정", desc: "원하는 어투와 분위기를 선택합니다." },
+          { step: "생성", desc: "버튼 클릭으로 생성 후 클릭하여 직접 편집도 가능합니다." },
+        ]}
+      />
     </div>
   );
 }
