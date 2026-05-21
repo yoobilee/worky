@@ -5,6 +5,7 @@ export const OPTIONAL_MENU_ITEMS = [
   { href: "/data",      label: "데이터 정리" },
   { href: "/insight",   label: "데이터 인사이트" },
   { href: "/glossary",  label: "용어집" },
+  { href: "/feedback",  label: "피드백 정리" },
   { href: "/clients",   label: "거래처 관리" },
   { href: "/report",    label: "보고 메시지" },
 ] as const;

@@ -54,7 +54,7 @@ const JOB_PRESETS: JobPreset[] = [
   {
     id: "designer",  label: "디자이너",           icon: IconPalette,
     desc: "크리에이티브 직군",
-    on: ["/translate", "/glossary", "/template", "/summary"],
+    on: ["/translate", "/glossary", "/template", "/summary", "/feedback"],
   },
   {
     id: "other",     label: "기타",               icon: IconApps,
