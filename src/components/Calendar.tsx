@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import ConfirmModal from "./ConfirmModal";
 import {
   IconChevronLeft, IconChevronRight, IconPlus,
   IconTrash, IconCalendar, IconClock, IconMapPin,
@@ -60,7 +61,8 @@ export default function CalendarComponent() {
   const [formTime,     setFormTime]     = useState("");
   const [formLocation, setFormLocation] = useState("");
   const [hydrated,   setHydrated]   = useState(false);
-  const [editingId,  setEditingId]  = useState<string | null>(null);
+  const [editingId,       setEditingId]       = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const panelWrapRef = useRef<HTMLDivElement>(null);
   const panelRef     = useRef<HTMLDivElement>(null);
   const [editTitle,    setEditTitle]    = useState("");
@@ -124,9 +126,12 @@ export default function CalendarComponent() {
     setFormTitle(""); setFormTime(""); setFormLocation("");
   };
 
-  const handleDelete = (id: string) => {
-    persist(events.filter(e => e.id !== id));
-    if (editingId === id) setEditingId(null);
+  const handleDelete = (id: string) => setConfirmDeleteId(id);
+  const doDelete = () => {
+    if (!confirmDeleteId) return;
+    persist(events.filter(e => e.id !== confirmDeleteId));
+    if (editingId === confirmDeleteId) setEditingId(null);
+    setConfirmDeleteId(null);
   };
 
   const startEdit = (ev: CalendarEvent) => {
@@ -151,6 +156,14 @@ export default function CalendarComponent() {
 
   return (
     <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
+
+      {confirmDeleteId && (
+        <ConfirmModal
+          message="일정을 삭제하시겠습니까?"
+          onConfirm={doDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
 
       {/* 캘린더 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import ConfirmModal from "./ConfirmModal";
 import { IconTrash, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
 interface Todo {
@@ -113,7 +114,8 @@ function doCarryover(targetDate: string, existingTodos: Todo[]): Todo[] {
 export default function TodoMemo() {
   const [todos,        setTodos]        = useState<Todo[]>([]);
   const [input,        setInput]        = useState("");
-  const [memoTab,      setMemoTab]      = useState<MemoTab>("업무");
+  const [memoTab,        setMemoTab]        = useState<MemoTab>("업무");
+  const [confirmAction,  setConfirmAction]  = useState<"memo" | "completed" | null>(null);
   const [memos,        setMemos]        = useState<Record<MemoTab, string>>({ 업무: "", 회의: "", 개인: "" });
   const [saveStatus,   setSaveStatus]   = useState<SaveStatus>("idle");
   const [hydrated,     setHydrated]     = useState(false);
@@ -230,13 +232,14 @@ export default function TodoMemo() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
   };
 
-  const clearMemo = () => {
-    if (!confirm("메모를 전체 삭제할까요?")) return;
+  const clearMemo = () => setConfirmAction("memo");
+  const doClearMemo = () => {
     setMemos((prev) => ({ ...prev, [memoTab]: "" }));
     localStorage.removeItem(MEMO_KEYS[memoTab]);
     setSaveStatus("idle");
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    setConfirmAction(null);
   };
 
   const addTodo = () => {
@@ -265,6 +268,21 @@ export default function TodoMemo() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full">
+
+      {confirmAction === "completed" && (
+        <ConfirmModal
+          message="오늘의 할 일을 모두 삭제하시겠습니까?"
+          onConfirm={() => { setTodos((prev) => prev.filter((t) => !t.completed)); setConfirmAction(null); }}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
+      {confirmAction === "memo" && (
+        <ConfirmModal
+          message="메모를 모두 삭제하시겠습니까?"
+          onConfirm={doClearMemo}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
 
       {/* Bento 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -471,7 +489,7 @@ export default function TodoMemo() {
 
           {todos.some((t) => t.completed) && (
             <button
-              onClick={() => setTodos((prev) => prev.filter((t) => !t.completed))}
+              onClick={() => setConfirmAction("completed")}
               className="text-xs text-slate-400 hover:text-red-400 transition text-left"
             >
               완료된 항목 모두 삭제
