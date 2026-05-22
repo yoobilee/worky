@@ -2,14 +2,23 @@
 
 import { useState, useEffect, useRef } from "react";
 import { IconQuestionMark, IconX } from "@tabler/icons-react";
+import { loadHelpButtonEnabled, HELP_BUTTON_EVENT } from "@/lib/menuSettings";
 
 export interface HelpStep { step: string; desc: string; }
 
 interface Props { title: string; steps: HelpStep[]; }
 
 export default function HelpButton({ title, steps }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open,    setOpen]    = useState(false);
+  const [visible, setVisible] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setVisible(loadHelpButtonEnabled());
+    const handler = () => setVisible(loadHelpButtonEnabled());
+    window.addEventListener(HELP_BUTTON_EVENT, handler);
+    return () => window.removeEventListener(HELP_BUTTON_EVENT, handler);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -19,6 +28,8 @@ export default function HelpButton({ title, steps }: Props) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  if (!visible) return null;
 
   return (
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end" ref={ref}>
