@@ -16,6 +16,8 @@ import {
   IconCheck,
   IconTag,
 } from "@tabler/icons-react";
+import { createClient } from "@/lib/supabase/client";
+import { getGlossary, addTerm, updateTerm, deleteTerm } from "@/lib/db/glossary";
 
 /* ───────── 타입·상수 ───────── */
 
@@ -39,8 +41,6 @@ const CATEGORY_COLORS: Record<Category, string> = {
   재무:   "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
   기타:   "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400",
 };
-
-const STORAGE_KEY = "worky_glossary";
 
 const DEFAULT_TERMS: Term[] = [
   { id: "default-1", term: "KPI",   category: "직무",   createdAt: 0,
@@ -78,6 +78,7 @@ function CategoryBadge({ category }: { category: Category }) {
 export default function Glossary() {
   const [terms, setTerms]           = useState<Term[]>([]);
   const [hydrated, setHydrated]     = useState(false);
+  const [userId, setUserId]         = useState<string | null>(null);
   const [search, setSearch]         = useState("");
   const [filterCat, setFilterCat]   = useState<Category | "전체">("전체");
   const [showForm, setShowForm]     = useState(false);
@@ -95,30 +96,32 @@ export default function Glossary() {
   const [aiLoading, setAiLoading]   = useState(false);
   const [aiError, setAiError]       = useState("");
 
-  // localStorage 로드 (데이터 없거나 빈 배열이면 기본 예시 삽입)
+  // Supabase 로드
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const parsed: Term[] = raw ? JSON.parse(raw) : [];
-
-      if (parsed.length > 0) {
-        setTerms(parsed);
-      } else {
-        setTerms(DEFAULT_TERMS);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TERMS));
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+      if (uid) {
+        const rows = await getGlossary(uid);
+        if (rows.length > 0) {
+          setTerms(rows.map((r) => ({
+            id: r.id, term: r.term, description: r.definition,
+            category: r.category as Category, createdAt: new Date(r.created_at).getTime(),
+          })));
+        } else {
+          // 기본 예시 일괄 삽입
+          const inserted: Term[] = [];
+          for (const d of DEFAULT_TERMS) {
+            const row = await addTerm(uid, { term: d.term, definition: d.description, category: d.category });
+            if (row) inserted.push({ id: row.id, term: row.term, description: row.definition, category: row.category as Category, createdAt: new Date(row.created_at).getTime() });
+          }
+          setTerms(inserted.length > 0 ? inserted : DEFAULT_TERMS);
+        }
       }
-    } catch (e) {
-      setTerms(DEFAULT_TERMS);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TERMS));
-    }
-    setHydrated(true);
+      setHydrated(true);
+    });
   }, []);
-
-  // localStorage 저장
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(terms));
-  }, [terms, hydrated]);
 
   /* ── CRUD ── */
   const openAdd = () => {
@@ -133,26 +136,35 @@ export default function Glossary() {
     setShowForm(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formTerm.trim() || !formDesc.trim()) return;
     if (editId) {
+      await updateTerm(editId, { term: formTerm.trim(), definition: formDesc.trim(), category: formCat });
       setTerms((prev) =>
         prev.map((t) =>
           t.id === editId ? { ...t, term: formTerm.trim(), description: formDesc.trim(), category: formCat } : t
         )
       );
     } else {
-      setTerms((prev) => [
-        { id: crypto.randomUUID(), term: formTerm.trim(), description: formDesc.trim(), category: formCat, createdAt: Date.now() },
-        ...prev,
-      ]);
+      const row = userId
+        ? await addTerm(userId, { term: formTerm.trim(), definition: formDesc.trim(), category: formCat })
+        : null;
+      const newTerm: Term = {
+        id: row?.id ?? crypto.randomUUID(),
+        term: formTerm.trim(),
+        description: formDesc.trim(),
+        category: formCat,
+        createdAt: Date.now(),
+      };
+      setTerms((prev) => [newTerm, ...prev]);
     }
     setShowForm(false);
   };
 
   const handleDelete = (id: string) => setConfirmDeleteId(id);
-  const doDelete = () => {
+  const doDelete = async () => {
     if (!confirmDeleteId) return;
+    await deleteTerm(confirmDeleteId);
     setTerms((prev) => prev.filter((t) => t.id !== confirmDeleteId));
     setConfirmDeleteId(null);
   };

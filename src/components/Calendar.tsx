@@ -9,9 +9,9 @@ import {
   IconTrash, IconCalendar, IconClock, IconMapPin,
   IconPencil, IconCheck, IconX, IconChevronUp,
 } from "@tabler/icons-react";
-import {
-  CalendarEvent, loadCalendarEvents, saveCalendarEvents,
-} from "@/lib/calendarStorage";
+import { CalendarEvent } from "@/lib/calendarStorage";
+import { createClient } from "@/lib/supabase/client";
+import { getEvents, addEvent, updateEvent, deleteEvent } from "@/lib/db/calendar";
 
 const DAY_LABELS  = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
@@ -63,6 +63,7 @@ export default function CalendarComponent() {
   const [formTime,     setFormTime]     = useState("");
   const [formLocation, setFormLocation] = useState("");
   const [hydrated,   setHydrated]   = useState(false);
+  const [userId,     setUserId]     = useState<string | null>(null);
   const [editingId,       setEditingId]       = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const panelWrapRef = useRef<HTMLDivElement>(null);
@@ -72,8 +73,16 @@ export default function CalendarComponent() {
   const [editLocation, setEditLocation] = useState("");
 
   useEffect(() => {
-    setEvents(loadCalendarEvents());
-    setHydrated(true);
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+      if (uid) {
+        const rows = await getEvents(uid);
+        setEvents(rows.map((r) => ({ id: r.id, date: r.date, title: r.title, time: r.time, location: r.location })));
+      }
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -114,24 +123,23 @@ export default function CalendarComponent() {
   const eventsOn       = (key: string) => events.filter(e => e.date === key);
   const selectedEvents = selected ? eventsOn(selected) : [];
 
-  const persist = (next: CalendarEvent[]) => { setEvents(next); saveCalendarEvents(next); };
-
-  const handleAdd = () => {
-    if (!formTitle.trim() || !selected) return;
-    persist([...events, {
-      id: crypto.randomUUID(),
+  const handleAdd = async () => {
+    if (!formTitle.trim() || !selected || !userId) return;
+    const row = await addEvent(userId, {
       date: selected,
       title: formTitle.trim(),
       time: formTime.trim() || undefined,
       location: formLocation.trim() || undefined,
-    }]);
+    });
+    if (row) setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time, location: row.location }]);
     setFormTitle(""); setFormTime(""); setFormLocation("");
   };
 
   const handleDelete = (id: string) => setConfirmDeleteId(id);
-  const doDelete = () => {
+  const doDelete = async () => {
     if (!confirmDeleteId) return;
-    persist(events.filter(e => e.id !== confirmDeleteId));
+    await deleteEvent(confirmDeleteId);
+    setEvents((prev) => prev.filter(e => e.id !== confirmDeleteId));
     if (editingId === confirmDeleteId) setEditingId(null);
     setConfirmDeleteId(null);
   };
@@ -143,14 +151,15 @@ export default function CalendarComponent() {
     setEditLocation(ev.location || "");
   };
 
-  const saveEdit = (id: string) => {
+  const saveEdit = async (id: string) => {
     if (!editTitle.trim()) return;
-    persist(events.map(e => e.id !== id ? e : {
-      ...e,
+    const patch = {
       title: editTitle.trim(),
       time: editTime.trim() || undefined,
       location: editLocation.trim() || undefined,
-    }));
+    };
+    await updateEvent(id, patch);
+    setEvents((prev) => prev.map(e => e.id !== id ? e : { ...e, ...patch }));
     setEditingId(null);
   };
 

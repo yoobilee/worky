@@ -15,6 +15,10 @@ import {
 } from "@/lib/menuSettings";
 import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
 import { loadCalendarEvents, type CalendarEvent } from "@/lib/calendarStorage";
+import { createClient } from "@/lib/supabase/client";
+import { getStats } from "@/lib/db/usage_stats";
+import { getEvents } from "@/lib/db/calendar";
+import { getTodos } from "@/lib/db/todos";
 
 /* ───────── 상수 ───────── */
 
@@ -182,22 +186,33 @@ export default function HomePage() {
     setTip(todayTip.text);
     setTipCategory(todayTip.category);
 
-    // 이번 주 사용 통계
+    // localStorage fallback (즉각 표시)
     setWeekStats(getThisWeekStats());
-
-    // 다가오는 일정
     const todayStr = new Date().toISOString().slice(0, 10);
-    const upcoming = loadCalendarEvents()
+    const localUpcoming = loadCalendarEvents()
       .filter(e => e.date >= todayStr)
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, 3);
-    setUpcomingEvents(upcoming);
+    setUpcomingEvents(localUpcoming);
 
-    // localStorage 할 일
-    try {
-      const saved = localStorage.getItem("worky_todos");
-      if (saved) setTodos(JSON.parse(saved));
-    } catch {}
+    // Supabase에서 최신 데이터 비동기 로드
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) return;
+      const [dbStats, dbEvents, todayTodos] = await Promise.all([
+        getStats(uid),
+        getEvents(uid),
+        getTodos(uid, todayStr),
+      ]);
+      setWeekStats(dbStats as Partial<Record<FeatureKey, number>>);
+      const upcoming = dbEvents
+        .filter(e => e.date >= todayStr)
+        .slice(0, 3)
+        .map(e => ({ id: e.id, date: e.date, title: e.title, time: e.time, location: e.location } as CalendarEvent));
+      setUpcomingEvents(upcoming);
+      if (todayTodos.length > 0) setTodos(todayTodos.map(t => ({ id: t.id, text: t.text, completed: t.completed })));
+    });
 
     // 메뉴 설정
     setMenuSettings(loadMenuSettings());
