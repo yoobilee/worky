@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconEdit, IconFileText, IconMessageCheck } from "@tabler/icons-react";
+import { usePathname, useRouter } from "next/navigation";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconEdit, IconFileText, IconMessageCheck, IconLogout } from "@tabler/icons-react";
 import { loadMenuOrder, MENU_ORDER_EVENT } from "@/lib/menuSettings";
 import { useTheme } from "./ThemeProvider";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
 } from "@/lib/menuSettings";
+import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -159,6 +161,7 @@ const COLLAPSED_KEY = "worky-sidebar-collapsed";
 
 export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const pathname = usePathname();
+  const router   = useRouter();
   const { theme, toggle: toggleTheme } = useTheme();
   const st = statusConfig[aiStatus];
 
@@ -166,6 +169,8 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const [mounted,       setMounted]       = useState(false);
   const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
   const [menuOrder,     setMenuOrder]     = useState<string[]>([]);
+  const [user,          setUser]          = useState<User | null>(null);
+  const [loggingOut,    setLoggingOut]    = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(COLLAPSED_KEY);
@@ -174,15 +179,29 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
     setMenuOrder(loadMenuOrder());
     setMounted(true);
 
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
     const onSettings = () => setMenuSettings(loadMenuSettings());
     const onOrder    = () => setMenuOrder(loadMenuOrder());
     window.addEventListener(MENU_SETTINGS_EVENT, onSettings);
     window.addEventListener(MENU_ORDER_EVENT,    onOrder);
     return () => {
+      subscription.unsubscribe();
       window.removeEventListener(MENU_SETTINGS_EVENT, onSettings);
       window.removeEventListener(MENU_ORDER_EVENT,    onOrder);
     };
   }, []);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   const toggleCollapse = () => {
     const next = !collapsed;
@@ -354,6 +373,54 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
             )}
           </div>
         </div>
+
+        {/* 사용자 프로필 + 로그아웃 */}
+        {user && (
+          <div
+            title={isCollapsed ? (user.user_metadata?.full_name ?? user.email ?? "사용자") : undefined}
+            className={[
+              "flex items-center rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/80",
+              isCollapsed ? "justify-center px-2 py-2" : "gap-2.5 px-3 py-2.5",
+            ].join(" ")}
+          >
+            {/* 아바타 */}
+            {user.user_metadata?.avatar_url ? (
+              <img
+                src={user.user_metadata.avatar_url}
+                alt="프로필"
+                className="w-6 h-6 rounded-full shrink-0 object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div
+                className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                {(user.user_metadata?.full_name ?? user.email ?? "U")[0].toUpperCase()}
+              </div>
+            )}
+
+            {/* 이름/이메일 + 로그아웃 */}
+            <div className={`flex-1 min-w-0 inline-block ${labelCls}`}>
+              <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate whitespace-nowrap">
+                {user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자"}
+              </p>
+              <p className="text-[10px] text-slate-400 dark:text-zinc-500 truncate whitespace-nowrap">
+                {user.email}
+              </p>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              aria-label="로그아웃"
+              title="로그아웃"
+              className={`shrink-0 p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-40 ${labelCls}`}
+            >
+              <IconLogout className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
       </div>
     </aside>
