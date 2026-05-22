@@ -1,29 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
 import { createServerClient } from "@supabase/ssr";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback"];
 
 export async function middleware(request: NextRequest) {
-  const response = await updateSession(request);
-
   const { pathname } = request.nextUrl;
 
-  // 공개 경로는 인증 없이 접근 가능
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    return response;
-  }
-
-  // 정적 자산 및 API는 통과
+  // 공개 경로 & 정적 자산은 그냥 통과
   if (
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)
   ) {
-    return response;
+    return NextResponse.next({ request });
   }
 
-  // 세션 확인
+  let supabaseResponse = NextResponse.next({ request });
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,14 +27,21 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
+          // 요청 쿠키 업데이트
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          // 응답 쿠키 업데이트 (세션 갱신)
+          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options)
           );
         },
       },
     }
   );
 
+  // 세션 갱신 + 사용자 확인 (한 번에)
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -49,7 +50,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return response;
+  return supabaseResponse;
 }
 
 export const config = {
