@@ -10,7 +10,9 @@
       "Bash(node -e ' *)",
       "Bash(grep -n \"min-h\\\\|max-h\\\\|flex-1\\\\|h-\\\\[\\\\\\\\|rows=\\\\|textarea\\\\|shrink-0\\\\|overflow\" src/components/EmailReply.tsx)",
       "Bash(git commit *)",
-      "Bash(node -e \"const icons=require\\('@tabler/icons-react'\\); const keys=Object.keys\\(icons\\).filter\\(k=>k.includes\\('Brand'\\)\\); console.log\\(keys.filter\\(k=>k.match\\(/Openai|Google|Anthropic|Perplexity/i\\)\\).join\\('\\\\n'\\)\\);\")"
+      "Bash(node -e \"const icons=require\\('@tabler/icons-react'\\); const keys=Object.keys\\(icons\\).filter\\(k=>k.includes\\('Brand'\\)\\); console.log\\(keys.filter\\(k=>k.match\\(/Openai|Google|Anthropic|Perplexity/i\\)\\).join\\('\\\\n'\\)\\);\")",
+      "Bash(node -e \"require\\('@supabase/supabase-js'\\); console.log\\('ok'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('rootDir:', d.get\\('compilerOptions',{}\\).get\\('rootDir','not set'\\)\\); print\\('baseUrl:', d.get\\('compilerOptions',{}\\).get\\('baseUrl','not set'\\)\\)\")"
     ]
   }
 }
