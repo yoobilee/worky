@@ -12,6 +12,12 @@ import {
   IconChevronLeft, IconChevronRight,
   IconCircleCheck, IconCircleX, IconClock, IconPlayerPlay,
 } from "@tabler/icons-react";
+import { createClient } from "@/lib/supabase/client";
+import {
+  getClients as getDbClients, addClient as addDbClient,
+  updateClient as updateDbClient, deleteClient as deleteDbClient,
+  type DbClient,
+} from "@/lib/db/clients";
 
 /* ── 타입 ── */
 type ReportStatus = "pending" | "inprogress" | "complete" | "stopped";
@@ -57,7 +63,6 @@ interface FormState {
 }
 
 /* ── 상수 ── */
-const STORAGE_KEY    = "worky_clients";
 const RESET_DATE_KEY = "worky_clients_reset_date";
 
 const EMPTY_FORM: FormState = {
@@ -186,16 +191,42 @@ function normalize(raw: Record<string, unknown>): Client {
   };
 }
 
-function loadClients(): Client[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
-    return (JSON.parse(data) as Record<string, unknown>[]).map(normalize);
-  } catch { return []; }
+function dbToClient(row: DbClient): Client {
+  return normalize({
+    id:            row.id,
+    name:          row.name,
+    status:        row.status,
+    contact:       row.contact_person,
+    phone:         row.phone,
+    link:          row.link,
+    tags:          row.tags,
+    contractStart: row.contract_start ?? "",
+    contractDays:  row.contract_days,
+    reportTone:    row.report_tone ?? "",
+    memo:          row.memo,
+    statusHistory: row.history,
+    dailyLog:      row.progress as Record<string, DayStatus>,
+    showGrassGrid: row.show_grass_grid,
+    createdAt:     row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+  });
 }
 
-function saveClients(clients: Client[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+function clientToDb(c: Omit<Client, "id" | "createdAt">): Omit<DbClient, "id" | "created_at"> {
+  return {
+    name:            c.name,
+    status:          c.status,
+    contact_person:  c.contact,
+    phone:           c.phone,
+    link:            c.link,
+    tags:            c.tags,
+    contract_start:  c.contractStart || null,
+    contract_days:   c.contractDays,
+    report_tone:     c.reportTone,
+    memo:            c.memo,
+    history:         c.statusHistory as unknown[],
+    progress:        c.dailyLog as Record<string, string>,
+    show_grass_grid: c.showGrassGrid,
+  };
 }
 
 /* ── 한국 공휴일 (2026) ── */
@@ -462,6 +493,7 @@ function DatePickerInput({ value, onChange }: { value: string; onChange: (v: str
 export default function ClientManager() {
   const [clients,           setClients]           = useState<Client[]>([]);
   const [hydrated,          setHydrated]          = useState(false);
+  const [userId,            setUserId]            = useState<string | null>(null);
   const [sortOrder,         setSortOrder]         = useState<SortOrder>("inprogress");
   const [showForm,          setShowForm]          = useState(false);
   const [editingId,         setEditingId]         = useState<string | null>(null);
@@ -473,19 +505,27 @@ export default function ClientManager() {
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const today = todayKey();
-    let cls = loadClients();
-    const lastReset = localStorage.getItem(RESET_DATE_KEY);
-    if (lastReset !== today) {
-      // 완료 → 대기 중으로 리셋 (진행 중/중단은 유지)
-      cls = cls.map((c) =>
-        c.status === "complete" ? { ...c, status: "pending" as ReportStatus } : c
-      );
-      saveClients(cls);
-      localStorage.setItem(RESET_DATE_KEY, today);
-    }
-    setClients(cls);
-    setHydrated(true);
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+      if (uid) {
+        let rows = await getDbClients(uid);
+        const today = todayKey();
+        const lastReset = localStorage.getItem(RESET_DATE_KEY);
+        if (lastReset !== today) {
+          // 완료 → 대기 중으로 일괄 리셋
+          const toReset = rows.filter((r) => r.status === "complete");
+          for (const r of toReset) {
+            await updateDbClient(r.id, { status: "pending" });
+          }
+          if (toReset.length > 0) rows = await getDbClients(uid);
+          localStorage.setItem(RESET_DATE_KEY, today);
+        }
+        setClients(rows.map(dbToClient));
+      }
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -507,7 +547,8 @@ export default function ClientManager() {
           statusHistory: [...c.statusHistory, { date: today, status: newStatus }],
         }
       );
-      saveClients(updated);
+      const c = updated.find((x) => x.id === id);
+      if (c) updateDbClient(id, { status: newStatus, history: c.statusHistory as unknown[] }).catch(() => {});
       return updated;
     });
     setOpenStatusId(null);
@@ -518,12 +559,12 @@ export default function ClientManager() {
       const updated = prev.map((c) => {
         if (c.id !== clientId) return c;
         const log = { ...c.dailyLog };
-        if (!log[date])           log[date] = "done";
-        else if (log[date] === "done")   log[date] = "failed";
-        else                            delete log[date];
+        if (!log[date])                log[date] = "done";
+        else if (log[date] === "done") log[date] = "failed";
+        else                           delete log[date];
+        updateDbClient(clientId, { progress: log as Record<string, string> }).catch(() => {});
         return { ...c, dailyLog: log };
       });
-      saveClients(updated);
       return updated;
     });
   };
@@ -534,8 +575,8 @@ export default function ClientManager() {
     setForm((f) => ({ ...f, tags: [...f.tags, tag], tagInput: "" }));
   };
 
-  const handleSave = () => {
-    if (!form.name.trim()) return;
+  const handleSave = async () => {
+    if (!form.name.trim() || !userId) return;
     const base = {
       name:          form.name.trim(),
       status:        form.status,
@@ -549,13 +590,18 @@ export default function ClientManager() {
       memo:          form.memo.trim(),
       showGrassGrid: form.showGrassGrid,
     };
-    setClients((prev) => {
-      const updated = editingId
-        ? prev.map((c) => c.id !== editingId ? c : { ...c, ...base })
-        : [...prev, { ...base, id: crypto.randomUUID(), statusHistory: [], dailyLog: {}, createdAt: Date.now() }];
-      saveClients(updated);
-      return updated;
-    });
+    if (editingId) {
+      const existing = clients.find((c) => c.id === editingId);
+      if (!existing) { closeForm(); return; }
+      const updated = { ...existing, ...base };
+      await updateDbClient(editingId, clientToDb(updated));
+      setClients((prev) => prev.map((c) => c.id !== editingId ? c : updated));
+    } else {
+      const dbRow = await addDbClient(userId, {
+        ...clientToDb({ ...base, statusHistory: [], dailyLog: {} }),
+      });
+      if (dbRow) setClients((prev) => [...prev, dbToClient(dbRow)]);
+    }
     closeForm();
   };
 
@@ -572,9 +618,10 @@ export default function ClientManager() {
   };
 
   const handleDelete = (id: string) => setConfirmDeleteId(id);
-  const doDelete = () => {
+  const doDelete = async () => {
     if (!confirmDeleteId) return;
-    setClients((prev) => { const u = prev.filter((c) => c.id !== confirmDeleteId); saveClients(u); return u; });
+    await deleteDbClient(confirmDeleteId);
+    setClients((prev) => prev.filter((c) => c.id !== confirmDeleteId));
     setConfirmDeleteId(null);
   };
 

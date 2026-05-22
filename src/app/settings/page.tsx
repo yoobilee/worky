@@ -14,6 +14,8 @@ import {
   loadMenuOrder, saveMenuOrder,
   loadHelpButtonEnabled, saveHelpButtonEnabled,
 } from "@/lib/menuSettings";
+import { createClient } from "@/lib/supabase/client";
+import { getSettings, upsertSettings } from "@/lib/db/settings";
 
 const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
@@ -72,6 +74,7 @@ export default function SettingsPage() {
   const [collapsed,     setCollapsed]     = useState(false);
   const [saved,         setSaved]         = useState(false);
   const [hydrated,      setHydrated]      = useState(false);
+  const [userId,        setUserId]        = useState<string | null>(null);
   const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
   const [menuCollapsed, setMenuCollapsed] = useState(false);
   const [menuSaved,     setMenuSaved]     = useState(false);
@@ -88,19 +91,52 @@ export default function SettingsPage() {
   const [helpCollapsed,  setHelpCollapsed]  = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SENDER_KEY);
-      if (raw) {
-        const parsed: SenderInfo = JSON.parse(raw);
-        setInfo(parsed);
-        if (parsed.org || parsed.name || parsed.title) setCollapsed(true);
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+
+      // Supabase에서 설정 로드 → localStorage에 반영 (캐시 동기화)
+      if (uid) {
+        const dbSettings = await getSettings(uid);
+        if (dbSettings) {
+          if (dbSettings.sender_info) {
+            const si = dbSettings.sender_info as unknown as SenderInfo;
+            setInfo(si);
+            localStorage.setItem(SENDER_KEY, JSON.stringify(si));
+            if (si.org || si.name || si.title) setCollapsed(true);
+          }
+          if (dbSettings.menu_settings) {
+            saveMenuSettings(dbSettings.menu_settings as MenuSettings);
+          }
+          if (dbSettings.menu_order?.length) {
+            saveMenuOrder(dbSettings.menu_order);
+          }
+          if (dbSettings.help_button !== undefined) {
+            saveHelpButtonEnabled(dbSettings.help_button);
+          }
+          if (dbSettings.job_preset) {
+            localStorage.setItem(JOB_KEY, dbSettings.job_preset);
+            setJobPreset(dbSettings.job_preset);
+          }
+        }
+      } else {
+        // localStorage fallback
+        try {
+          const raw = localStorage.getItem(SENDER_KEY);
+          if (raw) {
+            const parsed: SenderInfo = JSON.parse(raw);
+            setInfo(parsed);
+            if (parsed.org || parsed.name || parsed.title) setCollapsed(true);
+          }
+        } catch {}
+        setJobPreset(localStorage.getItem(JOB_KEY));
       }
-    } catch {}
-    setMenuSettings(loadMenuSettings());
-    setMenuOrder(loadMenuOrder());
-    setHelpOn(loadHelpButtonEnabled());
-    setJobPreset(localStorage.getItem(JOB_KEY));
-    setHydrated(true);
+      setMenuSettings(loadMenuSettings());
+      setMenuOrder(loadMenuOrder());
+      setHelpOn(loadHelpButtonEnabled());
+      setHydrated(true);
+    });
   }, []);
 
   const handleChange = (field: keyof SenderInfo, value: string) => {
@@ -110,6 +146,7 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     localStorage.setItem(SENDER_KEY, JSON.stringify(info));
+    if (userId) upsertSettings(userId, { sender_info: info as unknown as Record<string, string> }).catch(() => {});
     setSaved(true);
     if (info.org || info.name || info.title) setCollapsed(true);
     setTimeout(() => setSaved(false), 2000);
@@ -119,6 +156,7 @@ export default function SettingsPage() {
     const next = { ...menuSettings, [href]: !isRouteEnabled(menuSettings, href) };
     setMenuSettings(next);
     saveMenuSettings(next);
+    if (userId) upsertSettings(userId, { menu_settings: next }).catch(() => {});
     setMenuSaved(true);
     setTimeout(() => setMenuSaved(false), 2500);
   };
@@ -135,6 +173,7 @@ export default function SettingsPage() {
     next.splice(i, 0, moved);
     setMenuOrder(next);
     saveMenuOrder(next);
+    if (userId) upsertSettings(userId, { menu_order: next }).catch(() => {});
     setOrderSaved(true);
     setTimeout(() => setOrderSaved(false), 2500);
     setDragIdx(null);
@@ -146,6 +185,7 @@ export default function SettingsPage() {
     const next = !helpOn;
     setHelpOn(next);
     saveHelpButtonEnabled(next);
+    if (userId) upsertSettings(userId, { help_button: next }).catch(() => {});
     setHelpSaved(true);
     setTimeout(() => setHelpSaved(false), 2500);
   };
@@ -164,6 +204,7 @@ export default function SettingsPage() {
     setMenuSettings(next);
     saveMenuSettings(next);
     localStorage.setItem(JOB_KEY, pendingPreset);
+    if (userId) upsertSettings(userId, { menu_settings: next, job_preset: pendingPreset }).catch(() => {});
     setJobPreset(pendingPreset);
     setPendingPreset(null);
     setJobSaved(true);

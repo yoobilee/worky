@@ -1,13 +1,15 @@
+import { createClient } from "@/lib/supabase/client";
+import { trackFeature } from "@/lib/db/usage_stats";
+
 export type FeatureKey =
   | "data" | "email" | "template" | "translate"
   | "summary" | "schedule" | "insight" | "qa" | "report";
 
 const STORAGE_KEY = "worky_usage_stats";
 
-// 이번 주 월요일 날짜를 키로 사용
 function getWeekKey(): string {
-  const now = new Date();
-  const day  = now.getDay(); // 0=일, 1=월 ...
+  const now  = new Date();
+  const day  = now.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   const mon  = new Date(now);
   mon.setDate(now.getDate() + diff);
@@ -16,6 +18,7 @@ function getWeekKey(): string {
 }
 
 export function trackUsage(feature: FeatureKey): void {
+  // localStorage 기록 (즉각 반응)
   try {
     const raw   = localStorage.getItem(STORAGE_KEY);
     const stats: Record<string, Record<string, number>> = raw ? JSON.parse(raw) : {};
@@ -24,6 +27,11 @@ export function trackUsage(feature: FeatureKey): void {
     stats[week][feature] = (stats[week][feature] ?? 0) + 1;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
   } catch {}
+
+  // Supabase 기록 (fire-and-forget)
+  createClient().auth.getUser().then(({ data }) => {
+    if (data.user) trackFeature(data.user.id, feature).catch(() => {});
+  });
 }
 
 export function getThisWeekStats(): Partial<Record<FeatureKey, number>> {

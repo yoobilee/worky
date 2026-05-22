@@ -5,6 +5,9 @@ import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef, useCallback } from "react";
 import ConfirmModal from "./ConfirmModal";
 import { IconTrash, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { createClient } from "@/lib/supabase/client";
+import { getTodos, upsertTodos, getPastTodoRows } from "@/lib/db/todos";
+import { getMemos, upsertMemos } from "@/lib/db/memos";
 
 interface Todo {
   id: string;
@@ -25,10 +28,10 @@ const MEMO_TABS: { id: MemoTab; label: string }[] = [
   { id: "개인", label: "개인 메모" },
 ];
 
-const MEMO_KEYS: Record<MemoTab, string> = {
-  업무: "worky_memo_work",
-  회의: "worky_memo_meeting",
-  개인: "worky_memo_personal",
+const MEMO_DB_KEYS: Record<MemoTab, "work_memo" | "meeting_memo" | "personal_memo"> = {
+  업무: "work_memo",
+  회의: "meeting_memo",
+  개인: "personal_memo",
 };
 
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -40,10 +43,6 @@ function toDateKey(date: Date): string {
 
 function todayKey(): string {
   return toDateKey(new Date());
-}
-
-function todoStorageKey(dateKey: string): string {
-  return `worky_todos_${dateKey}`;
 }
 
 function shiftDate(dateStr: string, delta: number): string {
@@ -66,50 +65,39 @@ function formatOriginalDate(dateStr: string): string {
   return `${m}월 ${d}일에서 이월`;
 }
 
-// 과거 날짜 미완료 항목 → 오늘로 이월 (id 기반 중복 방지, 매번 재실행 가능)
-function doCarryover(targetDate: string, existingTodos: Todo[]): Todo[] {
-  // 이미 이월된 originalId 수집
+// 과거 날짜 미완료 항목 → 오늘로 이월 (id 기반 중복 방지)
+async function doCarryoverAsync(
+  userId: string,
+  targetDate: string,
+  existingTodos: Todo[]
+): Promise<Todo[]> {
   const carriedIds = new Set(
     existingTodos.filter((t) => t.carriedOver && t.originalId).map((t) => t.originalId!)
   );
 
-  // localStorage에서 과거 날짜 키 전체 스캔
-  const pastKeys = Object.keys(localStorage).filter(
-    (k) => k.startsWith("worky_todos_") && k !== todoStorageKey(targetDate)
-  );
-
+  const pastRows = await getPastTodoRows(userId, targetDate);
   const newCarryovers: Todo[] = [];
 
-  for (const key of pastKeys) {
-    try {
-      const data = localStorage.getItem(key);
-      if (!data) continue;
-      const pastTodos: Todo[] = JSON.parse(data);
-      const pastDate = key.replace("worky_todos_", "");
-
-      for (const t of pastTodos) {
-        // 완료됐거나 이미 이월된 항목은 이월 소스로 사용하지 않음
-        if (t.completed || t.carriedOver) continue;
-        if (carriedIds.has(t.id)) continue;
-
-        newCarryovers.push({
-          id: crypto.randomUUID(),
-          text: t.text,
-          completed: false,
-          createdAt: Date.now(),
-          carriedOver: true,
-          originalDate: pastDate,
-          originalId: t.id,
-        });
-        carriedIds.add(t.id);
-      }
-    } catch {}
+  for (const row of pastRows) {
+    for (const t of row.todos) {
+      if (t.completed || t.carriedOver) continue;
+      if (carriedIds.has(t.id)) continue;
+      newCarryovers.push({
+        id: crypto.randomUUID(),
+        text: t.text,
+        completed: false,
+        createdAt: Date.now(),
+        carriedOver: true,
+        originalDate: row.date,
+        originalId: t.id,
+      });
+      carriedIds.add(t.id);
+    }
   }
 
   if (newCarryovers.length === 0) return existingTodos;
-
   const merged = [...newCarryovers, ...existingTodos];
-  localStorage.setItem(todoStorageKey(targetDate), JSON.stringify(merged));
+  await upsertTodos(userId, targetDate, merged);
   return merged;
 }
 
@@ -121,6 +109,7 @@ export default function TodoMemo() {
   const [memos,        setMemos]        = useState<Record<MemoTab, string>>({ 업무: "", 회의: "", 개인: "" });
   const [saveStatus,   setSaveStatus]   = useState<SaveStatus>("idle");
   const [hydrated,     setHydrated]     = useState(false);
+  const [userId,       setUserId]       = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(todayKey);
 
   // 커스텀 날짜 피커
@@ -148,53 +137,45 @@ export default function TodoMemo() {
 
   // 초기 로드
   useEffect(() => {
-    try {
-      const today = todayKey();
-      const key = todoStorageKey(today);
-      let todayTodos: Todo[] = [];
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+      if (uid) {
+        const today = todayKey();
+        let todayTodos = await getTodos(uid, today);
+        todayTodos = await doCarryoverAsync(uid, today, todayTodos);
+        setTodos(todayTodos);
 
-      let todosData = localStorage.getItem(key);
-      if (!todosData) {
-        const legacy = localStorage.getItem("worky_todos");
-        if (legacy) { localStorage.setItem(key, legacy); todosData = legacy; }
+        const memoData = await getMemos(uid);
+        setMemos({
+          업무: memoData.work_memo     ?? "",
+          회의: memoData.meeting_memo  ?? "",
+          개인: memoData.personal_memo ?? "",
+        });
       }
-      if (todosData) todayTodos = JSON.parse(todosData);
-
-      todayTodos = doCarryover(today, todayTodos);
-      setTodos(todayTodos);
-
-      const legacy = localStorage.getItem("worky_memo");
-      setMemos({
-        업무: localStorage.getItem(MEMO_KEYS.업무) ?? legacy ?? "",
-        회의: localStorage.getItem(MEMO_KEYS.회의) ?? "",
-        개인: localStorage.getItem(MEMO_KEYS.개인) ?? "",
-      });
-    } catch {}
-    setHydrated(true);
+      setHydrated(true);
+    });
   }, []);
 
-  // 할 일 저장
+  // 할 일 저장 (Supabase)
   useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(todoStorageKey(selectedDateRef.current), JSON.stringify(todos));
-  }, [todos, hydrated]);
+    if (!hydrated || !userId) return;
+    upsertTodos(userId, selectedDateRef.current, todos).catch(() => {});
+  }, [todos, hydrated, userId]);
 
   // 날짜 이동 + 이월 처리
-  const goToDate = useCallback((newDate: string) => {
+  const goToDate = useCallback(async (newDate: string) => {
     selectedDateRef.current = newDate;
     setSelectedDate(newDate);
     setPickerOpen(false);
-    try {
-      const saved = localStorage.getItem(todoStorageKey(newDate));
-      let loaded: Todo[] = saved ? JSON.parse(saved) : [];
-      if (newDate === todayKey()) {
-        loaded = doCarryover(newDate, loaded);
-      }
-      setTodos(loaded);
-    } catch {
-      setTodos([]);
+    if (!userId) { setTodos([]); return; }
+    let loaded = await getTodos(userId, newDate);
+    if (newDate === todayKey()) {
+      loaded = await doCarryoverAsync(userId, newDate, loaded);
     }
-  }, []);
+    setTodos(loaded);
+  }, [userId]);
 
   const openPicker = () => {
     const [y, m] = selectedDate.split("-").map(Number);
@@ -215,14 +196,14 @@ export default function TodoMemo() {
   ];
   while (pickerCells.length % 7 !== 0) pickerCells.push(null);
 
-  // 메모 변경 (debounce 500ms)
+  // 메모 변경 (debounce 500ms → Supabase 저장)
   const handleMemoChange = (value: string) => {
     setMemos((prev) => ({ ...prev, [memoTab]: value }));
     setSaveStatus("saving");
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
     debounceRef.current = setTimeout(() => {
-      localStorage.setItem(MEMO_KEYS[memoTab], value);
+      if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: value }).catch(() => {});
       setSaveStatus("saved");
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     }, 500);
@@ -237,7 +218,7 @@ export default function TodoMemo() {
   const clearMemo = () => setConfirmAction("memo");
   const doClearMemo = () => {
     setMemos((prev) => ({ ...prev, [memoTab]: "" }));
-    localStorage.removeItem(MEMO_KEYS[memoTab]);
+    if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: "" }).catch(() => {});
     setSaveStatus("idle");
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
