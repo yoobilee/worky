@@ -27,11 +27,9 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          // 요청 쿠키 업데이트
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          // 응답 쿠키 업데이트 (세션 갱신)
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -42,7 +40,9 @@ export async function middleware(request: NextRequest) {
   );
 
   // 세션 갱신 + 사용자 확인 (한 번에)
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  console.log(`[middleware] pathname=${pathname} | user=${user?.email ?? "null"} | error=${error?.message ?? "none"}`);
 
   if (!user) {
     const loginUrl = request.nextUrl.clone();
