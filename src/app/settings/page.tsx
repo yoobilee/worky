@@ -5,11 +5,14 @@ import HelpButton from "@/components/HelpButton";
 import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
+  IconGripVertical, IconHelp,
 } from "@tabler/icons-react";
 import {
   OPTIONAL_MENU_ITEMS, ALWAYS_VISIBLE_ITEMS,
   loadMenuSettings, saveMenuSettings, isRouteEnabled,
   MENU_SETTINGS_EVENT, type MenuSettings,
+  loadMenuOrder, saveMenuOrder,
+  loadHelpButtonEnabled, saveHelpButtonEnabled,
 } from "@/lib/menuSettings";
 
 const SENDER_KEY  = "worky_sender_info";
@@ -74,8 +77,15 @@ export default function SettingsPage() {
   const [menuSaved,     setMenuSaved]     = useState(false);
   const [jobPreset,     setJobPreset]     = useState<string | null>(null);
   const [pendingPreset, setPendingPreset] = useState<string | null>(null);
-  const [jobSaved,      setJobSaved]      = useState(false);
-  const [jobCollapsed,  setJobCollapsed]  = useState(false);
+  const [jobSaved,       setJobSaved]       = useState(false);
+  const [jobCollapsed,   setJobCollapsed]   = useState(false);
+  const [menuOrder,      setMenuOrder]      = useState<string[]>([]);
+  const [orderSaved,     setOrderSaved]     = useState(false);
+  const [dragIdx,        setDragIdx]        = useState<number | null>(null);
+  const [dropIdx,        setDropIdx]        = useState<number | null>(null);
+  const [helpOn,         setHelpOn]         = useState(true);
+  const [helpSaved,      setHelpSaved]      = useState(false);
+  const [helpCollapsed,  setHelpCollapsed]  = useState(false);
 
   useEffect(() => {
     try {
@@ -87,6 +97,8 @@ export default function SettingsPage() {
       }
     } catch {}
     setMenuSettings(loadMenuSettings());
+    setMenuOrder(loadMenuOrder());
+    setHelpOn(loadHelpButtonEnabled());
     setJobPreset(localStorage.getItem(JOB_KEY));
     setHydrated(true);
   }, []);
@@ -109,6 +121,33 @@ export default function SettingsPage() {
     saveMenuSettings(next);
     setMenuSaved(true);
     setTimeout(() => setMenuSaved(false), 2500);
+  };
+
+  /* ── 드래그&드롭 순서 변경 ── */
+  const handleDragStart = (i: number) => setDragIdx(i);
+  const handleDragEnd   = () => { setDragIdx(null); setDropIdx(null); };
+  const handleDragOver  = (e: React.DragEvent, i: number) => { e.preventDefault(); setDropIdx(i); };
+  const handleDrop      = (e: React.DragEvent, i: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === i) { setDragIdx(null); setDropIdx(null); return; }
+    const next = [...menuOrder];
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(i, 0, moved);
+    setMenuOrder(next);
+    saveMenuOrder(next);
+    setOrderSaved(true);
+    setTimeout(() => setOrderSaved(false), 2500);
+    setDragIdx(null);
+    setDropIdx(null);
+  };
+
+  /* ── 도움말 버튼 토글 ── */
+  const handleHelpToggle = () => {
+    const next = !helpOn;
+    setHelpOn(next);
+    saveHelpButtonEnabled(next);
+    setHelpSaved(true);
+    setTimeout(() => setHelpSaved(false), 2500);
   };
 
   const handlePresetConfirm = () => {
@@ -334,25 +373,51 @@ export default function SettingsPage() {
         {!menuCollapsed && (
           <div className="px-5 pb-5">
 
-            {/* 선택 메뉴 */}
-            <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
-              선택 표시
-            </p>
+            {/* 선택 메뉴 — 드래그&드롭 순서 변경 */}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
+                선택 표시
+              </p>
+              {orderSaved && (
+                <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                  <IconCheck className="w-3.5 h-3.5" />순서 저장됨
+                </span>
+              )}
+            </div>
             <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800 mb-4">
-              {OPTIONAL_MENU_ITEMS.map(({ href, label }) => {
-                const enabled = isRouteEnabled(menuSettings, href);
+              {menuOrder.map((href, idx) => {
+                const item = OPTIONAL_MENU_ITEMS.find((m) => m.href === href);
+                if (!item) return null;
+                const enabled   = isRouteEnabled(menuSettings, href);
+                const isDragging = dragIdx === idx;
+                const isOver     = dropIdx === idx;
                 return (
-                  <div key={href} className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{label}</p>
-                      <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">{href}</p>
+                  <div
+                    key={href}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDrop={(e) => handleDrop(e, idx)}
+                    className={[
+                      "flex items-center justify-between px-3 py-3 transition-colors cursor-grab active:cursor-grabbing",
+                      isDragging ? "opacity-40 bg-slate-50 dark:bg-zinc-800" : "",
+                      isOver && !isDragging ? "bg-[#6C63FF]/5 border-t-2 border-t-[#6C63FF]/40" : "",
+                    ].join(" ")}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <IconGripVertical className="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{item.label}</p>
+                        <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">{href}</p>
+                      </div>
                     </div>
                     <button
                       onClick={() => handleMenuToggle(href)}
                       role="switch"
                       aria-checked={enabled}
                       className={[
-                        "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0",
+                        "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-2",
                         enabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
                       ].join(" ")}
                     >
@@ -424,6 +489,63 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* 도움말 설정 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <button
+          onClick={() => setHelpCollapsed((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+              <IconHelp className="w-4 h-4 text-[#6C63FF]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">도움말 설정</p>
+                {helpSaved && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                    <IconCheck className="w-3.5 h-3.5" />저장됨
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                페이지 도움말 버튼 표시 여부
+              </p>
+            </div>
+          </div>
+          {helpCollapsed
+            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+        </button>
+
+        {!helpCollapsed && (
+          <div className="px-5 pb-5">
+            <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">페이지 도움말 버튼 표시</p>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                  각 페이지 우측 하단의 ? 버튼 (홈 AI 바로가기는 영향 없음)
+                </p>
+              </div>
+              <button
+                onClick={handleHelpToggle}
+                role="switch"
+                aria-checked={helpOn}
+                className={[
+                  "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
+                  helpOn ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                ].join(" ")}
+              >
+                <span className={[
+                  "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                  helpOn ? "translate-x-5" : "translate-x-1",
+                ].join(" ")} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <HelpButton
         title="설정 사용법"

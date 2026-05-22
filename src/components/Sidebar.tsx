@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconEdit, IconFileText, IconMessageCheck } from "@tabler/icons-react";
+import { loadMenuOrder, MENU_ORDER_EVENT } from "@/lib/menuSettings";
 import { useTheme } from "./ThemeProvider";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
@@ -164,16 +165,23 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const [collapsed,     setCollapsed]     = useState(false);
   const [mounted,       setMounted]       = useState(false);
   const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
+  const [menuOrder,     setMenuOrder]     = useState<string[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem(COLLAPSED_KEY);
     if (saved === "true") setCollapsed(true);
     setMenuSettings(loadMenuSettings());
+    setMenuOrder(loadMenuOrder());
     setMounted(true);
 
-    const handler = () => setMenuSettings(loadMenuSettings());
-    window.addEventListener(MENU_SETTINGS_EVENT, handler);
-    return () => window.removeEventListener(MENU_SETTINGS_EVENT, handler);
+    const onSettings = () => setMenuSettings(loadMenuSettings());
+    const onOrder    = () => setMenuOrder(loadMenuOrder());
+    window.addEventListener(MENU_SETTINGS_EVENT, onSettings);
+    window.addEventListener(MENU_ORDER_EVENT,    onOrder);
+    return () => {
+      window.removeEventListener(MENU_SETTINGS_EVENT, onSettings);
+      window.removeEventListener(MENU_ORDER_EVENT,    onOrder);
+    };
   }, []);
 
   const toggleCollapse = () => {
@@ -242,7 +250,17 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
 
       {/* ── 네비게이션 ── */}
       <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {navItems.filter((item) => isRouteEnabled(menuSettings, item.href)).map((item) => {
+        {(() => {
+          // 고정 항목 → 선택 항목(저장된 순서, 활성화된 것만)
+          const navMap = Object.fromEntries(navItems.map((n) => [n.href, n]));
+          const FIXED_HREFS = ["/", "/todo", "/qa", "/email", "/schedule", "/calendar"];
+          const orderedItems = [
+            ...FIXED_HREFS.map((h) => navMap[h]).filter(Boolean),
+            ...(menuOrder.length ? menuOrder : FIXED_HREFS)
+              .filter((h) => !FIXED_HREFS.includes(h) && isRouteEnabled(menuSettings, h))
+              .map((h) => navMap[h]).filter(Boolean),
+          ];
+          return orderedItems.map((item) => {
           const active = pathname === item.href;
           return (
             <Link
@@ -262,11 +280,11 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               <span className={`shrink-0 ${active ? "opacity-90" : "opacity-60"}`}>
                 {item.icon}
               </span>
-              {/* inline-block으로 w-0 적용 가능하게 */}
               <span className={`inline-block ${labelCls}`}>{item.label}</span>
             </Link>
           );
-        })}
+          });
+        })()}
       </nav>
 
       {/* ── 하단 푸터 ── */}
