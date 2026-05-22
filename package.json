@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.106.1",
     "@tabler/icons-react": "^3.44.0",
     "@types/papaparse": "^5.5.2",
     "groq-sdk": "^1.2.0",
