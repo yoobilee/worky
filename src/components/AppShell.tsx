@@ -50,6 +50,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const meta = routeMeta[pathname] ?? routeMeta["/"];
 
+  // 로그인 페이지는 레이아웃 없이 children만 렌더링
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* 모바일 오버레이 */}
