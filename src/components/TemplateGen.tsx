@@ -9,43 +9,79 @@ import { IconReport, IconMail, IconNotes, IconBulb, IconSettings, IconAlertTrian
 import EditableResult from "@/components/EditableResult";
 import React from "react";
 
+function parseInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : part
+  );
+}
+
 function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split("\n");
   const nodes: React.ReactNode[] = [];
-  let listItems: string[] = [];
+  let bulletItems: React.ReactNode[] = [];
+  let orderedItems: React.ReactNode[] = [];
   let k = 0;
 
-  const flushList = () => {
-    if (listItems.length === 0) return;
+  const flushBullet = () => {
+    if (bulletItems.length === 0) return;
     nodes.push(
       <ul key={k++} className="list-disc pl-5 space-y-0.5 my-1">
-        {listItems.map((item, i) => (
+        {bulletItems.map((item, i) => (
           <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
         ))}
       </ul>
     );
-    listItems = [];
+    bulletItems = [];
   };
+
+  const flushOrdered = () => {
+    if (orderedItems.length === 0) return;
+    nodes.push(
+      <ol key={k++} className="list-decimal pl-5 space-y-0.5 my-1">
+        {orderedItems.map((item, i) => (
+          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
+        ))}
+      </ol>
+    );
+    orderedItems = [];
+  };
+
+  const flushAll = () => { flushBullet(); flushOrdered(); };
 
   for (const line of lines) {
     const t = line.trim();
-    if (t.startsWith("## ")) {
-      flushList();
-      nodes.push(<p key={k++} className="text-[15px] font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1">{t.slice(3)}</p>);
-    } else if (t.startsWith("### ")) {
-      flushList();
-      nodes.push(<p key={k++} className="text-sm font-bold text-slate-800 dark:text-zinc-100 mt-2 mb-0.5">{t.slice(4)}</p>);
-    } else if (/^[-•*] /.test(t)) {
-      listItems.push(t.slice(2));
+
+    if (/^#{1,6} /.test(t)) {
+      flushAll();
+      const content = t.replace(/^#+\s+/, "");
+      const isLarge = t.startsWith("## ");
+      nodes.push(
+        <p key={k++} className={`font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1 ${isLarge ? "text-[15px]" : "text-sm"}`}>
+          {parseInline(content)}
+        </p>
+      );
+    } else if (/^[-•] /.test(t)) {
+      flushOrdered();
+      bulletItems.push(parseInline(t.slice(2)));
+    } else if (/^\d+\. /.test(t)) {
+      flushBullet();
+      orderedItems.push(parseInline(t.replace(/^\d+\.\s+/, "")));
     } else if (t === "") {
-      flushList();
+      flushAll();
       nodes.push(<div key={k++} className="h-1.5" />);
     } else {
-      flushList();
-      nodes.push(<p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{t}</p>);
+      flushAll();
+      nodes.push(
+        <p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">
+          {parseInline(t)}
+        </p>
+      );
     }
   }
-  flushList();
+  flushAll();
   return <div className="space-y-0.5">{nodes}</div>;
 }
 
