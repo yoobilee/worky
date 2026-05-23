@@ -28,24 +28,25 @@ async function parseFileToText(file: File): Promise<string> {
 
   if (ext === "xlsx" || ext === "xls") {
     const XLSX = await import("xlsx");
+    const Papa = (await import("papaparse")).default;
     const buf  = await file.arrayBuffer();
     const wb   = XLSX.read(buf, { type: "array" });
     const ws   = wb.Sheets[wb.SheetNames[0]];
-    // Excel 날짜 시리얼 넘버(40000~50000 범위)를 M/D 형식으로 변환
-    const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
-    for (let R = range.s.r; R <= range.e.r; R++) {
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        const addr = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = ws[addr];
-        if (cell && cell.t === "n" && cell.v >= 40000 && cell.v <= 50000) {
-          const d = new Date(Math.round((cell.v - 25569) * 86400 * 1000));
-          cell.t = "s";
-          cell.v = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
-          cell.w = cell.v;
+    const csvStr = XLSX.utils.sheet_to_csv(ws);
+
+    // papaparse로 파싱 후 40000~50000 범위 숫자값을 날짜로 변환
+    const parsed = Papa.parse<string[]>(csvStr, { skipEmptyLines: true });
+    const rows = (parsed.data as string[][]).map((row) =>
+      row.map((cell) => {
+        const num = Number(cell);
+        if (Number.isFinite(num) && num >= 40000 && num <= 50000) {
+          const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+          return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
         }
-      }
-    }
-    return XLSX.utils.sheet_to_csv(ws);
+        return cell;
+      })
+    );
+    return rows.map((r) => r.join("\t")).join("\n");
   }
 
   throw new Error("지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드하세요.");
