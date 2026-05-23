@@ -108,7 +108,13 @@ export default function EmailReply() {
   const [sendTo, setSendTo]       = useState("");
   const [sendSubject, setSendSubject] = useState("");
   const [sending, setSending]     = useState(false);
-  const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // 토스트
+  const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
+  const showToast = (ok: boolean, msg: string) => {
+    setToast({ ok, msg });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     if (drafts.length > 0) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -175,7 +181,8 @@ export default function EmailReply() {
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.provider_token;
       if (!accessToken) {
-        setSendResult({ ok: false, msg: "Gmail 권한이 없습니다. 다시 로그인해 주세요." });
+        setSendModal(null);
+        showToast(false, "Gmail 권한이 없습니다. 다시 로그인해 주세요.");
         return;
       }
       const res = await fetch("/api/gmail", {
@@ -189,13 +196,15 @@ export default function EmailReply() {
         }),
       });
       const data = await res.json();
+      setSendModal(null);
       if (res.ok) {
-        setSendResult({ ok: true, msg: "이메일이 성공적으로 전송되었습니다." });
+        showToast(true, "이메일이 성공적으로 전송되었습니다.");
       } else {
-        setSendResult({ ok: false, msg: data.error ?? "전송 실패" });
+        showToast(false, data.error ?? "전송 실패");
       }
     } catch {
-      setSendResult({ ok: false, msg: "전송 중 오류가 발생했습니다." });
+      setSendModal(null);
+      showToast(false, "전송 중 오류가 발생했습니다.");
     } finally {
       setSending(false);
     }
@@ -207,6 +216,25 @@ export default function EmailReply() {
 
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
+      {/* 토스트 */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+          toast.ok
+            ? "bg-green-500 text-white"
+            : "bg-red-500 text-white"
+        }`}>
+          {toast.ok ? (
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+          {toast.msg}
+        </div>
+      )}
 
       {/* 발신자 정보 없을 때 안내 */}
       {!hasSender && (
@@ -393,16 +421,6 @@ export default function EmailReply() {
               </div>
             </div>
 
-            {sendResult && (
-              <div className={`px-4 py-3 rounded-xl text-sm text-center font-medium ${
-                sendResult.ok
-                  ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400"
-                  : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400"
-              }`}>
-                {sendResult.msg}
-              </div>
-            )}
-
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setSendModal(null)}
@@ -412,7 +430,7 @@ export default function EmailReply() {
               </button>
               <button
                 onClick={handleSend}
-                disabled={sending || !sendTo.trim() || !sendSubject.trim() || sendResult?.ok === true}
+                disabled={sending || !sendTo.trim() || !sendSubject.trim()}
                 className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
