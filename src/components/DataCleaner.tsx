@@ -53,25 +53,30 @@ async function parseFileToRows(file: File): Promise<RawCell[][]> {
       return stripNewlines(String(raw));
     };
 
-    // 헤더 행 디버깅: 각 셀의 cell.w, cell.v, 계산값 출력
-    console.group("[DataCleaner] xlsx 헤더 행 디버깅");
-    const debugHeader: { col: number; addr: string; w: unknown; v: unknown; parsed: RawCell }[] = [];
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      const addr = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-      const cell = ws[addr];
-      debugHeader.push({ col: C, addr, w: cell?.w, v: cell?.v, parsed: cellVal(range.s.r, C) });
-    }
-    console.table(debugHeader);
+    // ── 디버깅: range 정보 및 초반 행 샘플 출력 ──
+    console.group("[DataCleaner] xlsx 파싱 디버깅");
+    console.log("range:", { sr: range.s.r, er: range.e.r, sc: range.s.c, ec: range.e.c });
 
-    // 헤더 행 전체 순회 → 값이 있는 마지막 컬럼 인덱스 확정 (trailing 빈 컬럼만 제거)
+    // 첫 8행의 첫 번째 셀 값 출력 (어느 행에 헤더가 있는지 확인)
+    const rowSamples: { rowIdx: number; firstCell_w: unknown; firstCell_v: unknown; parsed: RawCell }[] = [];
+    for (let R = range.s.r; R <= Math.min(range.s.r + 7, range.e.r); R++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: range.s.c });
+      const cell = ws[addr];
+      rowSamples.push({ rowIdx: R, firstCell_w: cell?.w, firstCell_v: cell?.v, parsed: cellVal(R, range.s.c) });
+    }
+    console.table(rowSamples);
+
+    // 전체 행에서 유효 컬럼이 가장 많은 행 기준으로 colCount 결정
     let lastCol = range.s.c - 1;
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      if (cellVal(range.s.r, C) !== null) lastCol = C;
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        if (cellVal(R, C) !== null && C > lastCol) lastCol = C;
+      }
     }
     console.log("[DataCleaner] lastCol:", lastCol, "/ range.e.c:", range.e.c, "/ colCount:", lastCol - range.s.c + 1);
     console.groupEnd();
 
-    if (lastCol < range.s.c) return []; // 헤더가 전부 비어있으면 빈 결과
+    if (lastCol < range.s.c) return [];
     const colCount = lastCol - range.s.c + 1;
 
     const allRows: RawCell[][] = [];
