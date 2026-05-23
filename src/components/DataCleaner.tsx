@@ -42,9 +42,76 @@ const SYSTEM_PROMPT = `당신은 데이터 정리 전문가입니다. 사용자�
 마크다운 코드블록, 설명 텍스트는 절대 포함하지 마세요.
 thead > tr > th 로 헤더를, tbody > tr > td 로 데이터를 구성하세요.`;
 
+const CHUNK_SYSTEM_PROMPT = `당신은 데이터 정리 전문가입니다. 아래 CSV 데이터(헤더 포함)를 HTML 표로 변환하세요.
+반드시 <table> 태그로 시작하고 </table> 태그로 끝나는 HTML만 반환하세요.
+마크다운 코드블록, 설명 텍스트는 절대 포함하지 마세요.
+thead > tr > th 로 헤더를, tbody > tr > td 로 데이터를 구성하세요.`;
+
+const CHUNK_SIZE = 30;
+
 function extractTableHtml(raw: string): string {
   const match = raw.match(/<table[\s\S]*<\/table>/i);
   return match ? match[0] : raw;
+}
+
+async function callGroqApi(text: string, systemPrompt: string): Promise<string> {
+  const res = await fetch("/api/groq", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [{ role: "user", content: text }],
+      systemPrompt,
+      max_tokens: 8192,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
+  return data.result as string;
+}
+
+async function cleanDataWithChunks(
+  sourceText: string,
+  onProgress: (done: number, total: number) => void
+): Promise<string> {
+  const lines = sourceText.trim().split("\n");
+
+  // 소량 데이터는 그대로 전송
+  if (lines.length <= CHUNK_SIZE + 1) {
+    const raw = await callGroqApi(sourceText, SYSTEM_PROMPT);
+    onProgress(1, 1);
+    return extractTableHtml(raw);
+  }
+
+  const header = lines[0];
+  const dataRows = lines.slice(1);
+  const chunks: string[][] = [];
+  for (let i = 0; i < dataRows.length; i += CHUNK_SIZE) {
+    chunks.push(dataRows.slice(i, i + CHUNK_SIZE));
+  }
+
+  let theadHtml = "";
+  const tbodyRows: string[] = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunkText = [header, ...chunks[i]].join("\n");
+    const raw = await callGroqApi(chunkText, CHUNK_SYSTEM_PROMPT);
+    const tableHtml = extractTableHtml(raw);
+
+    if (i === 0) {
+      const theadMatch = tableHtml.match(/<thead[\s\S]*?<\/thead>/i);
+      theadHtml = theadMatch ? theadMatch[0] : "";
+    }
+
+    const tbodyMatch = tableHtml.match(/<tbody[\s\S]*?<\/tbody>/i);
+    if (tbodyMatch) {
+      const trs = tbodyMatch[0].match(/<tr[\s\S]*?<\/tr>/gi) ?? [];
+      tbodyRows.push(...trs);
+    }
+
+    onProgress(i + 1, chunks.length);
+  }
+
+  return `<table>${theadHtml}<tbody>${tbodyRows.join("")}</tbody></table>`;
 }
 
 function tableHtmlToCSV(html: string): string {
@@ -86,7 +153,8 @@ export default function DataCleaner() {
   const [fileText, setFileText]     = useState("");
   const [extracting, setExtracting] = useState(false);
   const [tableHtml, setTableHtml]   = useState("");
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [chunkProgress, setChunkProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError]           = useState("");
   const [copied, setCopied]         = useState(false);
   const [cleanCount, setCleanCount] = useState(0);
@@ -132,19 +200,13 @@ export default function DataCleaner() {
     setLoading(true);
     setError("");
     setTableHtml("");
+    setChunkProgress(null);
 
     try {
-      const res = await fetch("/api/groq", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [{ role: "user", content: sourceText }],
-          systemPrompt: SYSTEM_PROMPT,
-        }),
+      const result = await cleanDataWithChunks(sourceText, (done, total) => {
+        setChunkProgress({ done, total });
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-      setTableHtml(extractTableHtml(data.result));
+      setTableHtml(result);
       trackUsage("data");
       const now = new Date().toISOString();
       localStorage.setItem(LAST_CLEAN_KEY, now);
@@ -158,6 +220,7 @@ export default function DataCleaner() {
       setError(e instanceof Error ? e.message : "데이터 정리 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
+      setChunkProgress(null);
     }
   };
 
@@ -292,7 +355,9 @@ export default function DataCleaner() {
             {loading ? (
               <>
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                정리 중...
+                {chunkProgress && chunkProgress.total > 1
+                  ? `정리 중... (${chunkProgress.done}/${chunkProgress.total})`
+                  : "정리 중..."}
               </>
             ) : (
               <>
