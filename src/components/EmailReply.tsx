@@ -299,7 +299,7 @@ export default function EmailReply() {
       )}
 
       {/* 탭 */}
-      <div className="flex gap-2 shrink-0">
+      <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
         {([
           { id: "new",   label: "새 이메일 작성", Icon: IconMailPlus },
           { id: "reply", label: "답장 작성",       Icon: IconMailForward },
@@ -307,12 +307,12 @@ export default function EmailReply() {
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+            className={[
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
               activeTab === id
-                ? "text-white border-transparent"
-                : "bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:border-[#6C63FF]/40"
-            }`}
-            style={activeTab === id ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+                ? "bg-[#6C63FF] text-white shadow-sm"
+                : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700",
+            ].join(" ")}
           >
             <Icon className="w-4 h-4" />
             {label}
