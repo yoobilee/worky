@@ -32,21 +32,24 @@ async function parseFileToText(file: File): Promise<string> {
     const buf  = await file.arrayBuffer();
     const wb   = XLSX.read(buf, { type: "array" });
     const ws   = wb.Sheets[wb.SheetNames[0]];
-    const csvStr = XLSX.utils.sheet_to_csv(ws);
+    // rawNumbers: false → SheetJS가 날짜 시리얼을 서식 문자열로 출력
+    const csvStr = XLSX.utils.sheet_to_csv(ws, { rawNumbers: false } as Parameters<typeof XLSX.utils.sheet_to_csv>[1]);
 
-    // papaparse로 파싱 후 40000~50000 범위 숫자값을 날짜로 변환
-    const parsed = Papa.parse<string[]>(csvStr, { skipEmptyLines: true });
-    const rows = (parsed.data as string[][]).map((row) =>
-      row.map((cell) => {
-        const num = Number(cell);
-        if (Number.isFinite(num) && num >= 40000 && num <= 50000) {
-          const d = new Date(Math.round((num - 25569) * 86400 * 1000));
-          return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
-        }
-        return cell;
-      })
+    const parsed = Papa.parse<string[]>(csvStr, { skipEmptyLines: false });
+    const allRows = parsed.data as string[][];
+
+    // 헤더 행 자동 감지: 비어있지 않은 셀이 2개 이상인 첫 번째 행
+    const headerIdx = allRows.findIndex(
+      (row) => row.filter((cell) => cell.trim() !== "").length >= 2
     );
-    return rows.map((r) => r.join("\t")).join("\n");
+    if (headerIdx === -1) throw new Error("헤더 행을 찾을 수 없습니다.");
+
+    // 헤더 이후 행에서 빈 행 제거
+    const dataRows = allRows
+      .slice(headerIdx + 1)
+      .filter((row) => row.some((cell) => cell.trim() !== ""));
+
+    return [allRows[headerIdx], ...dataRows].map((r) => r.join("\t")).join("\n");
   }
 
   throw new Error("지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드하세요.");
