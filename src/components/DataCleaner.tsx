@@ -8,9 +8,10 @@ import { IconAlignLeft, IconFileUpload } from "@tabler/icons-react";
 import { trackUsage } from "@/lib/usageStats";
 
 type InputMode = "text" | "file";
+type RawCell   = string | number | null;
 
 /* ── 파일 → 전체 rows 파싱 (헤더 미지정) ── */
-async function parseFileToRows(file: File): Promise<string[][]> {
+async function parseFileToRows(file: File): Promise<RawCell[][]> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
 
   if (ext === "csv" || file.type === "text/csv") {
@@ -27,43 +28,41 @@ async function parseFileToRows(file: File): Promise<string[][]> {
   if (ext === "xlsx" || ext === "xls") {
     const XLSX = await import("xlsx");
     const buf  = await file.arrayBuffer();
-    const wb   = XLSX.read(buf, { type: "array" });
+    const wb   = XLSX.read(buf, { type: "array", raw: true });
     const ws   = wb.Sheets[wb.SheetNames[0]];
-
-    const ref   = ws["!ref"];
+    const ref  = ws["!ref"];
     if (!ref) return [];
     const range = XLSX.utils.decode_range(ref);
 
-    const DATE_RE = /^(\d{1,2})\/(\d{1,2})\/\d{2,4}$/;
-
-    const rows: string[][] = [];
+    const allRows: RawCell[][] = [];
     for (let R = range.s.r; R <= range.e.r; R++) {
-      const row: string[] = [];
+      const rowData: RawCell[] = [];
       for (let C = range.s.c; C <= range.e.c; C++) {
         const addr = XLSX.utils.encode_cell({ r: R, c: C });
         const cell = ws[addr];
-        let val = "";
-        if (cell != null) {
-          // 서식 문자열 우선, 없으면 원시값
-          val = String(cell.w ?? cell.v ?? "");
-          // 줄바꿈 → 공백
-          val = val.replace(/\r\n|\r|\n/g, " ").trim();
-          // M/D/YYYY → M/D
-          const m = DATE_RE.exec(val);
-          if (m) val = `${m[1]}/${m[2]}`;
+        let val: RawCell = cell ? (cell.v as RawCell) : null;
+        // 문자열 셀: 줄바꿈 → 공백
+        if (typeof val === "string") val = val.replace(/[\r\n]+/g, " ").trim();
+        // 날짜 시리얼 넘버(40000~60000) → M/D 문자열
+        if (typeof val === "number" && val > 40000 && val < 60000) {
+          const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+          val = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
         }
-        row.push(val);
+        rowData.push(val);
       }
-      rows.push(row);
+      allRows.push(rowData);
     }
-    return rows;
+    return allRows;
   }
 
   throw new Error("지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드하세요.");
 }
 
-/* ── 헤더 행 적용 → 탭 구분 텍스트 ── */
-function applyHeaderRow(rawRows: string[][], headerRowNum: number): string {
+/* ── 헤더 행 적용 → { previewRows, confirmedText, rowCount } ── */
+function applyHeaderRow(
+  rawRows: RawCell[][],
+  headerRowNum: number
+): { previewRows: string[][]; confirmedText: string; rowCount: number } {
   const idx = headerRowNum - 1;
   if (idx < 0 || idx >= rawRows.length)
     throw new Error(`${headerRowNum}행은 파일 범위를 벗어납니다. (전체 ${rawRows.length}행)`);
@@ -71,10 +70,22 @@ function applyHeaderRow(rawRows: string[][], headerRowNum: number): string {
   const header = rawRows[idx].map((c) => String(c ?? ""));
   const dataRows = rawRows
     .slice(idx + 1)
-    .filter((row) => row.some((c) => String(c ?? "").trim() !== ""))
-    .map((row) => row.map((c) => String(c ?? "")));
+    .filter((row) => row.some((c) => c !== null && String(c).trim() !== ""));
 
-  return [header, ...dataRows].map((r) => r.join("\t")).join("\n");
+  // 헤더를 키로, 각 데이터 행을 값으로 객체 배열 생성
+  const objects = dataRows.map((row) => {
+    const obj: Record<string, string> = {};
+    header.forEach((key, ci) => {
+      obj[key || `열${ci + 1}`] = String(row[ci] ?? "");
+    });
+    return obj;
+  });
+
+  // 미리보기용: 헤더 + 최대 3개 데이터 행 (string[][])
+  const previewData = dataRows.slice(0, 3).map((row) => row.map((c) => String(c ?? "")));
+  const previewRows = [header, ...previewData];
+
+  return { previewRows, confirmedText: JSON.stringify(objects), rowCount: dataRows.length };
 }
 
 /* ── AI / 청크 처리 ── */
@@ -114,6 +125,43 @@ async function cleanDataWithChunks(
   sourceText: string,
   onProgress: (done: number, total: number) => void
 ): Promise<string> {
+  // ── JSON 객체 배열 경로 (파일 업로드) ──
+  if (sourceText.trimStart().startsWith("[")) {
+    const objects = JSON.parse(sourceText) as Record<string, string>[];
+
+    if (objects.length <= CHUNK_SIZE) {
+      const raw = await callGroqApi(sourceText, SYSTEM_PROMPT);
+      onProgress(1, 1);
+      return extractTableHtml(raw);
+    }
+
+    const chunks: Record<string, string>[][] = [];
+    for (let i = 0; i < objects.length; i += CHUNK_SIZE)
+      chunks.push(objects.slice(i, i + CHUNK_SIZE));
+
+    let theadHtml = "";
+    const tbodyRows: string[] = [];
+
+    for (let i = 0; i < chunks.length; i++) {
+      const raw       = await callGroqApi(JSON.stringify(chunks[i]), CHUNK_SYSTEM_PROMPT);
+      const tableHtml = extractTableHtml(raw);
+      if (i === 0) {
+        const m = tableHtml.match(/<thead[\s\S]*?<\/thead>/i);
+        theadHtml = m ? m[0] : "";
+      }
+      const tbodyMatch = tableHtml.match(/<tbody[\s\S]*?<\/tbody>/i);
+      if (tbodyMatch) {
+        const trs = tbodyMatch[0].match(/<tr[\s\S]*?<\/tr>/gi) ?? [];
+        tbodyRows.push(...trs);
+      }
+      onProgress(i + 1, chunks.length);
+      if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 500));
+    }
+
+    return `<table>${theadHtml}<tbody>${tbodyRows.join("")}</tbody></table>`;
+  }
+
+  // ── 일반 텍스트 경로 (텍스트 입력 모드) ──
   const lines = sourceText.trim().split("\n");
 
   if (lines.length <= CHUNK_SIZE + 1) {
@@ -135,7 +183,6 @@ async function cleanDataWithChunks(
     const chunkText = [header, ...chunks[i]].join("\n");
     const raw       = await callGroqApi(chunkText, CHUNK_SYSTEM_PROMPT);
     const tableHtml = extractTableHtml(raw);
-
     if (i === 0) {
       const m = tableHtml.match(/<thead[\s\S]*?<\/thead>/i);
       theadHtml = m ? m[0] : "";
@@ -145,7 +192,6 @@ async function cleanDataWithChunks(
       const trs = tbodyMatch[0].match(/<tr[\s\S]*?<\/tr>/gi) ?? [];
       tbodyRows.push(...trs);
     }
-
     onProgress(i + 1, chunks.length);
     if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 500));
   }
@@ -221,11 +267,12 @@ export default function DataCleaner() {
   const [inputMode,      setInputMode]      = useState<InputMode>("text");
   const [input,          setInput]          = useState("");
   const [file,           setFile]           = useState<File | null>(null);
-  const [rawRows,        setRawRows]        = useState<string[][] | null>(null);
+  const [rawRows,        setRawRows]        = useState<RawCell[][] | null>(null);
   const [headerInput,    setHeaderInput]    = useState("1");
-  const [headerConfirmed, setHeaderConfirmed] = useState(false);
-  const [confirmedText,  setConfirmedText]  = useState("");
-  const [previewRows,    setPreviewRows]    = useState<string[][] | null>(null);
+  const [headerConfirmed,  setHeaderConfirmed]  = useState(false);
+  const [confirmedText,    setConfirmedText]    = useState("");
+  const [confirmedRowCount, setConfirmedRowCount] = useState(0);
+  const [previewRows,      setPreviewRows]      = useState<string[][] | null>(null);
   const [extracting,     setExtracting]     = useState(false);
   const [headerError,    setHeaderError]    = useState("");
   const [tableHtml,      setTableHtml]      = useState("");
@@ -246,6 +293,7 @@ export default function DataCleaner() {
     setHeaderInput("1");
     setHeaderConfirmed(false);
     setConfirmedText("");
+    setConfirmedRowCount(0);
     setPreviewRows(null);
     setHeaderError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -279,13 +327,10 @@ export default function DataCleaner() {
       return;
     }
     try {
-      const text = applyHeaderRow(rawRows, num);
-      const lines = text.split("\n");
-      // 미리보기: 헤더 + 최대 3개 데이터 행
-      const previewLines = lines.slice(0, 4);
-      const previewParsed = previewLines.map((l) => l.split("\t"));
-      setConfirmedText(text);
-      setPreviewRows(previewParsed);
+      const { previewRows: pRows, confirmedText: cText, rowCount } = applyHeaderRow(rawRows, num);
+      setConfirmedText(cText);
+      setConfirmedRowCount(rowCount);
+      setPreviewRows(pRows);
       setHeaderConfirmed(true);
     } catch (e) {
       setHeaderError(e instanceof Error ? e.message : "헤더 행 지정 중 오류가 발생했습니다.");
@@ -483,7 +528,7 @@ export default function DataCleaner() {
                     </p>
                     <PreviewTable rows={previewRows} />
                     <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2">
-                      총 {confirmedText.split("\n").length - 1}개 데이터 행 · 헤더 행 번호가 잘못됐으면 다시 입력하세요.
+                      총 {confirmedRowCount}개 데이터 행 · 헤더 행 번호가 잘못됐으면 다시 입력하세요.
                     </p>
                   </div>
                 )}
