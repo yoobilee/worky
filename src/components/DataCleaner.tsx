@@ -29,20 +29,25 @@ async function parseFileToRows(file: File): Promise<string[][]> {
     const buf  = await file.arrayBuffer();
     const wb   = XLSX.read(buf, { type: "array" });
     const ws   = wb.Sheets[wb.SheetNames[0]];
-    const raw  = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: false }) as unknown[][];
 
-    // 날짜 패턴: M/D/YYYY 또는 MM/DD/YYYY → M/D に統一
+    // sheet_to_json 이전에 각 셀의 .v 값에서 줄바꿈 제거
+    for (const key of Object.keys(ws)) {
+      if (key.startsWith("!")) continue; // 메타 키 스킵
+      const cell = ws[key];
+      if (cell && typeof cell.v === "string") {
+        cell.v = cell.v.replace(/\r\n|\r|\n/g, " ").trim();
+        cell.w = cell.v; // 서식 문자열도 동기화
+      }
+    }
+
     const DATE_RE = /^(\d{1,2})\/(\d{1,2})\/\d{2,4}$/;
 
+    const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: false }) as unknown[][];
     return raw.map((row) =>
       row.map((cell) => {
-        let s = String(cell ?? "");
-        // 셀 내 줄바꿈 → 공백
-        s = s.replace(/\r\n|\r|\n/g, " ").trim();
-        // 날짜 형식 M/D/YYYY → M/D
+        const s = String(cell ?? "").trim();
         const m = DATE_RE.exec(s);
-        if (m) s = `${m[1]}/${m[2]}`;
-        return s;
+        return m ? `${m[1]}/${m[2]}` : s;
       })
     );
   }
