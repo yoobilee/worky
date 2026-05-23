@@ -169,7 +169,6 @@ export default function EmailReply() {
     setSendModal({ open: true, draftIndex: index, draftText: drafts[index] });
     setSendTo("");
     setSendSubject("");
-    setSendResult(null);
   };
 
   const handleSend = async () => {
