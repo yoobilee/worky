@@ -259,7 +259,7 @@ function isOffDay(dateKey: string): boolean {
   return dow === 0 || dow === 6;
 }
 
-/* ── 잔디밭 그리드 (가로형) ── */
+/* ── 잔디밭 그리드 (주 단위 네비게이션) ── */
 function GrassGrid({
   contractStart,
   contractEnd,
@@ -273,94 +273,162 @@ function GrassGrid({
 }) {
   const today = todayKey();
 
-  // 전체 날짜 목록
-  const allDates: string[] = [];
-  const cur = new Date(contractStart + "T00:00:00");
-  const end = new Date(contractEnd   + "T00:00:00");
-  while (cur <= end) { allDates.push(toDateKey(cur)); cur.setDate(cur.getDate() + 1); }
+  function addDays(dateKey: string, n: number): string {
+    const d = new Date(dateKey + "T00:00:00");
+    d.setDate(d.getDate() + n);
+    return toDateKey(d);
+  }
 
-  // 누적 완료 수
+  // 주의 월요일 계산 (ISO: Mon=0)
+  function getMondayOf(dateKey: string): string {
+    const d = new Date(dateKey + "T00:00:00");
+    const offset = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - offset);
+    return toDateKey(d);
+  }
+
+  const startMonday = getMondayOf(contractStart);
+  const endMonday   = getMondayOf(contractEnd);
+
+  // 초기 주: 오늘이 계약 기간 내면 오늘의 주, 아니면 시작 주
+  const initMonday = today >= contractStart && today <= contractEnd
+    ? getMondayOf(today)
+    : startMonday;
+
+  const [weekStart, setWeekStart] = useState(initMonday);
+
+  const canPrev = weekStart > startMonday;
+  const canNext = weekStart < endMonday;
+
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // 전체 날짜 (누적 회차 + 통계 계산용)
+  const allDates: string[] = [];
+  {
+    const cur = new Date(contractStart + "T00:00:00");
+    const end = new Date(contractEnd   + "T00:00:00");
+    while (cur <= end) { allDates.push(toDateKey(cur)); cur.setDate(cur.getDate() + 1); }
+  }
+
   let cumDone = 0;
   const cumMap: Record<string, number> = {};
   for (const d of allDates) { if (dailyLog[d] === "done") cumDone++; cumMap[d] = cumDone; }
 
-  // 통계
   const workdays   = allDates.filter((d) => !isOffDay(d));
   const statDone   = workdays.filter((d) => dailyLog[d] === "done").length;
   const statFailed = workdays.filter((d) => dailyLog[d] === "failed").length;
   const statNone   = workdays.filter((d) => !dailyLog[d] && d <= today).length;
 
-  const DateCell = ({ date }: { date: string }) => {
-    const ds          = dailyLog[date];
-    const isFuture    = date > today;
-    const isToday     = date === today;
-    const off         = isOffDay(date);
-    const holidayName = GRASS_HOLIDAYS[date];
-    const [, m, d]    = date.split("-").map(Number);
-    const dateLabel   = `${m}/${d}`;
-
-    const tooltip = off
-      ? (holidayName ? `${dateLabel} · ${holidayName}` : dateLabel)
-      : ds === "done"   ? `${dateLabel} · ${cumMap[date]}회차`
-      : ds === "failed" ? `${dateLabel} · 실패`
-      : dateLabel;
-
-    const labelCls = [
-      "text-[9px] leading-none font-medium",
-      isToday  ? "text-[#6C63FF] font-bold"
-      : off    ? "text-slate-400 dark:text-zinc-600"
-      : "text-slate-400 dark:text-zinc-500",
-    ].join(" ");
-
-    if (off) {
-      return (
-        <div className="flex flex-col items-center gap-1 shrink-0" title={tooltip}>
-          <span className={labelCls}>{dateLabel}</span>
-          <div className="w-[28px] h-[28px] rounded-md bg-slate-200 dark:bg-zinc-700 opacity-40" />
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex flex-col items-center gap-1 shrink-0">
-        <span className={labelCls}>{dateLabel}</span>
-        <button
-          type="button"
-          onClick={() => { if (!isFuture) onToggle(date); }}
-          title={tooltip}
-          className={[
-            "w-[28px] h-[28px] rounded-md transition-all",
-            isToday  ? "ring-2 ring-[#6C63FF] ring-offset-1 dark:ring-offset-zinc-900" : "",
-            isFuture ? "opacity-20 cursor-not-allowed" : "cursor-pointer hover:opacity-75 active:scale-90",
-            ds === "done"     ? "bg-emerald-500"
-            : ds === "failed" ? "bg-red-400"
-            : "bg-slate-200 dark:bg-zinc-700",
-          ].join(" ")}
-        />
-      </div>
-    );
-  };
+  // 네비게이션 헤더 날짜 범위 레이블
+  const [, ws_m, ws_d] = weekStart.split("-").map(Number);
+  const weekEndDate = addDays(weekStart, 6);
+  const [, we_m, we_d] = weekEndDate.split("-").map(Number);
 
   return (
-    <div className="w-full flex items-start gap-3">
-      {/* 가로 스크롤 잔디밭 */}
-      <div className="flex-1 overflow-x-auto pb-1 min-w-0">
-        <div className="flex gap-1.5 min-w-max">
-          {allDates.map((date) => <DateCell key={date} date={date} />)}
-        </div>
+    <div className="w-full flex flex-col gap-2">
+      {/* 네비게이션 */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          disabled={!canPrev}
+          onClick={() => setWeekStart((w) => addDays(w, -7))}
+          className="p-1 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-slate-400 dark:text-zinc-500"
+        >
+          <IconChevronLeft className="w-3.5 h-3.5" />
+        </button>
+        <span className="text-[10px] font-medium text-slate-400 dark:text-zinc-500">
+          {ws_m}/{ws_d} – {we_m}/{we_d}
+        </span>
+        <button
+          type="button"
+          disabled={!canNext}
+          onClick={() => setWeekStart((w) => addDays(w, 7))}
+          className="p-1 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-slate-400 dark:text-zinc-500"
+        >
+          <IconChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
-      {/* 통계 + 범례 */}
-      <div className="flex flex-col gap-1.5 pt-4 shrink-0">
+
+      {/* 7일 셀 */}
+      <div className="flex gap-1.5 justify-between">
+        {weekDates.map((date) => {
+          // 계약 범위 밖 — 빈 자리 유지
+          if (date < contractStart || date > contractEnd) {
+            return (
+              <div key={date} className="flex flex-col items-center gap-1 flex-1">
+                <span className="text-[9px] leading-none text-transparent select-none">·</span>
+                <div className="w-full h-[30px] rounded-md" />
+              </div>
+            );
+          }
+
+          const ds          = dailyLog[date];
+          const isFuture    = date > today;
+          const isToday     = date === today;
+          const off         = isOffDay(date);
+          const holidayName = GRASS_HOLIDAYS[date];
+          const [, m, d]    = date.split("-").map(Number);
+          const dateLabel   = `${m}/${d}`;
+
+          const tooltip = off
+            ? (holidayName ? `${dateLabel} · ${holidayName}` : dateLabel)
+            : ds === "done"   ? `${dateLabel} · ${cumMap[date]}회차`
+            : ds === "failed" ? `${dateLabel} · 실패`
+            : dateLabel;
+
+          const labelCls = [
+            "text-[9px] leading-none font-medium",
+            isToday ? "text-[#6C63FF] font-bold"
+            : off   ? "text-slate-400 dark:text-zinc-600"
+            :         "text-slate-400 dark:text-zinc-500",
+          ].join(" ");
+
+          if (off) {
+            return (
+              <div key={date} className="flex flex-col items-center gap-1 flex-1" title={tooltip}>
+                <span className={labelCls}>{dateLabel}</span>
+                <div className="w-full h-[30px] rounded-md bg-slate-200 dark:bg-zinc-700 opacity-40" />
+              </div>
+            );
+          }
+
+          return (
+            <div key={date} className="flex flex-col items-center gap-1 flex-1">
+              <span className={labelCls}>{dateLabel}</span>
+              <button
+                type="button"
+                onClick={() => { if (!isFuture) onToggle(date); }}
+                title={tooltip}
+                className={[
+                  "w-full h-[30px] rounded-md transition-all flex items-center justify-center",
+                  isToday  ? "ring-2 ring-[#6C63FF] ring-offset-1 dark:ring-offset-zinc-900" : "",
+                  isFuture ? "opacity-20 cursor-not-allowed" : "cursor-pointer hover:opacity-75 active:scale-95",
+                  ds === "done"     ? "bg-emerald-500"
+                  : ds === "failed" ? "bg-red-400"
+                  :                   "bg-slate-200 dark:bg-zinc-700",
+                ].join(" ")}
+              >
+                {ds === "done" && (
+                  <span className="text-[11px] font-bold text-white leading-none">{cumMap[date]}</span>
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 하단 범례 + 전체 통계 */}
+      <div className="flex items-center gap-3 flex-wrap pt-0.5">
         {[
-          { cls: "bg-emerald-500",                label: "완료",   count: statDone,   showCount: true  },
-          { cls: "bg-red-400",                    label: "실패",   count: statFailed, showCount: true  },
-          { cls: "bg-slate-200 dark:bg-zinc-700", label: "미확인", count: statNone,   showCount: true  },
-          { cls: "bg-slate-200 dark:bg-zinc-700 opacity-40", label: "휴일", count: 0, showCount: false },
+          { cls: "bg-emerald-500",                              label: "완료",   count: statDone,   showCount: true  },
+          { cls: "bg-red-400",                                  label: "실패",   count: statFailed, showCount: true  },
+          { cls: "bg-slate-200 dark:bg-zinc-700",               label: "미확인", count: statNone,   showCount: true  },
+          { cls: "bg-slate-200 dark:bg-zinc-700 opacity-40",    label: "휴일",   count: 0,          showCount: false },
         ].map(({ cls, label, count, showCount }) => (
-          <div key={label} className="flex items-center gap-1.5">
-            <div className={`w-3 h-3 rounded-sm shrink-0 ${cls}`} />
+          <div key={label} className="flex items-center gap-1">
+            <div className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cls}`} />
             <span className="text-[9px] text-slate-500 dark:text-zinc-400">{label}</span>
-            {showCount && <span className="text-[9px] font-semibold text-slate-700 dark:text-zinc-200">{count}</span>}
+            {showCount && <span className="text-[9px] font-semibold text-slate-700 dark:text-zinc-200">{count}건</span>}
           </div>
         ))}
       </div>
@@ -1021,7 +1089,7 @@ export default function ClientManager() {
                           : <IconChevronDown className="w-3 h-3 text-slate-400 dark:text-zinc-500 transition-colors group-hover/grass:text-[#6C63FF]" />}
                       </button>
                       <div
-                        style={{ maxHeight: grassOpen ? "120px" : "0px", opacity: grassOpen ? 1 : 0 }}
+                        style={{ maxHeight: grassOpen ? "180px" : "0px", opacity: grassOpen ? 1 : 0 }}
                         className="overflow-hidden transition-all duration-300 ease-in-out"
                       >
                         <GrassGrid
