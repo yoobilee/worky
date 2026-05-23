@@ -9,52 +9,49 @@ import { trackUsage } from "@/lib/usageStats";
 
 type InputMode = "text" | "file";
 
-async function parseFileToText(file: File): Promise<string> {
+/* ── 파일 → 전체 rows 파싱 (헤더 미지정) ── */
+async function parseFileToRows(file: File): Promise<string[][]> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
 
   if (ext === "csv" || file.type === "text/csv") {
     const Papa = (await import("papaparse")).default;
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
-        complete: (res) => {
-          const rows = res.data as string[][];
-          resolve(rows.map((r) => r.join("\t")).join("\n"));
-        },
+        complete: (res) => resolve(res.data as string[][]),
         error: reject,
-        skipEmptyLines: true,
+        skipEmptyLines: false,
       });
     });
   }
 
   if (ext === "xlsx" || ext === "xls") {
     const XLSX = await import("xlsx");
-    const Papa = (await import("papaparse")).default;
     const buf  = await file.arrayBuffer();
     const wb   = XLSX.read(buf, { type: "array" });
     const ws   = wb.Sheets[wb.SheetNames[0]];
-    // rawNumbers: false → SheetJS가 날짜 시리얼을 서식 문자열로 출력
-    const csvStr = XLSX.utils.sheet_to_csv(ws, { rawNumbers: false } as Parameters<typeof XLSX.utils.sheet_to_csv>[1]);
-
-    const parsed = Papa.parse<string[]>(csvStr, { skipEmptyLines: false });
-    const allRows = parsed.data as string[][];
-
-    // 헤더 행 자동 감지: 비어있지 않은 셀이 2개 이상인 첫 번째 행
-    const headerIdx = allRows.findIndex(
-      (row) => row.filter((cell) => cell.trim() !== "").length >= 2
-    );
-    if (headerIdx === -1) throw new Error("헤더 행을 찾을 수 없습니다.");
-
-    // 헤더 이후 행에서 빈 행 제거
-    const dataRows = allRows
-      .slice(headerIdx + 1)
-      .filter((row) => row.some((cell) => cell.trim() !== ""));
-
-    return [allRows[headerIdx], ...dataRows].map((r) => r.join("\t")).join("\n");
+    // raw: false → 날짜 시리얼 등을 서식 문자열로 변환
+    return XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false }) as string[][];
   }
 
   throw new Error("지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드하세요.");
 }
 
+/* ── 헤더 행 적용 → 탭 구분 텍스트 ── */
+function applyHeaderRow(rawRows: string[][], headerRowNum: number): string {
+  const idx = headerRowNum - 1;
+  if (idx < 0 || idx >= rawRows.length)
+    throw new Error(`${headerRowNum}행은 파일 범위를 벗어납니다. (전체 ${rawRows.length}행)`);
+
+  const header = rawRows[idx].map((c) => String(c ?? ""));
+  const dataRows = rawRows
+    .slice(idx + 1)
+    .filter((row) => row.some((c) => String(c ?? "").trim() !== ""))
+    .map((row) => row.map((c) => String(c ?? "")));
+
+  return [header, ...dataRows].map((r) => r.join("\t")).join("\n");
+}
+
+/* ── AI / 청크 처리 ── */
 const SYSTEM_PROMPT = `당신은 데이터 정리 전문가입니다. 사용자가 붙여넣은 지저분한 텍스트나 데이터를 분석하여 깔끔한 HTML 표로 변환하세요.
 반드시 <table> 태그로 시작하고 </table> 태그로 끝나는 HTML만 반환하세요.
 마크다운 코드블록, 설명 텍스트는 절대 포함하지 마세요.
@@ -93,33 +90,30 @@ async function cleanDataWithChunks(
 ): Promise<string> {
   const lines = sourceText.trim().split("\n");
 
-  // 소량 데이터는 그대로 전송
   if (lines.length <= CHUNK_SIZE + 1) {
     const raw = await callGroqApi(sourceText, SYSTEM_PROMPT);
     onProgress(1, 1);
     return extractTableHtml(raw);
   }
 
-  const header = lines[0];
+  const header   = lines[0];
   const dataRows = lines.slice(1);
   const chunks: string[][] = [];
-  for (let i = 0; i < dataRows.length; i += CHUNK_SIZE) {
+  for (let i = 0; i < dataRows.length; i += CHUNK_SIZE)
     chunks.push(dataRows.slice(i, i + CHUNK_SIZE));
-  }
 
   let theadHtml = "";
   const tbodyRows: string[] = [];
 
   for (let i = 0; i < chunks.length; i++) {
     const chunkText = [header, ...chunks[i]].join("\n");
-    const raw = await callGroqApi(chunkText, CHUNK_SYSTEM_PROMPT);
+    const raw       = await callGroqApi(chunkText, CHUNK_SYSTEM_PROMPT);
     const tableHtml = extractTableHtml(raw);
 
     if (i === 0) {
-      const theadMatch = tableHtml.match(/<thead[\s\S]*?<\/thead>/i);
-      theadHtml = theadMatch ? theadMatch[0] : "";
+      const m = tableHtml.match(/<thead[\s\S]*?<\/thead>/i);
+      theadHtml = m ? m[0] : "";
     }
-
     const tbodyMatch = tableHtml.match(/<tbody[\s\S]*?<\/tbody>/i);
     if (tbodyMatch) {
       const trs = tbodyMatch[0].match(/<tr[\s\S]*?<\/tr>/gi) ?? [];
@@ -127,7 +121,6 @@ async function cleanDataWithChunks(
     }
 
     onProgress(i + 1, chunks.length);
-    // rate limit 방지 딜레이 (마지막 청크 제외)
     if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 500));
   }
 
@@ -135,8 +128,7 @@ async function cleanDataWithChunks(
 }
 
 function tableHtmlToCSV(html: string): string {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
+  const doc  = new DOMParser().parseFromString(html, "text/html");
   const rows = doc.querySelectorAll("tr");
   return Array.from(rows)
     .map((row) =>
@@ -166,45 +158,119 @@ function formatLastClean(iso: string | null): string {
   return `${diffDays}일 전`;
 }
 
+/* ── 미리보기 테이블 ── */
+function PreviewTable({ rows }: { rows: string[][] }) {
+  if (rows.length === 0) return null;
+  const [header, ...data] = rows;
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 mt-2">
+      <table className="w-full text-xs border-collapse">
+        <thead>
+          <tr>
+            {header.map((h, i) => (
+              <th key={i} className="px-3 py-2 text-left font-semibold text-white bg-[#6C63FF] whitespace-nowrap">
+                {h || <span className="opacity-40">(빈 열)</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, ri) => (
+            <tr key={ri} className={ri % 2 === 1 ? "bg-slate-50 dark:bg-zinc-800/50" : ""}>
+              {header.map((_, ci) => (
+                <td key={ci} className="px-3 py-2 text-slate-700 dark:text-zinc-300 border-b border-slate-100 dark:border-zinc-800 whitespace-nowrap">
+                  {row[ci] ?? ""}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ── 메인 컴포넌트 ── */
 export default function DataCleaner() {
-  const [inputMode, setInputMode]   = useState<InputMode>("text");
-  const [input, setInput]           = useState("");
-  const [file, setFile]             = useState<File | null>(null);
-  const [fileText, setFileText]     = useState("");
-  const [extracting, setExtracting] = useState(false);
-  const [tableHtml, setTableHtml]   = useState("");
-  const [loading, setLoading]         = useState(false);
-  const [chunkProgress, setChunkProgress] = useState<{ done: number; total: number } | null>(null);
-  const [error, setError]           = useState("");
-  const [copied, setCopied]         = useState(false);
-  const [cleanCount, setCleanCount] = useState(0);
-  const [lastClean, setLastClean]   = useState<string | null>(null);
-  const resultRef  = useRef<HTMLDivElement>(null);
+  const [inputMode,      setInputMode]      = useState<InputMode>("text");
+  const [input,          setInput]          = useState("");
+  const [file,           setFile]           = useState<File | null>(null);
+  const [rawRows,        setRawRows]        = useState<string[][] | null>(null);
+  const [headerInput,    setHeaderInput]    = useState("1");
+  const [headerConfirmed, setHeaderConfirmed] = useState(false);
+  const [confirmedText,  setConfirmedText]  = useState("");
+  const [previewRows,    setPreviewRows]    = useState<string[][] | null>(null);
+  const [extracting,     setExtracting]     = useState(false);
+  const [headerError,    setHeaderError]    = useState("");
+  const [tableHtml,      setTableHtml]      = useState("");
+  const [loading,        setLoading]        = useState(false);
+  const [chunkProgress,  setChunkProgress]  = useState<{ done: number; total: number } | null>(null);
+  const [error,          setError]          = useState("");
+  const [copied,         setCopied]         = useState(false);
+  const [cleanCount,     setCleanCount]     = useState(0);
+  const [lastClean,      setLastClean]      = useState<string | null>(null);
+  const resultRef    = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleModeChange = (mode: InputMode) => {
-    setInputMode(mode);
-    setError("");
+  const handleModeChange = (mode: InputMode) => { setInputMode(mode); setError(""); };
+
+  const resetFileState = () => {
+    setFile(null);
+    setRawRows(null);
+    setHeaderInput("1");
+    setHeaderConfirmed(false);
+    setConfirmedText("");
+    setPreviewRows(null);
+    setHeaderError("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    resetFileState();
     setFile(f);
-    setFileText("");
-    setError("");
     setExtracting(true);
+    setError("");
     try {
-      const text = await parseFileToText(f);
-      if (!text.trim()) throw new Error("파일에서 데이터를 추출할 수 없습니다.");
-      setFileText(text);
+      const rows = await parseFileToRows(f);
+      if (rows.length === 0) throw new Error("파일에서 데이터를 추출할 수 없습니다.");
+      setRawRows(rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : "파일 처리 중 오류가 발생했습니다.");
       setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {
       setExtracting(false);
     }
+  };
+
+  const handleConfirmHeader = () => {
+    if (!rawRows) return;
+    setHeaderError("");
+    const num = parseInt(headerInput, 10);
+    if (!Number.isFinite(num) || num < 1) {
+      setHeaderError("1 이상의 숫자를 입력하세요.");
+      return;
+    }
+    try {
+      const text = applyHeaderRow(rawRows, num);
+      const lines = text.split("\n");
+      // 미리보기: 헤더 + 최대 3개 데이터 행
+      const previewLines = lines.slice(0, 4);
+      const previewParsed = previewLines.map((l) => l.split("\t"));
+      setConfirmedText(text);
+      setPreviewRows(previewParsed);
+      setHeaderConfirmed(true);
+    } catch (e) {
+      setHeaderError(e instanceof Error ? e.message : "헤더 행 지정 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleHeaderInputChange = (v: string) => {
+    setHeaderInput(v);
+    setHeaderConfirmed(false);
+    setPreviewRows(null);
+    setHeaderError("");
   };
 
   useEffect(() => {
@@ -213,7 +279,7 @@ export default function DataCleaner() {
     setLastClean(localStorage.getItem(LAST_CLEAN_KEY));
   }, []);
 
-  const sourceText = inputMode === "text" ? input : fileText;
+  const sourceText = inputMode === "text" ? input : confirmedText;
 
   const handleClean = async () => {
     if (!sourceText.trim()) return;
@@ -221,7 +287,6 @@ export default function DataCleaner() {
     setError("");
     setTableHtml("");
     setChunkProgress(null);
-
     try {
       const result = await cleanDataWithChunks(sourceText, (done, total) => {
         setChunkProgress({ done, total });
@@ -253,15 +318,17 @@ export default function DataCleaner() {
 
   const handleDownloadCSV = () => {
     if (!tableHtml) return;
-    const csv = tableHtmlToCSV(tableHtml);
+    const csv  = tableHtmlToCSV(tableHtml);
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "worky_data.csv";
-    a.click();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = "worky_data.csv"; a.click();
     URL.revokeObjectURL(url);
   };
+
+  const canClean = inputMode === "text"
+    ? !!input.trim()
+    : headerConfirmed && !!confirmedText.trim();
 
   return (
     <div className="space-y-3 max-w-4xl mx-auto w-full">
@@ -283,9 +350,7 @@ export default function DataCleaner() {
           { id: "text" as InputMode, label: "텍스트 입력", Icon: IconAlignLeft },
           { id: "file" as InputMode, label: "파일 업로드", Icon: IconFileUpload },
         ]).map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => handleModeChange(id)}
+          <button key={id} onClick={() => handleModeChange(id)}
             className={[
               "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
               inputMode === id
@@ -293,8 +358,7 @@ export default function DataCleaner() {
                 : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700",
             ].join(" ")}
           >
-            <Icon className="w-4 h-4" />
-            {label}
+            <Icon className="w-4 h-4" />{label}
           </button>
         ))}
       </div>
@@ -319,11 +383,13 @@ export default function DataCleaner() {
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
               CSV 또는 Excel 파일 업로드
             </label>
+
+            {/* 파일 선택 영역 */}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={extracting}
               className={[
-                "w-full flex flex-col items-center justify-center gap-3 min-h-[160px] rounded-xl border-2 border-dashed transition-all disabled:opacity-60 disabled:cursor-not-allowed",
+                "w-full flex flex-col items-center justify-center gap-3 min-h-[140px] rounded-xl border-2 border-dashed transition-all disabled:opacity-60 disabled:cursor-not-allowed",
                 file
                   ? "border-[#6C63FF]/50 bg-[#6C63FF]/5 hover:border-[#6C63FF]/70"
                   : "border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5",
@@ -340,35 +406,70 @@ export default function DataCleaner() {
               </div>
             </button>
             <input
-              ref={fileInputRef}
-              type="file"
+              ref={fileInputRef} type="file"
               accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-              onChange={handleFileChange}
-              className="hidden"
+              onChange={handleFileChange} className="hidden"
             />
+
+            {/* 추출 중 */}
             {extracting && (
               <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
                 <span className="w-4 h-4 border-2 border-slate-300 border-t-[#6C63FF] rounded-full animate-spin shrink-0" />
                 데이터 추출 중...
               </div>
             )}
-            {fileText && !extracting && (
-              <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">추출된 데이터 미리보기</p>
-                <div className="max-h-[80px] overflow-hidden">
-                  <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">{fileText}</p>
+
+            {/* 헤더 행 지정 */}
+            {rawRows && !extracting && (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-slate-600 dark:text-zinc-400 shrink-0">
+                    헤더(컬럼명)가 몇 번째 행에 있나요?
+                  </label>
+                  <input
+                    type="number" min="1" max={rawRows.length}
+                    value={headerInput}
+                    onChange={(e) => handleHeaderInputChange(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleConfirmHeader()}
+                    className="w-20 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 text-center focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                  />
+                  <button
+                    onClick={handleConfirmHeader}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition"
+                    style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                  >
+                    확인
+                  </button>
+                  <span className="text-xs text-slate-400 dark:text-zinc-500">
+                    전체 {rawRows.length}행
+                  </span>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">
-                  총 {fileText.split("\n").length.toLocaleString()}행 추출됨
-                </p>
+
+                {headerError && (
+                  <p className="text-xs text-red-500">{headerError}</p>
+                )}
+
+                {/* 미리보기 */}
+                {previewRows && headerConfirmed && (
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1">
+                      미리보기 (헤더 + 최대 3행)
+                    </p>
+                    <PreviewTable rows={previewRows} />
+                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2">
+                      총 {confirmedText.split("\n").length - 1}개 데이터 행 · 헤더 행 번호가 잘못됐으면 다시 입력하세요.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </>
         )}
+
         <div className="flex justify-end mt-3">
           <button
             onClick={handleClean}
-            disabled={loading || !sourceText.trim() || extracting}
+            disabled={loading || !canClean || extracting}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
           >
@@ -407,8 +508,7 @@ export default function DataCleaner() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">정리된 표</h2>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleCopy}
+              <button onClick={handleCopy}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -416,8 +516,7 @@ export default function DataCleaner() {
                 </svg>
                 {copied ? "복사됨!" : "HTML 복사"}
               </button>
-              <button
-                onClick={handleDownloadCSV}
+              <button onClick={handleDownloadCSV}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition"
                 style={{ background: "var(--primary)" }}
               >
@@ -428,8 +527,6 @@ export default function DataCleaner() {
               </button>
             </div>
           </div>
-
-          {/* 테이블 렌더링 */}
           <EditableResult value={tableHtml} onChange={setTableHtml} rows={14} textareaClassName="font-mono text-xs">
             <div
               ref={resultRef}
@@ -452,8 +549,8 @@ export default function DataCleaner() {
         title="데이터 정리 사용법"
         steps={[
           { step: "데이터 입력", desc: "CSV·표·자유형식 텍스트를 붙여넣거나 파일을 업로드하세요." },
-          { step: "AI 분석", desc: "버튼 클릭으로 표 형태로 자동 정리됩니다." },
-          { step: "편집", desc: "생성된 표를 클릭하면 직접 수정할 수 있습니다." },
+          { step: "헤더 행 지정", desc: "파일 업로드 후 컬럼명이 있는 행 번호를 입력하고 확인을 누르세요." },
+          { step: "AI 분석", desc: "미리보기 확인 후 AI로 정리하기 버튼을 클릭하세요." },
           { step: "내보내기", desc: "HTML 복사 또는 CSV 파일로 다운로드하세요." },
         ]}
       />
