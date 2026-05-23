@@ -61,7 +61,7 @@ const navItems = [
   },
   {
     href: "/content",
-    label: "콘텐츠 작성",
+    label: "메시지 작성",
     icon: <IconEdit className="w-4 h-4" />,
   },
   {
@@ -131,7 +131,7 @@ const navItems = [
   },
   {
     href: "/insight",
-    label: "데이터 인사이트",
+    label: "데이터 분석",
     icon: <IconChartBar className="w-4 h-4" />,
   },
   {

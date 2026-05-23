@@ -506,7 +506,7 @@ export default function ContentCreator() {
         </>
       )}
       <HelpButton
-        title="콘텐츠 작성 사용법"
+        title="메시지 작성 사용법"
         steps={[
           { step: "탭 선택", desc: "보고 메시지 또는 인스타 게시글 탭을 선택하세요." },
           { step: "내용 입력", desc: "작업 내용 또는 게시글 주제를 입력합니다." },
