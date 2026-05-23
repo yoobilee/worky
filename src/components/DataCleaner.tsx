@@ -30,26 +30,33 @@ async function parseFileToRows(file: File): Promise<string[][]> {
     const wb   = XLSX.read(buf, { type: "array" });
     const ws   = wb.Sheets[wb.SheetNames[0]];
 
-    // sheet_to_json 이전에 각 셀의 .v 값에서 줄바꿈 제거
-    for (const key of Object.keys(ws)) {
-      if (key.startsWith("!")) continue; // 메타 키 스킵
-      const cell = ws[key];
-      if (cell && typeof cell.v === "string") {
-        cell.v = cell.v.replace(/\r\n|\r|\n/g, " ").trim();
-        cell.w = cell.v; // 서식 문자열도 동기화
-      }
-    }
+    const ref   = ws["!ref"];
+    if (!ref) return [];
+    const range = XLSX.utils.decode_range(ref);
 
     const DATE_RE = /^(\d{1,2})\/(\d{1,2})\/\d{2,4}$/;
 
-    const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: false }) as unknown[][];
-    return raw.map((row) =>
-      row.map((cell) => {
-        const s = String(cell ?? "").trim();
-        const m = DATE_RE.exec(s);
-        return m ? `${m[1]}/${m[2]}` : s;
-      })
-    );
+    const rows: string[][] = [];
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      const row: string[] = [];
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = ws[addr];
+        let val = "";
+        if (cell != null) {
+          // 서식 문자열 우선, 없으면 원시값
+          val = String(cell.w ?? cell.v ?? "");
+          // 줄바꿈 → 공백
+          val = val.replace(/\r\n|\r|\n/g, " ").trim();
+          // M/D/YYYY → M/D
+          const m = DATE_RE.exec(val);
+          if (m) val = `${m[1]}/${m[2]}`;
+        }
+        row.push(val);
+      }
+      rows.push(row);
+    }
+    return rows;
   }
 
   throw new Error("지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드하세요.");
