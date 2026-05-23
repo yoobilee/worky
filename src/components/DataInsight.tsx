@@ -539,7 +539,7 @@ export default function DataInsight() {
         </div>
       )}
       <HelpButton
-        title="데이터 인사이트 사용법"
+        title="데이터 분석 사용법"
         steps={[
           { step: "데이터 입력", desc: "숫자 데이터를 텍스트로 입력하거나 파일을 업로드하세요." },
           { step: "AI 분석", desc: "핵심 수치·트렌드·이상치를 자동으로 분석합니다." },

@@ -52,7 +52,7 @@ const QUICK_LINKS = [
   { href: "/summary",   label: "문서 요약",      Icon: IconFileDescription, desc: "AI 핵심 요약" },
   { href: "/schedule",  label: "일정 추출",      Icon: IconCalendarEvent,  desc: "날짜·장소 추출" },
   { href: "/translate", label: "번역·다듬기",    Icon: IconLanguage,       desc: "번역 / 톤 조정" },
-  { href: "/insight",   label: "데이터 인사이트", Icon: IconChartBar,       desc: "수치 분석" },
+  { href: "/insight",   label: "데이터 분석", Icon: IconChartBar,       desc: "수치 분석" },
   { href: "/glossary",  label: "용어집",         Icon: IconBook,           desc: "사내 용어 관리" },
   { href: "/calendar",  label: "일정 관리",      Icon: IconCalendar,       desc: "월별 일정 관리" },
   { href: "/clients",   label: "거래처 관리",    Icon: IconBuilding,       desc: "거래처 보고 관리" },
@@ -507,7 +507,7 @@ export default function HomePage() {
             { key: "translate", label: "번역·다듬기"   },
             { key: "summary",   label: "문서 요약"     },
             { key: "schedule",  label: "일정 추출"     },
-            { key: "insight",   label: "데이터 인사이트" },
+            { key: "insight",   label: "데이터 분석" },
             { key: "qa",        label: "Q&A"          },
           ];
           const counts = FEATURES.map((f) => weekStats[f.key] ?? 0);
