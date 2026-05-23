@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   IconSend, IconCopy, IconCheck, IconChevronDown,
 } from "@tabler/icons-react";
@@ -79,6 +79,11 @@ export default function ReportMessage() {
   const [customToneSample, setCustomToneSample] = useState("");
   const [useCustomTone,    setUseCustomTone]    = useState(false);
   const [sampleOpen,       setSampleOpen]       = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result]);
 
   useEffect(() => {
     try {
@@ -272,7 +277,7 @@ export default function ReportMessage() {
 
       {/* 결과 */}
       {result && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+        <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 보고 메시지</h2>
             <button

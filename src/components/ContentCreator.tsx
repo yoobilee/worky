@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   IconSend, IconBrandInstagram, IconCopy, IconCheck,
   IconChevronDown, IconX,
@@ -125,6 +125,16 @@ export default function ContentCreator() {
   const [instaLoading,    setInstaLoading]    = useState(false);
   const [instaError,      setInstaError]      = useState("");
   const [instaCopied,     setInstaCopied]     = useState(false);
+  const reportResultRef = useRef<HTMLDivElement>(null);
+  const instaResultRef  = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (reportResult) reportResultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [reportResult]);
+
+  useEffect(() => {
+    if (instaResult) instaResultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [instaResult]);
 
   useEffect(() => {
     try {
@@ -344,7 +354,7 @@ export default function ContentCreator() {
           )}
 
           {reportResult && (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+            <div ref={reportResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 보고 메시지</h2>
                 <button onClick={async () => { await navigator.clipboard.writeText(reportResult); setReportCopied(true); setTimeout(() => setReportCopied(false), 2000); }}
@@ -480,7 +490,7 @@ export default function ContentCreator() {
           )}
 
           {instaResult && (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+            <div ref={instaResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 인스타 게시글</h2>
                 <button onClick={async () => { await navigator.clipboard.writeText(instaResult); setInstaCopied(true); setTimeout(() => setInstaCopied(false), 2000); }}

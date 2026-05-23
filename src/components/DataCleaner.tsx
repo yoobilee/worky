@@ -133,6 +133,10 @@ export default function DataCleaner() {
     setLastClean(localStorage.getItem(LAST_CLEAN_KEY));
   }, []);
 
+  useEffect(() => {
+    if (tableHtml) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [tableHtml]);
+
   const handleClean = async () => {
     if (!input.trim()) return;
     setError("");
@@ -243,7 +247,7 @@ export default function DataCleaner() {
 
       {/* 결과 */}
       {tableHtml && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+        <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">정리된 표</h2>
             <div className="flex items-center gap-2">
@@ -268,7 +272,6 @@ export default function DataCleaner() {
           </div>
           <EditableResult value={tableHtml} onChange={setTableHtml} rows={14} textareaClassName="font-mono text-xs">
             <div
-              ref={resultRef}
               className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 [&_table]:w-full [&_table]:text-sm [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-white [&_td]:px-4 [&_td]:py-2.5 [&_td]:text-slate-700 dark:[&_td]:text-zinc-300 [&_tr:nth-child(even)_td]:bg-slate-50 dark:[&_tr:nth-child(even)_td]:bg-zinc-800/50"
             >
               <style>{`
