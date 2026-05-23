@@ -29,8 +29,22 @@ async function parseFileToText(file: File): Promise<string> {
   if (ext === "xlsx" || ext === "xls") {
     const XLSX = await import("xlsx");
     const buf  = await file.arrayBuffer();
-    const wb   = XLSX.read(buf, { type: "array" });
+    const wb   = XLSX.read(buf, { type: "array", cellDates: true });
     const ws   = wb.Sheets[wb.SheetNames[0]];
+    // cellDates: true 로 파싱된 Date 객체를 M/D 형식 문자열로 변환
+    const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = ws[addr];
+        if (cell && cell.t === "d" && cell.v instanceof Date) {
+          const d = cell.v as Date;
+          cell.t = "s";
+          cell.v = `${d.getMonth() + 1}/${d.getDate()}`;
+          cell.w = cell.v;
+        }
+      }
+    }
     return XLSX.utils.sheet_to_csv(ws);
   }
 
@@ -47,7 +61,7 @@ const CHUNK_SYSTEM_PROMPT = `당신은 데이터 정리 전문가입니다. 아�
 마크다운 코드블록, 설명 텍스트는 절대 포함하지 마세요.
 thead > tr > th 로 헤더를, tbody > tr > td 로 데이터를 구성하세요.`;
 
-const CHUNK_SIZE = 30;
+const CHUNK_SIZE = 50;
 
 function extractTableHtml(raw: string): string {
   const match = raw.match(/<table[\s\S]*<\/table>/i);
@@ -109,6 +123,8 @@ async function cleanDataWithChunks(
     }
 
     onProgress(i + 1, chunks.length);
+    // rate limit 방지 딜레이 (마지막 청크 제외)
+    if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 500));
   }
 
   return `<table>${theadHtml}<tbody>${tbodyRows.join("")}</tbody></table>`;
