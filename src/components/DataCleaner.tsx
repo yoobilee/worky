@@ -34,20 +34,31 @@ async function parseFileToRows(file: File): Promise<RawCell[][]> {
     if (!ref) return [];
     const range = XLSX.utils.decode_range(ref);
 
+    const stripNewlines = (s: string) => s.replace(/[\r\n]+/g, " ").trim();
+
     const allRows: RawCell[][] = [];
     for (let R = range.s.r; R <= range.e.r; R++) {
       const rowData: RawCell[] = [];
       for (let C = range.s.c; C <= range.e.c; C++) {
         const addr = XLSX.utils.encode_cell({ r: R, c: C });
         const cell = ws[addr];
-        let val: RawCell = cell ? (cell.v as RawCell) : null;
-        // 문자열 셀: 줄바꿈 → 공백
-        if (typeof val === "string") val = val.replace(/[\r\n]+/g, " ").trim();
-        // 날짜 시리얼 넘버(40000~60000) → M/D 문자열
-        if (typeof val === "number" && val > 40000 && val < 60000) {
-          const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-          val = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+        let val: RawCell = cell != null ? (cell.v as RawCell) : null;
+
+        if (val === null || val === undefined) {
+          val = null;
+        } else if (typeof val === "number") {
+          // 날짜 시리얼 넘버(40000~60000) → M/D 문자열
+          if (val > 40000 && val < 60000) {
+            const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+            val = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+          }
+        } else if (typeof val === "string") {
+          val = stripNewlines(val);
+        } else {
+          // boolean, object(rich text) 등 → 문자열 변환 후 줄바꿈 제거
+          val = stripNewlines(String(val));
         }
+
         rowData.push(val);
       }
       allRows.push(rowData);
@@ -205,7 +216,12 @@ function tableHtmlToCSV(html: string): string {
   return Array.from(rows)
     .map((row) =>
       Array.from(row.querySelectorAll("th, td"))
-        .map((cell) => `"${(cell.textContent ?? "").replace(/"/g, '""')}"`)
+        .map((cell) => {
+          const text = (cell.textContent ?? "")
+            .replace(/\r\n|\r|\n/g, " ")  // 셀 내 줄바꿈 → 공백
+            .replace(/"/g, '""');          // 큰따옴표 이스케이프
+          return `"${text}"`;
+        })
         .join(",")
     )
     .join("\n");
