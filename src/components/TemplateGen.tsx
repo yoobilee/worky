@@ -7,6 +7,47 @@ import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
 import { IconReport, IconMail, IconNotes, IconBulb, IconSettings, IconAlertTriangle } from "@tabler/icons-react";
 import EditableResult from "@/components/EditableResult";
+import React from "react";
+
+function renderMarkdown(text: string): React.ReactNode {
+  const lines = text.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  let k = 0;
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    nodes.push(
+      <ul key={k++} className="list-disc pl-5 space-y-0.5 my-1">
+        {listItems.map((item, i) => (
+          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
+        ))}
+      </ul>
+    );
+    listItems = [];
+  };
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith("## ")) {
+      flushList();
+      nodes.push(<p key={k++} className="text-[15px] font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1">{t.slice(3)}</p>);
+    } else if (t.startsWith("### ")) {
+      flushList();
+      nodes.push(<p key={k++} className="text-sm font-bold text-slate-800 dark:text-zinc-100 mt-2 mb-0.5">{t.slice(4)}</p>);
+    } else if (/^[-•*] /.test(t)) {
+      listItems.push(t.slice(2));
+    } else if (t === "") {
+      flushList();
+      nodes.push(<div key={k++} className="h-1.5" />);
+    } else {
+      flushList();
+      nodes.push(<p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{t}</p>);
+    }
+  }
+  flushList();
+  return <div className="space-y-0.5">{nodes}</div>;
+}
 
 const SENDER_KEY = "worky_sender_info";
 
@@ -292,9 +333,9 @@ export default function TemplateGen() {
             </div>
           </div>
           <EditableResult value={result} onChange={setResult} rows={16} textareaClassName="font-mono">
-            <pre className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 font-mono leading-relaxed whitespace-pre-wrap">
-              {result}
-            </pre>
+            <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800">
+              {renderMarkdown(result)}
+            </div>
           </EditableResult>
         </div>
       )}
