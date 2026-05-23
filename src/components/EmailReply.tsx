@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import {
   IconTie,
   IconBolt,
@@ -102,6 +103,13 @@ export default function EmailReply() {
   const [hydrated, setHydrated]         = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
+  // 이메일 전송 모달 상태
+  const [sendModal, setSendModal] = useState<{ open: boolean; draftIndex: number; draftText: string } | null>(null);
+  const [sendTo, setSendTo]       = useState("");
+  const [sendSubject, setSendSubject] = useState("");
+  const [sending, setSending]     = useState(false);
+  const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
   useEffect(() => {
     if (drafts.length > 0) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [drafts]);
@@ -149,6 +157,48 @@ export default function EmailReply() {
     await navigator.clipboard.writeText(text);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const openSendModal = (index: number) => {
+    setSendModal({ open: true, draftIndex: index, draftText: drafts[index] });
+    setSendTo("");
+    setSendSubject("");
+    setSendResult(null);
+  };
+
+  const handleSend = async () => {
+    if (!sendModal || !sendTo.trim() || !sendSubject.trim()) return;
+    setSending(true);
+    setSendResult(null);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.provider_token;
+      if (!accessToken) {
+        setSendResult({ ok: false, msg: "Gmail 권한이 없습니다. 다시 로그인해 주세요." });
+        return;
+      }
+      const res = await fetch("/api/gmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: sendTo.trim(),
+          subject: sendSubject.trim(),
+          body: sendModal.draftText,
+          accessToken,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSendResult({ ok: true, msg: "이메일이 성공적으로 전송되었습니다." });
+      } else {
+        setSendResult({ ok: false, msg: data.error ?? "전송 실패" });
+      }
+    } catch {
+      setSendResult({ ok: false, msg: "전송 중 오류가 발생했습니다." });
+    } finally {
+      setSending(false);
+    }
   };
 
   if (!hydrated) return null;
@@ -262,16 +312,28 @@ export default function EmailReply() {
                   style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
                   초안 {i + 1}
                 </span>
-                <button
-                  onClick={() => handleCopy(draft, i)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  {copiedIndex === i ? "복사됨!" : "복사"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openSendModal(i)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#6C63FF]/40 text-[#6C63FF] hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    전송
+                  </button>
+                  <button
+                    onClick={() => handleCopy(draft, i)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    {copiedIndex === i ? "복사됨!" : "복사"}
+                  </button>
+                </div>
               </div>
               <EditableResult
                 value={draft}
@@ -286,6 +348,94 @@ export default function EmailReply() {
           ))}
         </div>
       )}
+      {/* 이메일 전송 모달 */}
+      {sendModal?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-800 dark:text-zinc-100">이메일 전송</h3>
+              <button
+                onClick={() => setSendModal(null)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">받는 사람 (이메일)</label>
+                <input
+                  type="email"
+                  value={sendTo}
+                  onChange={(e) => setSendTo(e.target.value)}
+                  placeholder="example@email.com"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">제목</label>
+                <input
+                  type="text"
+                  value={sendSubject}
+                  onChange={(e) => setSendSubject(e.target.value)}
+                  placeholder="Re: 회의 일정 변경 요청"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">초안 {sendModal.draftIndex + 1} 내용</label>
+                <div className="px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-600 dark:text-zinc-400 whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
+                  {sendModal.draftText}
+                </div>
+              </div>
+            </div>
+
+            {sendResult && (
+              <div className={`px-4 py-3 rounded-xl text-sm text-center font-medium ${
+                sendResult.ok
+                  ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400"
+                  : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400"
+              }`}>
+                {sendResult.msg}
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setSendModal(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={sending || !sendTo.trim() || !sendSubject.trim() || sendResult?.ok === true}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                {sending ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    전송 중...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    전송
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <HelpButton
         title="이메일 작성 사용법"
         steps={[
