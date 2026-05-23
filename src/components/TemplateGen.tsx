@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
 import { IconReport, IconMail, IconNotes, IconBulb, IconSettings, IconAlertTriangle } from "@tabler/icons-react";
@@ -166,6 +166,11 @@ export default function TemplateGen() {
   const [copied, setCopied]             = useState(false);
   const [sender, setSender]             = useState<SenderInfo>({ org: "", name: "", title: "" });
   const [pendingTab, setPendingTab]     = useState<TemplateType | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result]);
 
   useEffect(() => {
     try {
@@ -345,7 +350,7 @@ export default function TemplateGen() {
 
       {/* 결과 */}
       {result && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+        <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
               생성된 {selectedTemplate.label}

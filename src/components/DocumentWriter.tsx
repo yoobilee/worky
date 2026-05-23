@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   IconFileCertificate, IconCopy, IconCheck,
 } from "@tabler/icons-react";
@@ -82,6 +82,11 @@ export default function DocumentWriter() {
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
   const [copied,    setCopied]    = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result]);
 
   const handleDocTypeChange = (id: OfficialDocType) => {
     setDocType(id); setFields({}); setResult(""); setError("");
@@ -188,7 +193,7 @@ export default function DocumentWriter() {
 
       {/* 결과 */}
       {result && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+        <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 {doc.label}</h2>
             <button onClick={handleCopy}

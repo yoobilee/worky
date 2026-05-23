@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import { addCalendarEvent, parseKoreanDate } from "@/lib/calendarStorage";
 import {
@@ -74,6 +74,11 @@ export default function ScheduleExtractor() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [savedIndex,  setSavedIndex]  = useState<number | null>(null);
   const [savedAll,    setSavedAll]    = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (schedules.length > 0) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [schedules]);
 
   const handleSaveToCalendar = (s: Schedule, index: number) => {
     const date = parseKoreanDate(s.date) ?? new Date().toISOString().slice(0, 10);
@@ -184,7 +189,7 @@ export default function ScheduleExtractor() {
       {schedules.length > 0 && (
         <>
           {/* 결과 헤더 */}
-          <div className="flex items-center justify-between px-1">
+          <div ref={resultRef} className="flex items-center justify-between px-1">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
               추출된 일정 {schedules.length}건
             </span>

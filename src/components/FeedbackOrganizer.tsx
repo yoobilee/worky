@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   IconMessageCheck, IconAlertCircle, IconCircleCheck, IconBulb,
   IconLoader2, IconAlertTriangle, IconCopy, IconCheck,
@@ -57,6 +57,11 @@ export default function FeedbackOrganizer() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
   const [copied,  setCopied]  = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result]);
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -151,7 +156,7 @@ export default function FeedbackOrganizer() {
 
       {/* 결과 */}
       {result && (
-        <div className="space-y-3">
+        <div ref={resultRef} className="space-y-3">
 
           {/* 전체 복사 */}
           <div className="flex justify-end">

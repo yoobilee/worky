@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 import Link from "next/link";
@@ -100,6 +100,11 @@ export default function EmailReply() {
   const [error, setError]               = useState("");
   const [copiedIndex, setCopiedIndex]   = useState<number | null>(null);
   const [hydrated, setHydrated]         = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (drafts.length > 0) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [drafts]);
 
   // 설정에서 발신자 정보 로드
   useEffect(() => {
@@ -246,7 +251,7 @@ export default function EmailReply() {
 
       {/* 초안 결과 */}
       {drafts.length > 0 && (
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div ref={resultRef} className="grid gap-3 lg:grid-cols-3">
           {drafts.map((draft, i) => (
             <div
               key={i}

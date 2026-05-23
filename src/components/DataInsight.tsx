@@ -151,6 +151,11 @@ export default function DataInsight() {
   const [reportError, setReportError]     = useState("");
   const [reportCopied, setReportCopied]   = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resultRef    = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result]);
 
   const sourceText = inputMode === "text" ? input : fileText;
 
@@ -403,7 +408,7 @@ export default function DataInsight() {
 
       {/* 결과 */}
       {result && (
-        <div className="space-y-3">
+        <div ref={resultRef} className="space-y-3">
 
           {/* 복사 버튼 */}
           <div className="flex justify-end">

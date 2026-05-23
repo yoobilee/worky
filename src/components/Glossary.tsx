@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
 import EditableResult from "./EditableResult";
 import {
@@ -92,6 +92,11 @@ export default function Glossary() {
   // AI 설명
   const [aiQuery, setAiQuery]       = useState("");
   const [aiResult,        setAiResult]        = useState("");
+  const aiResultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (aiResult) aiResultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [aiResult]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [aiLoading, setAiLoading]   = useState(false);
   const [aiError, setAiError]       = useState("");
@@ -246,7 +251,7 @@ export default function Glossary() {
         </div>
 
         {/* AI 설명 카드 */}
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
+        <div ref={aiResultRef} className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <IconSparkles className="w-4 h-4 text-[#6C63FF]" />
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">AI 용어 설명</span>
