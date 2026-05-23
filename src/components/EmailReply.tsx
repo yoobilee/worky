@@ -49,19 +49,29 @@ function buildNewEmailSystemPrompt(sender: SenderInfo): string {
   const senderLine = hasSender
     ? [sender.org, sender.name, sender.title].filter(Boolean).join(" ")
     : null;
-  const intro = senderLine ? `${senderLine}입니다.` : "담당자입니다.";
+  const senderIntro = senderLine ? `${senderLine}입니다.` : null;
+  const senderInfo = senderLine ? `발신자 정보: ${senderLine}\n` : "";
+
+  const introLine = senderIntro
+    ? `안녕하세요. {받는 사람 이름이 있으면 "○○님," 으로 시작, 없으면 생략}
+${senderIntro}`
+    : `안녕하세요. {받는 사람 이름이 있으면 "○○님," 으로 시작, 없으면 생략}`;
 
   return `당신은 비즈니스 이메일 전문가입니다. 사용자가 제공한 내용으로 격식 있는 비즈니스 이메일 본문을 작성해주세요.
+${senderInfo}
 반드시 아래 형식을 정확히 따르세요. "인사말:", "본문:", "마무리 인사:", "서명란:" 같은 라벨이나 구분자는 절대 쓰지 마세요.
 
-안녕하세요.
-${intro}
+${introLine}
 
-(본문 내용 — 목적, 세부 내용, 요청/안내 순서로 작성)
+(본문 내용 — 목적, 세부 내용, 요청/안내 순서로 자연스럽게 작성)
 
 감사합니다.
 
-마지막 줄은 반드시 "감사합니다."로만 끝내세요. 그 이후 이름, 소속, 직급 등 절대 추가 금지.${KO_RULES}`;
+[중요]
+- 첫 줄은 반드시 "안녕하세요."로 시작하세요.
+- 받는 사람 이름을 제목이나 내용에서 파악할 수 있으면 "안녕하세요. ○○님," 형식으로, 없으면 "안녕하세요." 만 쓰세요.
+- 발신자 정보가 있으면 인사말 바로 다음 줄에 "${senderIntro ?? ""}" 를 넣으세요. 없으면 생략하세요.
+- 마지막 줄은 반드시 "감사합니다."로만 끝내세요. 그 이후 이름, 소속, 직급 등 절대 추가 금지.${KO_RULES}`;
 }
 
 function buildReplySystemPrompt(sender: SenderInfo): string {
