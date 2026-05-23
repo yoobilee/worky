@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 import {
