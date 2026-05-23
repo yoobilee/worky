@@ -29,8 +29,22 @@ async function parseFileToRows(file: File): Promise<string[][]> {
     const buf  = await file.arrayBuffer();
     const wb   = XLSX.read(buf, { type: "array" });
     const ws   = wb.Sheets[wb.SheetNames[0]];
-    // raw: false → 날짜 시리얼 등을 서식 문자열로 변환
-    return XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false }) as string[][];
+    const raw  = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: false }) as unknown[][];
+
+    // 날짜 패턴: M/D/YYYY 또는 MM/DD/YYYY → M/D に統一
+    const DATE_RE = /^(\d{1,2})\/(\d{1,2})\/\d{2,4}$/;
+
+    return raw.map((row) =>
+      row.map((cell) => {
+        let s = String(cell ?? "");
+        // 셀 내 줄바꿈 → 공백
+        s = s.replace(/\r\n|\r|\n/g, " ").trim();
+        // 날짜 형식 M/D/YYYY → M/D
+        const m = DATE_RE.exec(s);
+        if (m) s = `${m[1]}/${m[2]}`;
+        return s;
+      })
+    );
   }
 
   throw new Error("지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드하세요.");
