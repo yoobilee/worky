@@ -91,21 +91,23 @@ function applyHeaderRow(
   const dataRows = rawRows
     .slice(idx + 1)
     .filter((row) => row.some((c) => c !== null && String(c).trim() !== ""))
-    .map((row) => row.slice(0, colCount).map((c) => String(c ?? "")));
-
-  // 헤더를 키로, 각 데이터 행을 값으로 객체 배열 생성
-  const objects = dataRows.map((row) => {
-    const obj: Record<string, string> = {};
-    header.forEach((key, ci) => {
-      obj[key || `열${ci + 1}`] = row[ci] ?? "";
+    .map((row) => {
+      const cells = row.slice(0, colCount).map((c) => String(c ?? ""));
+      // 헤더보다 컬럼이 적으면 빈 문자열로 채우기
+      while (cells.length < colCount) cells.push("");
+      return cells;
     });
-    return obj;
-  });
+
+  // 직접 HTML 테이블 생성
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const theadHtml = `<thead><tr>${header.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead>`;
+  const tbodyHtml = `<tbody>${dataRows.map((row) => `<tr>${row.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  const confirmedText = `<table>${theadHtml}${tbodyHtml}</table>`;
 
   // 미리보기용: 헤더 + 최대 3개 데이터 행 (string[][])
   const previewRows = [header, ...dataRows.slice(0, 3)];
 
-  return { previewRows, confirmedText: JSON.stringify(objects), rowCount: dataRows.length };
+  return { previewRows, confirmedText, rowCount: dataRows.length };
 }
 
 /* ── AI / 청크 처리 ── */
@@ -379,9 +381,26 @@ export default function DataCleaner() {
 
   const handleClean = async () => {
     if (!sourceText.trim()) return;
-    setLoading(true);
     setError("");
     setTableHtml("");
+
+    // 파일 업로드 탭: AI 없이 HTML 직접 사용
+    if (inputMode === "file") {
+      setTableHtml(confirmedText);
+      trackUsage("data");
+      const now = new Date().toISOString();
+      localStorage.setItem(LAST_CLEAN_KEY, now);
+      setLastClean(now);
+      setCleanCount((prev) => {
+        const next = prev + 1;
+        localStorage.setItem(CLEAN_COUNT_KEY, String(next));
+        return next;
+      });
+      return;
+    }
+
+    // 텍스트 입력 탭: AI 처리
+    setLoading(true);
     setChunkProgress(null);
     try {
       const result = await cleanDataWithChunks(sourceText, (done, total) => {
@@ -581,7 +600,7 @@ export default function DataCleaner() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
                 </svg>
-                AI로 정리하기
+                {inputMode === "file" ? "정리하기" : "AI로 정리하기"}
               </>
             )}
           </button>
