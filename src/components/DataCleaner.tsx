@@ -36,54 +36,29 @@ async function parseFileToRows(file: File): Promise<RawCell[][]> {
 
     const stripNewlines = (s: string) => s.replace(/[\r\n]+/g, " ").trim();
 
-    const cellVal = (R: number, C: number): RawCell => {
+    // cell.t 기준으로 값 추출 (cell.w 미사용)
+    const readCell = (R: number, C: number): RawCell => {
       const addr = XLSX.utils.encode_cell({ r: R, c: C });
       const cell = ws[addr];
-      if (!cell) return null;
-      // display value(cell.w) 우선 — 줄바꿈 포함 셀 문제 방지
-      const raw = cell.w != null ? cell.w : cell.v;
-      if (raw === null || raw === undefined) return null;
-      if (typeof raw === "number") {
-        if (raw > 40000 && raw < 60000) {
-          const d = new Date(Math.round((raw - 25569) * 86400 * 1000));
+      if (!cell || cell.v == null) return null;
+      if (cell.t === "s") return stripNewlines(String(cell.v));
+      if (cell.t === "n") {
+        const num = cell.v as number;
+        if (num > 40000 && num < 60000) {
+          const d = new Date(Math.round((num - 25569) * 86400 * 1000));
           return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
         }
-        return raw;
+        return num;
       }
-      return stripNewlines(String(raw));
+      return stripNewlines(String(cell.v));
     };
 
-    // ── 디버깅: range 정보 및 초반 행 샘플 출력 ──
-    console.group("[DataCleaner] xlsx 파싱 디버깅");
-    console.log("range:", { sr: range.s.r, er: range.e.r, sc: range.s.c, ec: range.e.c });
-
-    // 첫 8행의 첫 번째 셀 값 출력 (어느 행에 헤더가 있는지 확인)
-    const rowSamples: { rowIdx: number; firstCell_w: unknown; firstCell_v: unknown; parsed: RawCell }[] = [];
-    for (let R = range.s.r; R <= Math.min(range.s.r + 7, range.e.r); R++) {
-      const addr = XLSX.utils.encode_cell({ r: R, c: range.s.c });
-      const cell = ws[addr];
-      rowSamples.push({ rowIdx: R, firstCell_w: cell?.w, firstCell_v: cell?.v, parsed: cellVal(R, range.s.c) });
-    }
-    console.table(rowSamples);
-
-    // 전체 행에서 유효 컬럼이 가장 많은 행 기준으로 colCount 결정
-    let lastCol = range.s.c - 1;
-    for (let R = range.s.r; R <= range.e.r; R++) {
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        if (cellVal(R, C) !== null && C > lastCol) lastCol = C;
-      }
-    }
-    console.log("[DataCleaner] lastCol:", lastCol, "/ range.e.c:", range.e.c, "/ colCount:", lastCol - range.s.c + 1);
-    console.groupEnd();
-
-    if (lastCol < range.s.c) return [];
-    const colCount = lastCol - range.s.c + 1;
-
+    // range.e.c 전체 기준으로 모든 행 파싱 (lastCol은 applyHeaderRow에서 계산)
     const allRows: RawCell[][] = [];
     for (let R = range.s.r; R <= range.e.r; R++) {
       const rowData: RawCell[] = [];
-      for (let C = range.s.c; C < range.s.c + colCount; C++) {
-        rowData.push(cellVal(R, C));
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        rowData.push(readCell(R, C));
       }
       allRows.push(rowData);
     }
@@ -102,23 +77,33 @@ function applyHeaderRow(
   if (idx < 0 || idx >= rawRows.length)
     throw new Error(`${headerRowNum}행은 파일 범위를 벗어납니다. (전체 ${rawRows.length}행)`);
 
-  const header = rawRows[idx].map((c) => String(c ?? ""));
+  const headerRaw = rawRows[idx];
+
+  // 헤더 행 기준 마지막 유효 컬럼 인덱스 계산 (trailing 빈 컬럼 제거)
+  let lastValidCol = -1;
+  for (let C = 0; C < headerRaw.length; C++) {
+    if (headerRaw[C] !== null && String(headerRaw[C]).trim() !== "") lastValidCol = C;
+  }
+  if (lastValidCol === -1) throw new Error("헤더 행에 유효한 컬럼이 없습니다.");
+  const colCount = lastValidCol + 1;
+
+  const header = headerRaw.slice(0, colCount).map((c) => String(c ?? ""));
   const dataRows = rawRows
     .slice(idx + 1)
-    .filter((row) => row.some((c) => c !== null && String(c).trim() !== ""));
+    .filter((row) => row.some((c) => c !== null && String(c).trim() !== ""))
+    .map((row) => row.slice(0, colCount).map((c) => String(c ?? "")));
 
   // 헤더를 키로, 각 데이터 행을 값으로 객체 배열 생성
   const objects = dataRows.map((row) => {
     const obj: Record<string, string> = {};
     header.forEach((key, ci) => {
-      obj[key || `열${ci + 1}`] = String(row[ci] ?? "");
+      obj[key || `열${ci + 1}`] = row[ci] ?? "";
     });
     return obj;
   });
 
   // 미리보기용: 헤더 + 최대 3개 데이터 행 (string[][])
-  const previewData = dataRows.slice(0, 3).map((row) => row.map((c) => String(c ?? "")));
-  const previewRows = [header, ...previewData];
+  const previewRows = [header, ...dataRows.slice(0, 3)];
 
   return { previewRows, confirmedText: JSON.stringify(objects), rowCount: dataRows.length };
 }
