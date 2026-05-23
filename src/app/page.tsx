@@ -311,10 +311,10 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* 오른쪽: 시계 + 날씨 */}
-          <div className="flex items-center gap-5 shrink-0">
+          {/* 오른쪽: 날씨 + 시계 */}
+          <div className="flex items-center gap-4 shrink-0">
             {/* 날씨 */}
-            <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-400">
+            <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
               {geoStatus === "waiting" && (
                 <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
                   <IconMapPin className="w-3.5 h-3.5" /> 위치 확인 중...
@@ -326,23 +326,28 @@ export default function HomePage() {
                 </span>
               )}
               {geoStatus === "ok" && weather && (
-                <div className="flex flex-col items-center gap-2">
-                  <weather.Icon className="w-9 h-9 text-[#6C63FF]" />
-                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-200">{weather.label}</span>
-                  <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-                    {locationName && <><span className="font-medium text-slate-600 dark:text-zinc-300">{locationName}</span><span className="opacity-40">·</span></>}
-                    <span className="flex items-center gap-0.5 font-medium">
+                <>
+                  <weather.Icon className="w-14 h-14 text-[#6C63FF]" />
+                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-200 leading-none">{weather.label}</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                    {locationName && <><span>{locationName}</span><span className="opacity-40">·</span></>}
+                    <span className="flex items-center gap-0.5">
                       <IconTemperature className="w-3.5 h-3.5" />{weather.temp}°C
                     </span>
                   </span>
-                </div>
+                </>
               )}
             </div>
 
+            {/* 구분선 */}
+            {geoStatus === "ok" && weather && (
+              <div className="w-px h-14 bg-slate-200 dark:bg-zinc-700 shrink-0" />
+            )}
+
             {/* 실시간 시계 */}
-            <div className="flex flex-col items-center gap-1">
-              <IconClock className="w-4 h-4 text-[#6C63FF]" />
-              <span className="text-2xl font-semibold text-slate-800 dark:text-slate-100 tracking-wide tabular-nums">
+            <div className="flex flex-col items-center gap-1.5 min-w-[64px]">
+              <IconClock className="w-5 h-5 text-[#6C63FF]" />
+              <span className="text-xl font-semibold text-slate-800 dark:text-slate-100 tracking-wide tabular-nums leading-none">
                 {time}
               </span>
             </div>
