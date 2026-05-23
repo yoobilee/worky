@@ -174,7 +174,6 @@ export default function EmailReply() {
   const handleSend = async () => {
     if (!sendModal || !sendTo.trim() || !sendSubject.trim()) return;
     setSending(true);
-    setSendResult(null);
     try {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
