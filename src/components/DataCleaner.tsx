@@ -53,9 +53,12 @@ async function parseFileToRows(file: File): Promise<RawCell[][]> {
       return stripNewlines(String(raw));
     };
 
-    // 헤더 행의 마지막 유효 컬럼 인덱스 확정 (빈 trailing 컬럼 제거)
-    let lastCol = range.e.c;
-    while (lastCol > range.s.c && cellVal(range.s.r, lastCol) === null) lastCol--;
+    // 헤더 행 전체 순회 → 값이 있는 마지막 컬럼 인덱스 확정 (trailing 빈 컬럼만 제거)
+    let lastCol = range.s.c - 1;
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      if (cellVal(range.s.r, C) !== null) lastCol = C;
+    }
+    if (lastCol < range.s.c) return []; // 헤더가 전부 비어있으면 빈 결과
     const colCount = lastCol - range.s.c + 1;
 
     const allRows: RawCell[][] = [];
