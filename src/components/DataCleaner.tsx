@@ -29,18 +29,18 @@ async function parseFileToText(file: File): Promise<string> {
   if (ext === "xlsx" || ext === "xls") {
     const XLSX = await import("xlsx");
     const buf  = await file.arrayBuffer();
-    const wb   = XLSX.read(buf, { type: "array", cellDates: true });
+    const wb   = XLSX.read(buf, { type: "array" });
     const ws   = wb.Sheets[wb.SheetNames[0]];
-    // cellDates: true 로 파싱된 Date 객체를 M/D 형식 문자열로 변환
+    // Excel 날짜 시리얼 넘버(40000~50000 범위)를 M/D 형식으로 변환
     const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
     for (let R = range.s.r; R <= range.e.r; R++) {
       for (let C = range.s.c; C <= range.e.c; C++) {
         const addr = XLSX.utils.encode_cell({ r: R, c: C });
         const cell = ws[addr];
-        if (cell && cell.t === "d" && cell.v instanceof Date) {
-          const d = cell.v as Date;
+        if (cell && cell.t === "n" && cell.v >= 40000 && cell.v <= 50000) {
+          const d = new Date(Math.round((cell.v - 25569) * 86400 * 1000));
           cell.t = "s";
-          cell.v = `${d.getMonth() + 1}/${d.getDate()}`;
+          cell.v = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
           cell.w = cell.v;
         }
       }
