@@ -4,8 +4,7 @@
 import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
-import Link from "next/link";
-import { IconReport, IconMail, IconNotes, IconBulb, IconSettings, IconAlertTriangle } from "@tabler/icons-react";
+import { IconReport, IconNotes, IconBulb, IconAlertTriangle } from "@tabler/icons-react";
 import EditableResult from "@/components/EditableResult";
 import React from "react";
 
@@ -85,11 +84,7 @@ function renderMarkdown(text: string): React.ReactNode {
   return <div className="space-y-0.5">{nodes}</div>;
 }
 
-const SENDER_KEY = "worky_sender_info";
-
-interface SenderInfo { org: string; name: string; title: string; }
-
-type TemplateType = "report" | "email" | "meeting" | "plan";
+type TemplateType = "report" | "meeting" | "plan";
 
 interface TemplateOption {
   id: TemplateType;
@@ -121,23 +116,6 @@ const TEMPLATES: TemplateOption[] = [
 전문적이고 간결하게 작성하세요.${KO_RULES}`,
   },
   {
-    id: "email",
-    label: "이메일",
-    Icon: IconMail,
-    placeholder: "예: 신규 프로젝트 킥오프 미팅 일정 조율. 다음 주 화요일이나 목요일 오후 2시~4시 가능.",
-    systemPrompt: `당신은 비즈니스 이메일 전문가입니다. 사용자가 제공한 내용으로 격식 있는 비즈니스 이메일 본문을 작성해주세요.
-반드시 아래 형식을 정확히 따르세요. "인사말:", "본문:", "마무리 인사:", "서명란:" 같은 라벨이나 구분자는 절대 쓰지 마세요.
-
-안녕하세요.
-[발신자]입니다.
-
-(본문 내용 — 목적, 세부 내용, 요청/안내 순서로 작성)
-
-감사합니다.
-
-마지막 줄은 반드시 "감사합니다."로만 끝내세요. 그 이후 이름, 소속, 직급 등 아무것도 추가하지 마세요.${KO_RULES}`,
-  },
-  {
     id: "meeting",
     label: "회의록",
     Icon: IconNotes,
@@ -164,20 +142,12 @@ export default function TemplateGen() {
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState("");
   const [copied, setCopied]             = useState(false);
-  const [sender, setSender]             = useState<SenderInfo>({ org: "", name: "", title: "" });
   const [pendingTab, setPendingTab]     = useState<TemplateType | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [result]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SENDER_KEY);
-      if (raw) setSender(JSON.parse(raw));
-    } catch {}
-  }, []);
 
   const selectedTemplate    = TEMPLATES.find((t) => t.id === selectedType)!;
   const SelectedTemplateIcon = selectedTemplate.Icon;
@@ -186,17 +156,6 @@ export default function TemplateGen() {
     const now = new Date();
     const todayStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
     const dateNote = `\n오늘 날짜: ${todayStr}. 날짜가 필요한 경우 반드시 이 날짜를 사용하고, 임의로 다른 날짜를 만들지 마세요.`;
-
-    const hasSender = sender.org || sender.name || sender.title;
-    const senderLine = hasSender ? [sender.org, sender.name, sender.title].filter(Boolean).join(" ") : null;
-
-    if (selectedType === "email") {
-      const intro = senderLine ? `${senderLine}입니다.` : "담당자입니다.";
-      return selectedTemplate.systemPrompt +
-        dateNote +
-        `\n[발신자] 자리에는 "${intro}"을 그대로 사용하세요.` +
-        `\n마지막 줄은 반드시 "감사합니다."로만 끝내세요. 그 이후 이름, 소속, 직급 등 절대 추가 금지.`;
-    }
     return selectedTemplate.systemPrompt + dateNote;
   };
 
@@ -249,8 +208,6 @@ export default function TemplateGen() {
     URL.revokeObjectURL(url);
   };
 
-  const hasSender = sender.org || sender.name || sender.title;
-
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full self-start">
 
@@ -282,20 +239,8 @@ export default function TemplateGen() {
         </div>
       )}
 
-      {/* 이메일 탭 선택 시 발신자 없으면 안내 */}
-      {selectedType === "email" && !hasSender && (
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
-          <span>이메일 서명에 사용할 내 정보가 없습니다.</span>
-          <Link href="/settings"
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors shrink-0">
-            <IconSettings className="w-3.5 h-3.5" />
-            설정에서 입력
-          </Link>
-        </div>
-      )}
-
       {/* 유형 선택 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {TEMPLATES.map((tpl) => (
           <button key={tpl.id} onClick={() => handleTabChange(tpl.id)}
             className={[
@@ -383,7 +328,7 @@ export default function TemplateGen() {
       <HelpButton
         title="템플릿 생성 사용법"
         steps={[
-          { step: "유형 선택", desc: "업무보고서·이메일·회의록·기획안 중 원하는 유형을 선택합니다." },
+          { step: "유형 선택", desc: "업무보고서·회의록·기획안 중 원하는 유형을 선택합니다." },
           { step: "내용 입력", desc: "주요 내용과 핵심 사항을 자유롭게 입력합니다." },
           { step: "생성", desc: "버튼 클릭으로 완성 문서를 생성합니다." },
           { step: "저장", desc: "복사 또는 txt 파일로 다운로드하세요." },
