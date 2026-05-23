@@ -326,13 +326,13 @@ export default function HomePage() {
                 </span>
               )}
               {geoStatus === "ok" && weather && (
-                <div className="flex flex-col items-center gap-1">
-                  <weather.Icon className="w-6 h-6 text-[#6C63FF]" />
-                  <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">{weather.label}</span>
-                  <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                    {locationName && <><span>{locationName}</span><span className="opacity-40">·</span></>}
-                    <span className="flex items-center gap-0.5">
-                      <IconTemperature className="w-3 h-3" />{weather.temp}°C
+                <div className="flex flex-col items-center gap-2">
+                  <weather.Icon className="w-9 h-9 text-[#6C63FF]" />
+                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-200">{weather.label}</span>
+                  <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+                    {locationName && <><span className="font-medium text-slate-600 dark:text-zinc-300">{locationName}</span><span className="opacity-40">·</span></>}
+                    <span className="flex items-center gap-0.5 font-medium">
+                      <IconTemperature className="w-3.5 h-3.5" />{weather.temp}°C
                     </span>
                   </span>
                 </div>
@@ -342,10 +342,7 @@ export default function HomePage() {
             {/* 실시간 시계 */}
             <div className="flex flex-col items-center gap-1">
               <IconClock className="w-4 h-4 text-[#6C63FF]" />
-              <span
-                className="text-3xl text-slate-800 dark:text-slate-100 tracking-wider"
-                style={{ fontFamily: "var(--font-dm-mono)", fontWeight: 500 }}
-              >
+              <span className="text-2xl font-semibold text-slate-800 dark:text-slate-100 tracking-wide tabular-nums">
                 {time}
               </span>
             </div>
