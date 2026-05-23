@@ -53,11 +53,24 @@ async function parseFileToRows(file: File): Promise<RawCell[][]> {
       return stripNewlines(String(raw));
     };
 
+    // 헤더 행 디버깅: 각 셀의 cell.w, cell.v, 계산값 출력
+    console.group("[DataCleaner] xlsx 헤더 행 디버깅");
+    const debugHeader: { col: number; addr: string; w: unknown; v: unknown; parsed: RawCell }[] = [];
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: range.s.r, c: C });
+      const cell = ws[addr];
+      debugHeader.push({ col: C, addr, w: cell?.w, v: cell?.v, parsed: cellVal(range.s.r, C) });
+    }
+    console.table(debugHeader);
+
     // 헤더 행 전체 순회 → 값이 있는 마지막 컬럼 인덱스 확정 (trailing 빈 컬럼만 제거)
     let lastCol = range.s.c - 1;
     for (let C = range.s.c; C <= range.e.c; C++) {
       if (cellVal(range.s.r, C) !== null) lastCol = C;
     }
+    console.log("[DataCleaner] lastCol:", lastCol, "/ range.e.c:", range.e.c, "/ colCount:", lastCol - range.s.c + 1);
+    console.groupEnd();
+
     if (lastCol < range.s.c) return []; // 헤더가 전부 비어있으면 빈 결과
     const colCount = lastCol - range.s.c + 1;
 
