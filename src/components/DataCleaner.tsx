@@ -36,30 +36,33 @@ async function parseFileToRows(file: File): Promise<RawCell[][]> {
 
     const stripNewlines = (s: string) => s.replace(/[\r\n]+/g, " ").trim();
 
+    const cellVal = (R: number, C: number): RawCell => {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[addr];
+      if (!cell) return null;
+      // display value(cell.w) 우선 — 줄바꿈 포함 셀 문제 방지
+      const raw = cell.w != null ? cell.w : cell.v;
+      if (raw === null || raw === undefined) return null;
+      if (typeof raw === "number") {
+        if (raw > 40000 && raw < 60000) {
+          const d = new Date(Math.round((raw - 25569) * 86400 * 1000));
+          return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+        }
+        return raw;
+      }
+      return stripNewlines(String(raw));
+    };
+
+    // 헤더 행의 마지막 유효 컬럼 인덱스 확정 (빈 trailing 컬럼 제거)
+    let lastCol = range.e.c;
+    while (lastCol > range.s.c && cellVal(range.s.r, lastCol) === null) lastCol--;
+    const colCount = lastCol - range.s.c + 1;
+
     const allRows: RawCell[][] = [];
     for (let R = range.s.r; R <= range.e.r; R++) {
       const rowData: RawCell[] = [];
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        const addr = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = ws[addr];
-        let val: RawCell = cell != null ? (cell.v as RawCell) : null;
-
-        if (val === null || val === undefined) {
-          val = null;
-        } else if (typeof val === "number") {
-          // 날짜 시리얼 넘버(40000~60000) → M/D 문자열
-          if (val > 40000 && val < 60000) {
-            const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-            val = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
-          }
-        } else if (typeof val === "string") {
-          val = stripNewlines(val);
-        } else {
-          // boolean, object(rich text) 등 → 문자열 변환 후 줄바꿈 제거
-          val = stripNewlines(String(val));
-        }
-
-        rowData.push(val);
+      for (let C = range.s.c; C < range.s.c + colCount; C++) {
+        rowData.push(cellVal(R, C));
       }
       allRows.push(rowData);
     }
