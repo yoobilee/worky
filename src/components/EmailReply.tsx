@@ -299,29 +299,25 @@ export default function EmailReply() {
       )}
 
       {/* 탭 */}
-      <div className="flex gap-2 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl shrink-0">
-        <button
-          onClick={() => setActiveTab("new")}
-          className={`flex items-center gap-2 flex-1 justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "new"
-              ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm"
-              : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
-          }`}
-        >
-          <IconMailPlus className="w-4 h-4" />
-          새 이메일 작성
-        </button>
-        <button
-          onClick={() => setActiveTab("reply")}
-          className={`flex items-center gap-2 flex-1 justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "reply"
-              ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm"
-              : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
-          }`}
-        >
-          <IconMailForward className="w-4 h-4" />
-          답장 작성
-        </button>
+      <div className="flex gap-2 shrink-0">
+        {([
+          { id: "new",   label: "새 이메일 작성", Icon: IconMailPlus },
+          { id: "reply", label: "답장 작성",       Icon: IconMailForward },
+        ] as const).map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+              activeTab === id
+                ? "text-white border-transparent"
+                : "bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:border-[#6C63FF]/40"
+            }`}
+            style={activeTab === id ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* 발신자 정보 없을 때 안내 */}
@@ -342,30 +338,28 @@ export default function EmailReply() {
       {activeTab === "new" && (
         <>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0 flex flex-col gap-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">받는 사람 (이메일)</label>
-                <input
-                  type="email"
-                  value={newTo}
-                  onChange={(e) => setNewTo(e.target.value)}
-                  placeholder="example@email.com"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">제목</label>
-                <input
-                  type="text"
-                  value={newSubject}
-                  onChange={(e) => setNewSubject(e.target.value)}
-                  placeholder="이메일 제목"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">받는 사람 (이메일)</label>
+              <input
+                type="email"
+                value={newTo}
+                onChange={(e) => setNewTo(e.target.value)}
+                placeholder="example@email.com"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">이메일 내용 (핵심만 입력)</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">제목</label>
+              <input
+                type="text"
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+                placeholder="이메일 제목"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">이메일 내용</label>
               <textarea
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}
@@ -373,6 +367,9 @@ export default function EmailReply() {
                 rows={4}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
+              <p className="mt-1.5 text-xs text-slate-400 dark:text-zinc-500">
+                * 보낼 내용을 자유롭게 작성하면 AI가 맞춤법·표현을 다듬어 완성도 높은 이메일로 생성합니다.
+              </p>
             </div>
             <div className="flex justify-end">
               <button
