@@ -3,21 +3,28 @@
 신입 사무직 직장인을 위한 AI 기반 업무 보조 웹 앱입니다.  
 반복적인 업무 문서 작성, 일정 정리, 거래처 관리 등을 AI가 빠르게 처리해 드립니다.
 
-**배포 URL**: [https://worky-alpha.vercel.app](https://worky-alpha.vercel.app)
+**배포 URL**: [https://worky-ai.vercel.app](https://worky-ai.vercel.app)
 
 ---
 
 ## 기술 스택
 
-| 항목 | 내용 |
-|------|------|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS |
-| AI | Groq API (LLaMA 4 Scout) |
-| 인증 / DB | Supabase (Google OAuth) |
-| 이메일 | Gmail API |
-| 배포 | Vercel |
+**Frontend**  
+![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=flat-square&logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+
+**AI**  
+![Groq](https://img.shields.io/badge/Groq_API-F55036?style=flat-square&logo=groq&logoColor=white)
+![LLaMA](https://img.shields.io/badge/LLaMA_4_Scout-7C3AED?style=flat-square&logoColor=white)
+
+**인증 / DB**  
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
+![Google OAuth](https://img.shields.io/badge/Google_OAuth-4285F4?style=flat-square&logo=google&logoColor=white)
+![Gmail API](https://img.shields.io/badge/Gmail_API-EA4335?style=flat-square&logo=gmail&logoColor=white)
+
+**배포**  
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)
 
 ---
 
