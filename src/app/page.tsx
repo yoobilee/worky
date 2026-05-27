@@ -682,7 +682,11 @@ function SpeedDial() {
   const [newUrl, setNewUrl]           = useState("");
   const [newName, setNewName]         = useState("");
   const [userId, setUserId]           = useState<string | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  const [atTop, setAtTop]             = useState(true);
+  const [atBottom, setAtBottom]       = useState(false);
+  const [isDark, setIsDark]           = useState(false);
+  const ref       = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -711,6 +715,33 @@ function SpeedDial() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  // 다크모드 감지
+  useEffect(() => {
+    const check = () => setIsDark(document.documentElement.classList.contains("dark"));
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
+  // 패널 열릴 때 초기 스크롤 상태 계산
+  useEffect(() => {
+    if (!open) { setAtTop(true); setAtBottom(false); return; }
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      setAtTop(el.scrollTop <= 0);
+      setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
+    });
+  }, [open, customLinks]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAtTop(el.scrollTop <= 0);
+    setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
+  };
 
   const getDomain = (url: string) => {
     try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
@@ -756,10 +787,27 @@ function SpeedDial() {
 
       {/* 바로가기 목록 */}
       {open && (
-        <div
-          className="flex flex-col items-end gap-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-0.5"
-          style={{ maxHeight: "260px", scrollbarWidth: "none" }}
-        >
+        <div className="relative">
+          {/* 상단 fade */}
+          {!atTop && (
+            <div
+              className="absolute top-0 inset-x-0 h-10 pointer-events-none z-10"
+              style={{ background: `linear-gradient(to bottom, ${isDark ? "#0F0F13" : "#F8F8FA"}, transparent)` }}
+            />
+          )}
+          {/* 하단 fade */}
+          {!atBottom && (
+            <div
+              className="absolute bottom-0 inset-x-0 h-10 pointer-events-none z-10"
+              style={{ background: `linear-gradient(to top, ${isDark ? "#0F0F13" : "#F8F8FA"}, transparent)` }}
+            />
+          )}
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex flex-col items-end gap-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-0.5"
+            style={{ maxHeight: "260px", scrollbarWidth: "none" }}
+          >
           {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }) => (
             <div key={href} className="flex items-center gap-2">
               <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-200 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
@@ -798,18 +846,22 @@ function SpeedDial() {
               </a>
             </div>
           ))}
-          {/* 추가 버튼 */}
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-400 dark:text-zinc-500 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
-              추가
-            </span>
-            <button
-              onClick={() => setShowModal(true)}
-              className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] hover:bg-[#6C63FF]/5 bg-white/80 dark:bg-zinc-900/80 transition-all shadow-sm shrink-0"
-            >
-              <IconPlus className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
-            </button>
           </div>
+        </div>
+      )}
+
+      {/* 추가 버튼 (스크롤 영역 밖) */}
+      {open && (
+        <div className="flex items-center gap-2">
+          <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-400 dark:text-zinc-500 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
+            추가
+          </span>
+          <button
+            onClick={() => setShowModal(true)}
+            className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] hover:bg-[#6C63FF]/5 bg-white/80 dark:bg-zinc-900/80 transition-all shadow-sm shrink-0"
+          >
+            <IconPlus className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
+          </button>
         </div>
       )}
 
