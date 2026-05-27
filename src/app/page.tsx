@@ -8,7 +8,7 @@ import {
   IconCircleCheck, IconMessageDots, IconNotes, IconPlus,
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
   IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
-  IconBuilding, IconSparkles, IconBrandOpenai, IconBrandGoogle, IconSearch, IconX,
+  IconBuilding, IconSparkles, IconX,
 } from "@tabler/icons-react";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
@@ -635,16 +635,105 @@ export default function HomePage() {
   );
 }
 
-const AI_LINKS = [
-  { name: "Claude",     href: "https://claude.ai",           icon: null,             letter: "C" },
-  { name: "ChatGPT",    href: "https://chatgpt.com",          icon: IconBrandOpenai,  letter: null },
-  { name: "Gemini",     href: "https://gemini.google.com",    icon: IconBrandGoogle,  letter: null },
-  { name: "Perplexity", href: "https://perplexity.ai",        icon: IconSearch,       letter: null },
-] as const;
+interface CustomLink { url: string; name: string }
+
+const DEFAULT_SPEED_LINKS = [
+  { name: "Claude",       href: "https://claude.ai",         domain: "claude.ai" },
+  { name: "ChatGPT",      href: "https://chatgpt.com",        domain: "chatgpt.com" },
+  { name: "Gemini",       href: "https://gemini.google.com",  domain: "gemini.google.com" },
+  { name: "구글",         href: "https://google.com",         domain: "google.com" },
+  { name: "노션",         href: "https://notion.so",          domain: "notion.so" },
+  { name: "Gmail",        href: "https://mail.google.com",    domain: "mail.google.com" },
+  { name: "네이버",       href: "https://naver.com",          domain: "naver.com" },
+  { name: "Google Drive", href: "https://drive.google.com",   domain: "drive.google.com" },
+];
+
+function FaviconImg({ domain, name, size }: { domain: string; name: string; size: number }) {
+  const [err, setErr] = useState(false);
+  if (err) {
+    return (
+      <div
+        className="rounded-full flex items-center justify-center text-white font-bold"
+        style={{ width: size, height: size, background: "#6C63FF", fontSize: Math.round(size * 0.4) }}
+      >
+        {name.charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+      alt={name}
+      width={size}
+      height={size}
+      className="rounded-md"
+      onError={() => setErr(true)}
+    />
+  );
+}
+
+function SpeedDialItem({
+  name, href, domain, isCustom, onDelete,
+}: {
+  name: string; href: string; domain: string; isCustom: boolean; onDelete?: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      className="relative flex flex-col items-center gap-1.5 shrink-0 w-[60px]"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-14 h-14 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:scale-110 hover:border-[#6C63FF]/50 hover:shadow-md transition-all shadow-sm overflow-hidden"
+      >
+        <FaviconImg domain={domain} name={name} size={32} />
+      </a>
+      {isCustom && hovered && onDelete && (
+        <button
+          onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
+          className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs shadow-md leading-none"
+        >
+          ×
+        </button>
+      )}
+      <span className="text-[10px] text-slate-500 dark:text-zinc-400 text-center leading-tight w-full truncate px-0.5">
+        {name}
+      </span>
+    </div>
+  );
+}
 
 function SpeedDial() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]               = useState(false);
+  const [customLinks, setCustomLinks] = useState<CustomLink[]>([]);
+  const [showModal, setShowModal]     = useState(false);
+  const [newUrl, setNewUrl]           = useState("");
+  const [newName, setNewName]         = useState("");
+  const [userId, setUserId]           = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) return;
+      setUserId(uid);
+      try {
+        const { data: settings } = await supabase
+          .from("user_settings")
+          .select("speed_dial_custom")
+          .eq("user_id", uid)
+          .maybeSingle();
+        if (settings?.speed_dial_custom?.length) {
+          setCustomLinks(settings.speed_dial_custom as CustomLink[]);
+        }
+      } catch {}
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -655,46 +744,144 @@ function SpeedDial() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  const getDomain = (url: string) => {
+    try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
+    catch { return url; }
+  };
+
+  const saveCustomLinks = async (updated: CustomLink[]) => {
+    if (!userId) return;
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("user_settings")
+        .upsert({ user_id: userId, speed_dial_custom: updated }, { onConflict: "user_id" });
+    } catch {}
+  };
+
+  const addLink = async () => {
+    const trimUrl  = newUrl.trim();
+    const trimName = newName.trim();
+    if (!trimUrl || !trimName) return;
+    const finalUrl = trimUrl.startsWith("http") ? trimUrl : "https://" + trimUrl;
+    const updated  = [...customLinks, { url: finalUrl, name: trimName }];
+    setCustomLinks(updated);
+    setShowModal(false);
+    setNewUrl("");
+    setNewName("");
+    await saveCustomLinks(updated);
+  };
+
+  const removeLink = async (idx: number) => {
+    const updated = customLinks.filter((_, i) => i !== idx);
+    setCustomLinks(updated);
+    await saveCustomLinks(updated);
+  };
+
+  const previewDomain = (() => {
+    const t = newUrl.trim();
+    return t ? getDomain(t) : "";
+  })();
+
   return (
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2" ref={ref}>
-      {/* AI 버튼 목록 */}
-      <div className="flex flex-col items-end gap-2">
-        {[...AI_LINKS].reverse().map((ai, revIdx) => {
-          const idx = AI_LINKS.length - 1 - revIdx;
-          const Icon = ai.icon as React.ComponentType<{ className?: string }> | null;
-          return (
-            <div
-              key={ai.name}
-              className="flex items-center gap-2 transition-all duration-200"
-              style={{
-                opacity: open ? 1 : 0,
-                transform: open ? "translateY(0) scale(1)" : "translateY(16px) scale(0.8)",
-                transitionDelay: open ? `${idx * 50}ms` : `${(AI_LINKS.length - 1 - idx) * 30}ms`,
-                pointerEvents: open ? "auto" : "none",
-              }}
-            >
-              <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-200 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
-                {ai.name}
-              </span>
-              <a
-                href={ai.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150"
+
+      {/* 바로가기 트레이 */}
+      {open && (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3">
+          <div
+            className="flex items-end gap-3 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
+            style={{ maxWidth: "min(80vw, 420px)", scrollbarWidth: "none" }}
+          >
+            {DEFAULT_SPEED_LINKS.map(link => (
+              <SpeedDialItem
+                key={link.href}
+                name={link.name}
+                href={link.href}
+                domain={link.domain}
+                isCustom={false}
+              />
+            ))}
+            {customLinks.map((link, i) => (
+              <SpeedDialItem
+                key={link.url + i}
+                name={link.name}
+                href={link.url}
+                domain={getDomain(link.url)}
+                isCustom={true}
+                onDelete={() => removeLink(i)}
+              />
+            ))}
+            <div className="flex flex-col items-center gap-1.5 shrink-0 w-[60px]">
+              <button
+                onClick={() => setShowModal(true)}
+                className="w-14 h-14 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] hover:bg-[#6C63FF]/5 transition-all"
+              >
+                <IconPlus className="w-5 h-5 text-slate-400 dark:text-zinc-500" />
+              </button>
+              <span className="text-[10px] text-slate-400 dark:text-zinc-500">추가</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 커스텀 추가 모달 */}
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => { setShowModal(false); setNewUrl(""); setNewName(""); }}
+        >
+          <div
+            className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-sm mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">바로가기 추가</h3>
+            <div className="space-y-3">
+              <input
+                type="url"
+                placeholder="https://example.com"
+                value={newUrl}
+                onChange={e => setNewUrl(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-700 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-[#6C63FF] transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="내 회사 인트라넷"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") addLink(); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-700 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-[#6C63FF] transition-colors"
+              />
+            </div>
+            {previewDomain && (
+              <div className="mt-3 flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                <FaviconImg domain={previewDomain} name={newName || newUrl} size={28} />
+                <span className="text-xs text-slate-500 dark:text-zinc-400">아이콘 미리보기</span>
+              </div>
+            )}
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => { setShowModal(false); setNewUrl(""); setNewName(""); }}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-sm text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={addLink}
+                disabled={!newUrl.trim() || !newName.trim()}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all"
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
-                {Icon
-                  ? <Icon className="w-4.5 h-4.5" />
-                  : <span className="text-sm font-bold">{ai.letter}</span>}
-              </a>
+                추가
+              </button>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* 메인 토글 버튼 */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(v => !v)}
         aria-label="AI 바로가기"
         className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 active:scale-95 transition-all duration-150"
         style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
