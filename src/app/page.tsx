@@ -9,6 +9,7 @@ import {
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
   IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
   IconBuilding, IconSparkles, IconX,
+  IconBrandOpenai, IconBrandGoogle, IconBrandGmail, IconBrandGoogleDrive, IconBrandNotion, IconSearch,
 } from "@tabler/icons-react";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
@@ -637,15 +638,17 @@ export default function HomePage() {
 
 interface CustomLink { url: string; name: string }
 
-const DEFAULT_SPEED_LINKS = [
-  { name: "Claude",       href: "https://claude.ai",         domain: "claude.ai" },
-  { name: "ChatGPT",      href: "https://chatgpt.com",        domain: "chatgpt.com" },
-  { name: "Gemini",       href: "https://gemini.google.com",  domain: "gemini.google.com" },
-  { name: "구글",         href: "https://google.com",         domain: "google.com" },
-  { name: "노션",         href: "https://notion.so",          domain: "notion.so" },
-  { name: "Gmail",        href: "https://mail.google.com",    domain: "mail.google.com" },
-  { name: "네이버",       href: "https://naver.com",          domain: "naver.com" },
-  { name: "Google Drive", href: "https://drive.google.com",   domain: "drive.google.com" },
+type IconComp = React.ComponentType<{ className?: string }>;
+
+const DEFAULT_SPEED_LINKS: Array<{ name: string; href: string; Icon: IconComp | null; letter: string | null }> = [
+  { name: "Claude",       href: "https://claude.ai",         Icon: null,                 letter: "C" },
+  { name: "ChatGPT",      href: "https://chatgpt.com",        Icon: IconBrandOpenai,      letter: null },
+  { name: "Gemini",       href: "https://gemini.google.com",  Icon: IconBrandGoogle,      letter: null },
+  { name: "구글",         href: "https://google.com",         Icon: IconSearch,           letter: null },
+  { name: "노션",         href: "https://notion.so",          Icon: IconBrandNotion,      letter: null },
+  { name: "Gmail",        href: "https://mail.google.com",    Icon: IconBrandGmail,       letter: null },
+  { name: "네이버",       href: "https://naver.com",          Icon: null,                 letter: "N" },
+  { name: "Google Drive", href: "https://drive.google.com",   Icon: IconBrandGoogleDrive, letter: null },
 ];
 
 function FaviconImg({ domain, name, size }: { domain: string; name: string; size: number }) {
@@ -654,7 +657,7 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
     return (
       <div
         className="rounded-full flex items-center justify-center text-white font-bold"
-        style={{ width: size, height: size, background: "#6C63FF", fontSize: Math.round(size * 0.4) }}
+        style={{ width: size, height: size, background: "#6C63FF", fontSize: Math.round(size * 0.42) }}
       >
         {name.charAt(0).toUpperCase()}
       </div>
@@ -666,44 +669,9 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
       alt={name}
       width={size}
       height={size}
-      className="rounded-md"
+      className="rounded-sm"
       onError={() => setErr(true)}
     />
-  );
-}
-
-function SpeedDialItem({
-  name, href, domain, isCustom, onDelete,
-}: {
-  name: string; href: string; domain: string; isCustom: boolean; onDelete?: () => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      className="relative flex flex-col items-center gap-1.5 shrink-0 w-[60px]"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-14 h-14 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:scale-110 hover:border-[#6C63FF]/50 hover:shadow-md transition-all shadow-sm overflow-hidden"
-      >
-        <FaviconImg domain={domain} name={name} size={32} />
-      </a>
-      {isCustom && hovered && onDelete && (
-        <button
-          onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
-          className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs shadow-md leading-none"
-        >
-          ×
-        </button>
-      )}
-      <span className="text-[10px] text-slate-500 dark:text-zinc-400 text-center leading-tight w-full truncate px-0.5">
-        {name}
-      </span>
-    </div>
   );
 }
 
@@ -714,7 +682,10 @@ function SpeedDial() {
   const [newUrl, setNewUrl]           = useState("");
   const [newName, setNewName]         = useState("");
   const [userId, setUserId]           = useState<string | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  const [atTop, setAtTop]             = useState(true);
+  const [atBottom, setAtBottom]       = useState(false);
+  const ref       = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -743,6 +714,23 @@ function SpeedDial() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) { setAtTop(true); setAtBottom(false); return; }
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      setAtTop(el.scrollTop <= 0);
+      setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
+    });
+  }, [open, customLinks]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAtTop(el.scrollTop <= 0);
+    setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
+  };
 
   const getDomain = (url: string) => {
     try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
@@ -786,41 +774,76 @@ function SpeedDial() {
   return (
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2" ref={ref}>
 
-      {/* 바로가기 트레이 */}
+      {/* 바로가기 패널 */}
       {open && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3">
-          <div
-            className="flex items-end gap-3 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
-            style={{ maxWidth: "min(80vw, 420px)", scrollbarWidth: "none" }}
-          >
-            {DEFAULT_SPEED_LINKS.map(link => (
-              <SpeedDialItem
-                key={link.href}
-                name={link.name}
-                href={link.href}
-                domain={link.domain}
-                isCustom={false}
-              />
-            ))}
-            {customLinks.map((link, i) => (
-              <SpeedDialItem
-                key={link.url + i}
-                name={link.name}
-                href={link.url}
-                domain={getDomain(link.url)}
-                isCustom={true}
-                onDelete={() => removeLink(i)}
-              />
-            ))}
-            <div className="flex flex-col items-center gap-1.5 shrink-0 w-[60px]">
-              <button
-                onClick={() => setShowModal(true)}
-                className="w-14 h-14 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] hover:bg-[#6C63FF]/5 transition-all"
-              >
-                <IconPlus className="w-5 h-5 text-slate-400 dark:text-zinc-500" />
-              </button>
-              <span className="text-[10px] text-slate-400 dark:text-zinc-500">추가</span>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl py-2 min-w-[160px]">
+
+          {/* 스크롤 가능한 링크 목록 */}
+          <div className="relative">
+            {!atTop && (
+              <div className="absolute top-0 inset-x-0 h-8 bg-gradient-to-b from-white dark:from-zinc-900 to-transparent pointer-events-none z-10 rounded-t-xl" />
+            )}
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="overflow-y-auto [&::-webkit-scrollbar]:hidden"
+              style={{ maxHeight: "240px", scrollbarWidth: "none" }}
+            >
+              {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }) => (
+                <div key={href} className="flex items-center gap-2.5 px-3 py-1.5">
+                  <span className="text-xs font-medium text-slate-600 dark:text-zinc-300 flex-1 text-right whitespace-nowrap select-none">
+                    {name}
+                  </span>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0"
+                    style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                  >
+                    {Icon ? <Icon className="w-[18px] h-[18px]" /> : <span className="text-sm font-bold leading-none">{letter}</span>}
+                  </a>
+                </div>
+              ))}
+              {customLinks.map((link, i) => (
+                <div key={link.url + i} className="group relative flex items-center gap-2.5 px-3 py-1.5">
+                  <button
+                    onClick={() => removeLink(i)}
+                    className="absolute left-2 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] shadow opacity-0 group-hover:opacity-100 transition-opacity leading-none"
+                  >
+                    ×
+                  </button>
+                  <span className="text-xs font-medium text-slate-600 dark:text-zinc-300 flex-1 text-right whitespace-nowrap select-none">
+                    {link.name}
+                  </span>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0 overflow-hidden"
+                    style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                  >
+                    <FaviconImg domain={getDomain(link.url)} name={link.name} size={20} />
+                  </a>
+                </div>
+              ))}
             </div>
+            {!atBottom && (
+              <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-white dark:from-zinc-900 to-transparent pointer-events-none z-10 rounded-b-xl" />
+            )}
+          </div>
+
+          {/* 추가 버튼 */}
+          <div className="border-t border-slate-100 dark:border-zinc-800 mt-1 pt-1 px-3">
+            <button
+              onClick={() => setShowModal(true)}
+              className="w-full flex items-center gap-2.5 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <span className="text-xs font-medium text-slate-400 dark:text-zinc-500 flex-1 text-right">추가</span>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] transition-colors">
+                <IconPlus className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
+              </div>
+            </button>
           </div>
         </div>
       )}
