@@ -682,10 +682,7 @@ function SpeedDial() {
   const [newUrl, setNewUrl]           = useState("");
   const [newName, setNewName]         = useState("");
   const [userId, setUserId]           = useState<string | null>(null);
-  const [atTop, setAtTop]             = useState(true);
-  const [atBottom, setAtBottom]       = useState(false);
-  const ref       = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -714,23 +711,6 @@ function SpeedDial() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
-
-  useEffect(() => {
-    if (!open) { setAtTop(true); setAtBottom(false); return; }
-    requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      setAtTop(el.scrollTop <= 0);
-      setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
-    });
-  }, [open, customLinks]);
-
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setAtTop(el.scrollTop <= 0);
-    setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
-  };
 
   const getDomain = (url: string) => {
     try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
@@ -774,75 +754,60 @@ function SpeedDial() {
   return (
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2" ref={ref}>
 
-      {/* 바로가기 패널 */}
+      {/* 바로가기 목록 */}
       {open && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl py-2 min-w-[160px]">
-
-          {/* 스크롤 가능한 링크 목록 */}
-          <div className="relative">
-            {!atTop && (
-              <div className="absolute top-0 inset-x-0 h-8 bg-gradient-to-b from-white dark:from-zinc-900 to-transparent pointer-events-none z-10 rounded-t-xl" />
-            )}
-            <div
-              ref={scrollRef}
-              onScroll={handleScroll}
-              className="overflow-y-auto [&::-webkit-scrollbar]:hidden"
-              style={{ maxHeight: "240px", scrollbarWidth: "none" }}
-            >
-              {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }) => (
-                <div key={href} className="flex items-center gap-2.5 px-3 py-1.5">
-                  <span className="text-xs font-medium text-slate-600 dark:text-zinc-300 flex-1 text-right whitespace-nowrap select-none">
-                    {name}
-                  </span>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0"
-                    style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-                  >
-                    {Icon ? <Icon className="w-[18px] h-[18px]" /> : <span className="text-sm font-bold leading-none">{letter}</span>}
-                  </a>
-                </div>
-              ))}
-              {customLinks.map((link, i) => (
-                <div key={link.url + i} className="group relative flex items-center gap-2.5 px-3 py-1.5">
-                  <button
-                    onClick={() => removeLink(i)}
-                    className="absolute left-2 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] shadow opacity-0 group-hover:opacity-100 transition-opacity leading-none"
-                  >
-                    ×
-                  </button>
-                  <span className="text-xs font-medium text-slate-600 dark:text-zinc-300 flex-1 text-right whitespace-nowrap select-none">
-                    {link.name}
-                  </span>
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0 overflow-hidden"
-                    style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-                  >
-                    <FaviconImg domain={getDomain(link.url)} name={link.name} size={20} />
-                  </a>
-                </div>
-              ))}
+        <div
+          className="flex flex-col items-end gap-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-0.5"
+          style={{ maxHeight: "260px", scrollbarWidth: "none" }}
+        >
+          {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }) => (
+            <div key={href} className="flex items-center gap-2">
+              <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-200 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
+                {name}
+              </span>
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                {Icon ? <Icon className="w-[18px] h-[18px]" /> : <span className="text-sm font-bold leading-none">{letter}</span>}
+              </a>
             </div>
-            {!atBottom && (
-              <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-white dark:from-zinc-900 to-transparent pointer-events-none z-10 rounded-b-xl" />
-            )}
-          </div>
-
+          ))}
+          {customLinks.map((link, i) => (
+            <div key={link.url + i} className="group flex items-center gap-2">
+              <button
+                onClick={() => removeLink(i)}
+                className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] shadow opacity-0 group-hover:opacity-100 transition-opacity leading-none shrink-0"
+              >
+                ×
+              </button>
+              <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-200 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
+                {link.name}
+              </span>
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0 overflow-hidden"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                <FaviconImg domain={getDomain(link.url)} name={link.name} size={20} />
+              </a>
+            </div>
+          ))}
           {/* 추가 버튼 */}
-          <div className="border-t border-slate-100 dark:border-zinc-800 mt-1 pt-1 px-3">
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-400 dark:text-zinc-500 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
+              추가
+            </span>
             <button
               onClick={() => setShowModal(true)}
-              className="w-full flex items-center gap-2.5 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+              className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] hover:bg-[#6C63FF]/5 bg-white/80 dark:bg-zinc-900/80 transition-all shadow-sm shrink-0"
             >
-              <span className="text-xs font-medium text-slate-400 dark:text-zinc-500 flex-1 text-right">추가</span>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] transition-colors">
-                <IconPlus className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
-              </div>
+              <IconPlus className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
             </button>
           </div>
         </div>
@@ -909,9 +874,7 @@ function SpeedDial() {
         className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 active:scale-95 transition-all duration-150"
         style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
       >
-        <div className={`transition-transform duration-200 ${open ? "rotate-45" : "rotate-0"}`}>
-          {open ? <IconX className="w-5 h-5" /> : <IconSparkles className="w-5 h-5" />}
-        </div>
+        {open ? <IconX className="w-5 h-5" /> : <IconSparkles className="w-5 h-5" />}
       </button>
     </div>
   );
