@@ -263,6 +263,62 @@ function isOffDay(dateKey: string): boolean {
   return dow === 0 || dow === 6;
 }
 
+/* ── 미니 잔디밭 (목록형 뷰: 이번 주만 표시) ── */
+function MiniGrassGrid({
+  contractStart,
+  contractEnd,
+  dailyLog,
+}: {
+  contractStart: string;
+  contractEnd:   string;
+  dailyLog:      Record<string, DayStatus>;
+}) {
+  const today = todayKey();
+
+  function addDays(dateKey: string, n: number): string {
+    const d = new Date(dateKey + "T00:00:00");
+    d.setDate(d.getDate() + n);
+    return toDateKey(d);
+  }
+  function getMondayOf(dateKey: string): string {
+    const d = new Date(dateKey + "T00:00:00");
+    const offset = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - offset);
+    return toDateKey(d);
+  }
+
+  const weekStart = today >= contractStart && today <= contractEnd
+    ? getMondayOf(today)
+    : getMondayOf(contractStart);
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const [, sm, sd] = contractStart.split("-").map(Number);
+  const [, em, ed] = contractEnd.split("-").map(Number);
+  const rangeLabel = `${sm}/${sd}~${em}/${ed}`;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] text-slate-400 dark:text-zinc-500 whitespace-nowrap">{rangeLabel}</span>
+      <div className="flex gap-0.5">
+        {weekDates.map((date) => {
+          if (date < contractStart || date > contractEnd) {
+            return <div key={date} className="w-4 h-4 rounded-sm" />;
+          }
+          const ds  = dailyLog[date];
+          const off = isOffDay(date);
+          const [, m, d] = date.split("-").map(Number);
+          const cls = off
+            ? "bg-slate-400 dark:bg-zinc-500"
+            : ds === "done"   ? "bg-emerald-500"
+            : ds === "failed" ? "bg-red-400"
+            :                   "bg-slate-200 dark:bg-zinc-700";
+          return <div key={date} title={`${m}/${d}`} className={`w-4 h-4 rounded-sm ${cls}`} />;
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ── 잔디밭 그리드 (주 단위 네비게이션) ── */
 function GrassGrid({
   contractStart,
@@ -1026,7 +1082,7 @@ export default function ClientManager() {
                 <th className="px-4 py-3 whitespace-nowrap">계약 시작일</th>
                 <th className="px-4 py-3 whitespace-nowrap">D-day</th>
                 <th className="px-4 py-3 whitespace-nowrap">상태</th>
-                <th className="px-4 py-3 whitespace-nowrap sticky right-0 z-20 bg-slate-50 dark:bg-zinc-800">진행 현황</th>
+                <th className="px-4 py-3 whitespace-nowrap sticky right-0 z-20 bg-slate-50 dark:bg-zinc-800 border-l border-slate-200 dark:border-zinc-700">진행 현황</th>
               </tr>
             </thead>
             <tbody>
@@ -1078,16 +1134,17 @@ export default function ClientManager() {
                         {STATUS_ICONS[c.status]}{cfg.label}
                       </span>
                     </td>
-                    <td className={`px-4 py-3 sticky right-0 ${rowBg} group-hover:bg-[#6C63FF]/5 dark:group-hover:bg-[#6C63FF]/10`}>
+                    <td className={[
+                      "px-4 py-3 sticky right-0 z-10 border-l border-slate-200 dark:border-zinc-700",
+                      "group-hover:bg-[#6C63FF]/5 dark:group-hover:bg-[#6C63FF]/10",
+                      idx % 2 === 0 ? "bg-white dark:bg-zinc-900" : "bg-slate-50/60 dark:bg-zinc-800/30",
+                    ].join(" ")}>
                       {showGrass ? (
-                        <div className="w-72">
-                          <GrassGrid
-                            contractStart={c.contractStart}
-                            contractEnd={contractEnd!}
-                            dailyLog={c.dailyLog}
-                            onToggle={(date) => toggleDailyLog(c.id, date)}
-                          />
-                        </div>
+                        <MiniGrassGrid
+                          contractStart={c.contractStart}
+                          contractEnd={contractEnd!}
+                          dailyLog={c.dailyLog}
+                        />
                       ) : (
                         <span className="text-xs text-slate-300 dark:text-zinc-600">-</span>
                       )}
