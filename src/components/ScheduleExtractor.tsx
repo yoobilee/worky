@@ -4,7 +4,9 @@
 import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
-import { addCalendarEvent, parseKoreanDate } from "@/lib/calendarStorage";
+import { parseKoreanDate } from "@/lib/calendarStorage";
+import { createClient } from "@/lib/supabase/client";
+import { addEvent } from "@/lib/db/calendar";
 import {
   IconCalendarEvent,
   IconClock,
@@ -74,22 +76,43 @@ export default function ScheduleExtractor() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [savedIndex,  setSavedIndex]  = useState<number | null>(null);
   const [savedAll,    setSavedAll]    = useState(false);
+  const [userId,      setUserId]      = useState<string | null>(null);
+  const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (ok: boolean, msg: string) => {
+    setToast({ ok, msg });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     if (schedules.length > 0) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [schedules]);
 
-  const handleSaveToCalendar = (s: Schedule, index: number) => {
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+
+  const handleSaveToCalendar = async (s: Schedule, index: number) => {
+    if (!userId) {
+      showToast(false, "로그인 후 이용해주세요.");
+      return;
+    }
     const date = parseKoreanDate(s.date) ?? new Date().toISOString().slice(0, 10);
-    addCalendarEvent({
+    const row = await addEvent(userId, {
       date,
       title: s.content,
       time:  s.time     || undefined,
       location: s.location || undefined,
     });
-    setSavedIndex(index);
-    setTimeout(() => setSavedIndex(null), 2000);
+    if (row) {
+      setSavedIndex(index);
+      setTimeout(() => setSavedIndex(null), 2000);
+      showToast(true, "일정이 캘린더에 저장되었습니다.");
+    } else {
+      showToast(false, "일정 저장에 실패했습니다.");
+    }
   };
 
   const handleExtract = async () => {
@@ -129,17 +152,46 @@ export default function ScheduleExtractor() {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const handleSaveAll = () => {
-    schedules.forEach((s) => {
-      const date = parseKoreanDate(s.date) ?? new Date().toISOString().slice(0, 10);
-      addCalendarEvent({ date, title: s.content, time: s.time || undefined, location: s.location || undefined });
-    });
-    setSavedAll(true);
-    setTimeout(() => setSavedAll(false), 2000);
+  const handleSaveAll = async () => {
+    if (!userId) {
+      showToast(false, "로그인 후 이용해주세요.");
+      return;
+    }
+    const results = await Promise.all(
+      schedules.map((s) => {
+        const date = parseKoreanDate(s.date) ?? new Date().toISOString().slice(0, 10);
+        return addEvent(userId, { date, title: s.content, time: s.time || undefined, location: s.location || undefined });
+      })
+    );
+    if (results.every((r) => r)) {
+      setSavedAll(true);
+      setTimeout(() => setSavedAll(false), 2000);
+      showToast(true, "모든 일정이 캘린더에 저장되었습니다.");
+    } else {
+      showToast(false, "일부 일정 저장에 실패했습니다.");
+    }
   };
 
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
+      {/* 토스트 */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
+          toast.ok ? "bg-green-500 text-white" : "bg-red-500 text-white"
+        }`}>
+          {toast.ok ? (
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+          {toast.msg}
+        </div>
+      )}
+
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
         <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">

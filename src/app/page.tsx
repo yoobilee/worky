@@ -805,7 +805,7 @@ function SpeedDial() {
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex flex-col items-end gap-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-0.5"
+            className="flex flex-col items-end gap-1.5 overflow-y-auto overflow-x-visible [&::-webkit-scrollbar]:hidden pb-0.5 pr-1.5 -mr-1.5"
             style={{ maxHeight: "260px", scrollbarWidth: "none" }}
           >
           {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }) => (

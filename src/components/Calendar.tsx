@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
   IconChevronLeft, IconChevronRight, IconPlus,
@@ -66,8 +66,7 @@ export default function CalendarComponent() {
   const [userId,     setUserId]     = useState<string | null>(null);
   const [editingId,       setEditingId]       = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const panelWrapRef = useRef<HTMLDivElement>(null);
-  const panelRef     = useRef<HTMLDivElement>(null);
+  const [displayed, setDisplayed] = useState<string | null>(null);
   const [editTitle,    setEditTitle]    = useState("");
   const [editTime,     setEditTime]     = useState("");
   const [editLocation, setEditLocation] = useState("");
@@ -85,28 +84,9 @@ export default function CalendarComponent() {
     });
   }, []);
 
+  // 패널에 표시할 날짜 — 접히는 애니메이션 동안에도 마지막 선택 날짜 내용을 유지
   useEffect(() => {
-    const wrap  = panelWrapRef.current;
-    const inner = panelRef.current;
-    if (!wrap || !inner) return;
-
-    if (selected) {
-      wrap.style.height = inner.scrollHeight + "px";
-      const onEnd = () => {
-        wrap.style.height = "auto";
-        wrap.removeEventListener("transitionend", onEnd);
-      };
-      wrap.addEventListener("transitionend", onEnd);
-      return () => wrap.removeEventListener("transitionend", onEnd);
-    } else {
-      // height: auto → 숫자로 확정 → 0 으로 트랜지션
-      if (!wrap.style.height || wrap.style.height === "0px") return;
-      wrap.style.height = inner.scrollHeight + "px";
-      const raf = requestAnimationFrame(() =>
-        requestAnimationFrame(() => { wrap.style.height = "0px"; })
-      );
-      return () => cancelAnimationFrame(raf);
-    }
+    if (selected) setDisplayed(selected);
   }, [selected]);
 
   const prevMonth = () => { month === 0 ? (setYear(y => y-1), setMonth(11)) : setMonth(m => m-1); };
@@ -121,12 +101,12 @@ export default function CalendarComponent() {
   while (cells.length % 7 !== 0) cells.push(null);
 
   const eventsOn       = (key: string) => events.filter(e => e.date === key);
-  const selectedEvents = selected ? eventsOn(selected) : [];
+  const selectedEvents = displayed ? eventsOn(displayed) : [];
 
   const handleAdd = async () => {
-    if (!formTitle.trim() || !selected || !userId) return;
+    if (!formTitle.trim() || !displayed || !userId) return;
     const row = await addEvent(userId, {
-      date: selected,
+      date: displayed,
       title: formTitle.trim(),
       time: formTime.trim() || undefined,
       location: formLocation.trim() || undefined,
@@ -256,16 +236,15 @@ export default function CalendarComponent() {
 
       {/* 선택 날짜 패널 — 날짜 미선택 시 숨김, 선택 시 사르르 펼침 */}
       <div
-        ref={panelWrapRef}
-        className="overflow-hidden transition-[height,opacity] duration-300 ease-in-out"
-        style={{ height: 0, opacity: selected ? 1 : 0 }}
+        className="overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out"
+        style={{ maxHeight: selected ? "1000px" : "0px", opacity: selected ? 1 : 0 }}
       >
-        <div ref={panelRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
               <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
-                {selected ? formatKey(selected) : ""}
+                {displayed ? formatKey(displayed) : ""}
               </h2>
             </div>
             <button
