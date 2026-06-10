@@ -676,7 +676,7 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
       alt={name}
       width={size}
       height={size}
-      className="rounded-sm"
+      className="rounded-full"
       onError={() => setErr(true)}
       onLoad={(e) => {
         const img = e.currentTarget;
@@ -850,8 +850,8 @@ function SpeedDial() {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0 overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0"
+                style={{ background: "transparent" }}
               >
                 <FaviconImg domain={getDomain(link.url)} name={link.name} size={40} />
               </a>
