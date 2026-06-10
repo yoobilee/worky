@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getStats } from "@/lib/db/usage_stats";
 import { getEvents } from "@/lib/db/calendar";
 import { getTodos } from "@/lib/db/todos";
+import { getSettings, type CustomGreeting } from "@/lib/db/settings";
 
 /* ───────── 상수 ───────── */
 
@@ -122,6 +123,22 @@ function getGreeting(now: Date): string {
   return GREETINGS[now.getDay()][getPeriod(now.getHours())];
 }
 
+function getGreetingText(now: Date, customGreeting: CustomGreeting | null): string {
+  if (customGreeting?.enabled) {
+    const { mode, values } = customGreeting;
+    if (mode === "basic" && values.default?.trim()) return values.default;
+    if (mode === "time") {
+      const value = values[getPeriod(now.getHours())];
+      if (value?.trim()) return value;
+    }
+    if (mode === "day") {
+      const value = values[String(now.getDay())];
+      if (value?.trim()) return value;
+    }
+  }
+  return getGreeting(now);
+}
+
 /* ───────── 날씨 ───────── */
 
 interface WeatherInfo {
@@ -161,6 +178,7 @@ export default function HomePage() {
   const [showMore,       setShowMore]       = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const customGreetingRef = useRef<CustomGreeting | null>(null);
 
   // 실시간 시계 + 시간대별 인사말
   useEffect(() => {
@@ -170,7 +188,7 @@ export default function HomePage() {
       const mm = String(now.getMinutes()).padStart(2, "0");
       const ss = String(now.getSeconds()).padStart(2, "0");
       setTime(`${hh}:${mm}:${ss}`);
-      setGreeting(getGreeting(now));
+      setGreeting(getGreetingText(now, customGreetingRef.current));
     };
     tick();
     intervalRef.current = setInterval(tick, 1000);
@@ -204,11 +222,14 @@ export default function HomePage() {
     supabase.auth.getUser().then(async ({ data }) => {
       const uid = data.user?.id;
       if (!uid) return;
-      const [dbStats, dbEvents, todayTodos] = await Promise.all([
+      const [dbStats, dbEvents, todayTodos, dbSettings] = await Promise.all([
         getStats(uid),
         getEvents(uid),
         getTodos(uid, todayStr),
+        getSettings(uid),
       ]);
+      customGreetingRef.current = dbSettings?.custom_greeting ?? null;
+      setGreeting(getGreetingText(new Date(), customGreetingRef.current));
       setWeekStats(dbStats as Partial<Record<FeatureKey, number>>);
       const upcoming = dbEvents
         .filter(e => e.date >= todayStr)

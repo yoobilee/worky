@@ -5,7 +5,7 @@ import HelpButton from "@/components/HelpButton";
 import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
-  IconGripVertical, IconHelp,
+  IconGripVertical, IconHelp, IconMessageCircle,
 } from "@tabler/icons-react";
 import {
   OPTIONAL_MENU_ITEMS, ALWAYS_VISIBLE_ITEMS,
@@ -15,10 +15,40 @@ import {
   loadHelpButtonEnabled, saveHelpButtonEnabled,
 } from "@/lib/menuSettings";
 import { createClient } from "@/lib/supabase/client";
-import { getSettings, upsertSettings } from "@/lib/db/settings";
+import { getSettings, upsertSettings, type CustomGreeting } from "@/lib/db/settings";
 
 const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
+
+type GreetingMode = "basic" | "time" | "day";
+
+const GREETING_TIME_PERIODS: { id: string; label: string }[] = [
+  { id: "오전", label: "오전" },
+  { id: "오후", label: "오후" },
+  { id: "저녁", label: "저녁" },
+  { id: "심야", label: "심야" },
+];
+
+const GREETING_DAY_LABELS = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+
+const GREETING_PLACEHOLDERS = {
+  default: "오늘도 좋은 하루 보내세요!",
+  time: {
+    오전: "좋은 아침이에요! 오늘 하루도 힘차게 시작해봐요.",
+    오후: "오후도 활기차게 보내고 계신가요?",
+    저녁: "오늘 하루도 수고 많으셨어요.",
+    심야: "늦은 시간까지 고생 많으세요. 푹 쉬세요.",
+  } as Record<string, string>,
+  day: [
+    "일요일이에요. 편안한 하루 보내세요.",
+    "월요일이에요! 한 주를 힘차게 시작해봐요.",
+    "화요일이에요. 오늘도 좋은 하루 되세요.",
+    "수요일, 한 주의 절반을 지나고 있어요.",
+    "목요일이에요. 조금만 더 힘내봐요!",
+    "금요일이에요! 이번 주도 수고하셨어요.",
+    "토요일이에요. 즐거운 주말 보내세요.",
+  ],
+};
 
 interface SenderInfo {
   org:   string;
@@ -89,6 +119,11 @@ export default function SettingsPage() {
   const [helpOn,         setHelpOn]         = useState(true);
   const [helpSaved,      setHelpSaved]      = useState(false);
   const [helpCollapsed,  setHelpCollapsed]  = useState(false);
+  const [greetingEnabled,  setGreetingEnabled]  = useState(false);
+  const [greetingMode,     setGreetingMode]     = useState<GreetingMode>("basic");
+  const [greetingValues,   setGreetingValues]   = useState<Record<string, string>>({});
+  const [greetingSaved,    setGreetingSaved]    = useState(false);
+  const [greetingCollapsed, setGreetingCollapsed] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -118,6 +153,12 @@ export default function SettingsPage() {
           if (dbSettings.job_preset) {
             localStorage.setItem(JOB_KEY, dbSettings.job_preset);
             setJobPreset(dbSettings.job_preset);
+          }
+          if (dbSettings.custom_greeting) {
+            const cg = dbSettings.custom_greeting;
+            setGreetingEnabled(cg.enabled ?? false);
+            setGreetingMode(cg.mode ?? "basic");
+            setGreetingValues(cg.values ?? {});
           }
         }
       } else {
@@ -188,6 +229,28 @@ export default function SettingsPage() {
     if (userId) upsertSettings(userId, { help_button: next }).catch(() => {});
     setHelpSaved(true);
     setTimeout(() => setHelpSaved(false), 2500);
+  };
+
+  /* ── 커스텀 인사말 ── */
+  const handleGreetingToggle = () => {
+    setGreetingEnabled((v) => !v);
+    setGreetingSaved(false);
+  };
+
+  const handleGreetingValueChange = (key: string, value: string) => {
+    setGreetingValues((prev) => ({ ...prev, [key]: value }));
+    setGreetingSaved(false);
+  };
+
+  const handleGreetingSave = () => {
+    const payload: CustomGreeting = {
+      enabled: greetingEnabled,
+      mode: greetingMode,
+      values: greetingValues,
+    };
+    if (userId) upsertSettings(userId, { custom_greeting: payload }).catch(() => {});
+    setGreetingSaved(true);
+    setTimeout(() => setGreetingSaved(false), 2500);
   };
 
   const handlePresetConfirm = () => {
@@ -584,6 +647,143 @@ export default function SettingsPage() {
                 ].join(" ")} />
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* 커스텀 인사말 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <button
+          onClick={() => setGreetingCollapsed((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+              <IconMessageCircle className="w-4 h-4 text-[#6C63FF]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">커스텀 인사말</p>
+                {greetingSaved && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                    <IconCheck className="w-3.5 h-3.5" />저장됨
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                홈 화면에 표시되는 인사말을 직접 설정합니다
+              </p>
+            </div>
+          </div>
+          {greetingCollapsed
+            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+        </button>
+
+        {!greetingCollapsed && (
+          <div className="px-5 pb-5 space-y-4">
+            {/* on/off 토글 */}
+            <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">커스텀 인사말 사용</p>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                  끄면 기본 인사말이 표시됩니다
+                </p>
+              </div>
+              <button
+                onClick={handleGreetingToggle}
+                role="switch"
+                aria-checked={greetingEnabled}
+                className={[
+                  "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
+                  greetingEnabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                ].join(" ")}
+              >
+                <span className={[
+                  "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                  greetingEnabled ? "translate-x-5" : "translate-x-1",
+                ].join(" ")} />
+              </button>
+            </div>
+
+            {greetingEnabled && (
+              <>
+                {/* 모드 선택 탭 */}
+                <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
+                  {([
+                    { id: "basic", label: "기본" },
+                    { id: "time",  label: "시간대별" },
+                    { id: "day",   label: "요일별" },
+                  ] as { id: GreetingMode; label: string }[]).map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => { setGreetingMode(id); setGreetingSaved(false); }}
+                      className={[
+                        "py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
+                        greetingMode === id
+                          ? "bg-[#6C63FF] text-white shadow-sm"
+                          : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 기본 모드 */}
+                {greetingMode === "basic" && (
+                  <input
+                    value={greetingValues.default ?? ""}
+                    onChange={(e) => handleGreetingValueChange("default", e.target.value)}
+                    placeholder={GREETING_PLACEHOLDERS.default}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                  />
+                )}
+
+                {/* 시간대별 모드 */}
+                {greetingMode === "time" && (
+                  <div className="space-y-2">
+                    {GREETING_TIME_PERIODS.map(({ id, label }) => (
+                      <div key={id} className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
+                        <input
+                          value={greetingValues[id] ?? ""}
+                          onChange={(e) => handleGreetingValueChange(id, e.target.value)}
+                          placeholder={GREETING_PLACEHOLDERS.time[id]}
+                          className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 요일별 모드 */}
+                {greetingMode === "day" && (
+                  <div className="space-y-2">
+                    {GREETING_DAY_LABELS.map((label, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
+                        <input
+                          value={greetingValues[String(idx)] ?? ""}
+                          onChange={(e) => handleGreetingValueChange(String(idx), e.target.value)}
+                          placeholder={GREETING_PLACEHOLDERS.day[idx]}
+                          className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            <button
+              onClick={handleGreetingSave}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+            >
+              <IconDeviceFloppy className="w-3.5 h-3.5" />
+              저장
+            </button>
           </div>
         )}
       </div>
