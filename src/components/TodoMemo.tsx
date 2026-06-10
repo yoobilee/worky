@@ -35,8 +35,8 @@ const MEMO_DB_KEYS: Record<MemoTab, "work_memo" | "meeting_memo" | "personal_mem
 };
 
 const LEFT_RATIO_KEY = "todoMemoLeftRatio";
-const MIN_RATIO = 0.2;
-const MAX_RATIO = 0.8;
+const MIN_RATIO = 0.3;
+const MAX_RATIO = 0.7;
 
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
