@@ -695,10 +695,17 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
   if (BrandIcon) {
     return (
       <div
-        className="w-full h-full rounded-full flex items-center justify-center text-white shrink-0"
-        style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+        style={{
+          width: size,
+          height: size,
+          background: "linear-gradient(135deg, #6C63FF, #8B85FF)",
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <BrandIcon className="w-[18px] h-[18px]" />
+        <BrandIcon style={{ width: size * 0.45, height: size * 0.45, color: "white" }} />
       </div>
     );
   }
