@@ -9,6 +9,7 @@ export function createClient() {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
+        storageKey: "worky-auth-token",
       },
     }
   );
