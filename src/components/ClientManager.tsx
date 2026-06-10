@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
   IconBuilding, IconPlus, IconPencil, IconTrash,
@@ -1018,13 +1018,15 @@ export default function ClientManager() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="text-left text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
+                <th className="px-2 py-3 whitespace-nowrap"></th>
                 <th className="px-4 py-3 whitespace-nowrap">거래처명</th>
                 <th className="px-4 py-3 whitespace-nowrap">담당자</th>
                 <th className="px-4 py-3 whitespace-nowrap">연락처</th>
                 <th className="px-4 py-3 whitespace-nowrap">태그</th>
                 <th className="px-4 py-3 whitespace-nowrap">계약 시작일</th>
                 <th className="px-4 py-3 whitespace-nowrap">D-day</th>
-                <th className="px-4 py-3 whitespace-nowrap text-right sticky right-0 bg-slate-50 dark:bg-zinc-800">상태</th>
+                <th className="px-4 py-3 whitespace-nowrap">상태</th>
+                <th className="px-4 py-3 whitespace-nowrap sticky right-0 z-20 bg-slate-50 dark:bg-zinc-800">진행 현황</th>
               </tr>
             </thead>
             <tbody>
@@ -1034,68 +1036,63 @@ export default function ClientManager() {
                 const dday        = contractEnd ? getDday(contractEnd) : null;
                 const ddayFmt     = dday != null ? formatDday(dday) : null;
                 const showGrass   = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!contractEnd;
-                const grassOpen   = expandedGrass.has(c.id);
                 const rowBg       = idx % 2 === 0
                   ? "bg-white dark:bg-zinc-900"
                   : "bg-slate-50/60 dark:bg-zinc-800/30";
 
                 return (
-                  <Fragment key={c.id}>
-                    <tr className={`${rowBg} border-t border-slate-100 dark:border-zinc-800 hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition-colors`}>
-                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap">{c.name}</td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
-                      <td className="px-4 py-3">
-                        {c.tags.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {c.tags.map((t) => (
-                              <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{t}</span>
-                            ))}
-                          </div>
-                        ) : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? formatDate(c.contractStart) : "-"}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
-                      </td>
-                      <td className={`px-4 py-3 sticky right-0 ${rowBg}`}>
-                        <div className="flex items-center justify-end gap-2">
-                          <span className={[
-                            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border whitespace-nowrap",
-                            cfg.bgCls, cfg.borderCls, cfg.textCls,
-                          ].join(" ")}>
-                            {STATUS_ICONS[c.status]}{cfg.label}
-                          </span>
-                          {showGrass && (
-                            <button
-                              type="button"
-                              onClick={() => setExpandedGrass((prev) => {
-                                const next = new Set(prev);
-                                next.has(c.id) ? next.delete(c.id) : next.add(c.id);
-                                return next;
-                              })}
-                              className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] hover:bg-[#6C63FF]/10 transition-colors"
-                              aria-label="진행 현황 펼치기"
-                            >
-                              {grassOpen ? <IconChevronUp className="w-4 h-4" /> : <IconChevronDown className="w-4 h-4" />}
-                            </button>
-                          )}
+                  <tr key={c.id} className={`${rowBg} group border-t border-slate-100 dark:border-zinc-800 hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition-colors`}>
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <button onClick={() => startEdit(c)} aria-label="수정"
+                          className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] hover:bg-[#6C63FF]/10 transition-colors">
+                          <IconPencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDelete(c.id)} aria-label="삭제"
+                          className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                          <IconTrash className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap">{c.name}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
+                    <td className="px-4 py-3">
+                      {c.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {c.tags.map((t) => (
+                            <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{t}</span>
+                          ))}
                         </div>
-                      </td>
-                    </tr>
-                    {showGrass && grassOpen && (
-                      <tr className={`${rowBg} border-t border-slate-100 dark:border-zinc-800`}>
-                        <td colSpan={7} className="px-4 pb-4 pt-1">
+                      ) : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? formatDate(c.contractStart) : "-"}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={[
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border whitespace-nowrap w-fit",
+                        cfg.bgCls, cfg.borderCls, cfg.textCls,
+                      ].join(" ")}>
+                        {STATUS_ICONS[c.status]}{cfg.label}
+                      </span>
+                    </td>
+                    <td className={`px-4 py-3 sticky right-0 ${rowBg} group-hover:bg-[#6C63FF]/5 dark:group-hover:bg-[#6C63FF]/10`}>
+                      {showGrass ? (
+                        <div className="w-72">
                           <GrassGrid
                             contractStart={c.contractStart}
                             contractEnd={contractEnd!}
                             dailyLog={c.dailyLog}
                             onToggle={(date) => toggleDailyLog(c.id, date)}
                           />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-300 dark:text-zinc-600">-</span>
+                      )}
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
