@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
   IconBuilding, IconPlus, IconPencil, IconTrash,
@@ -11,6 +11,7 @@ import {
   IconMessage, IconChevronDown, IconChevronUp,
   IconChevronLeft, IconChevronRight,
   IconCircleCheck, IconCircleX, IconClock, IconPlayerPlay,
+  IconLayoutGrid, IconLayoutList,
 } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -64,6 +65,9 @@ interface FormState {
 
 /* ── 상수 ── */
 const RESET_DATE_KEY = "worky_clients_reset_date";
+const VIEW_MODE_KEY  = "worky_clients_view";
+
+type ViewMode = "grid" | "list";
 
 const EMPTY_FORM: FormState = {
   name: "", status: "pending", contact: "", phone: "",
@@ -541,6 +545,7 @@ export default function ClientManager() {
   const [expandedGrass,     setExpandedGrass]     = useState<Set<string>>(new Set());
   const [openStatusId,      setOpenStatusId]      = useState<string | null>(null);
   const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null);
+  const [viewMode,          setViewMode]          = useState<ViewMode>("grid");
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -563,9 +568,16 @@ export default function ClientManager() {
         }
         setClients(rows.map(dbToClient));
       }
+      const savedView = localStorage.getItem(VIEW_MODE_KEY);
+      if (savedView === "grid" || savedView === "list") setViewMode(savedView);
       setHydrated(true);
     });
   }, []);
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem(VIEW_MODE_KEY, mode);
+  };
 
   useEffect(() => {
     if (!openStatusId) return;
@@ -742,6 +754,33 @@ export default function ClientManager() {
           <span className="text-xs text-slate-400 dark:text-zinc-500">총 {total}개</span>
         </div>
         <div className="flex items-center gap-2">
+          {/* 뷰 모드 토글 */}
+          <div className="flex items-center gap-0.5 p-0.5 rounded-xl border border-slate-200 dark:border-zinc-700">
+            <button
+              onClick={() => handleViewModeChange("grid")}
+              aria-label="박스형 보기"
+              className={[
+                "p-1.5 rounded-lg transition-colors",
+                viewMode === "grid"
+                  ? "bg-[#6C63FF]/10 text-[#6C63FF]"
+                  : "text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800",
+              ].join(" ")}
+            >
+              <IconLayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleViewModeChange("list")}
+              aria-label="목록형 보기"
+              className={[
+                "p-1.5 rounded-lg transition-colors",
+                viewMode === "list"
+                  ? "bg-[#6C63FF]/10 text-[#6C63FF]"
+                  : "text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800",
+              ].join(" ")}
+            >
+              <IconLayoutList className="w-4 h-4" />
+            </button>
+          </div>
           <button
             onClick={() => setSortOrder((s) => SORT_CYCLE[(SORT_CYCLE.indexOf(s)+1)%SORT_CYCLE.length])}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
@@ -967,12 +1006,100 @@ export default function ClientManager() {
         </div>
       </div>
 
-      {/* 거래처 카드 그리드 */}
+      {/* 거래처 목록 */}
       {sorted.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-slate-300 dark:text-zinc-600">
           <IconBuilding className="w-12 h-12 mb-3" />
           <p className="text-sm font-medium text-slate-400 dark:text-zinc-500">등록된 거래처가 없습니다</p>
           <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">위 버튼을 눌러 거래처를 추가하세요</p>
+        </div>
+      ) : viewMode === "list" ? (
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="text-left text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
+                <th className="px-4 py-3 whitespace-nowrap">거래처명</th>
+                <th className="px-4 py-3 whitespace-nowrap">담당자</th>
+                <th className="px-4 py-3 whitespace-nowrap">연락처</th>
+                <th className="px-4 py-3 whitespace-nowrap">태그</th>
+                <th className="px-4 py-3 whitespace-nowrap">계약 시작일</th>
+                <th className="px-4 py-3 whitespace-nowrap">D-day</th>
+                <th className="px-4 py-3 whitespace-nowrap text-right sticky right-0 bg-slate-50 dark:bg-zinc-800">상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((c, idx) => {
+                const cfg         = STATUS_CONFIG[c.status];
+                const contractEnd = getContractEnd(c);
+                const dday        = contractEnd ? getDday(contractEnd) : null;
+                const ddayFmt     = dday != null ? formatDday(dday) : null;
+                const showGrass   = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!contractEnd;
+                const grassOpen   = expandedGrass.has(c.id);
+                const rowBg       = idx % 2 === 0
+                  ? "bg-white dark:bg-zinc-900"
+                  : "bg-slate-50/60 dark:bg-zinc-800/30";
+
+                return (
+                  <Fragment key={c.id}>
+                    <tr className={`${rowBg} border-t border-slate-100 dark:border-zinc-800 hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition-colors`}>
+                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap">{c.name}</td>
+                      <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
+                      <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
+                      <td className="px-4 py-3">
+                        {c.tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {c.tags.map((t) => (
+                              <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{t}</span>
+                            ))}
+                          </div>
+                        ) : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? formatDate(c.contractStart) : "-"}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
+                      </td>
+                      <td className={`px-4 py-3 sticky right-0 ${rowBg}`}>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className={[
+                            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border whitespace-nowrap",
+                            cfg.bgCls, cfg.borderCls, cfg.textCls,
+                          ].join(" ")}>
+                            {STATUS_ICONS[c.status]}{cfg.label}
+                          </span>
+                          {showGrass && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedGrass((prev) => {
+                                const next = new Set(prev);
+                                next.has(c.id) ? next.delete(c.id) : next.add(c.id);
+                                return next;
+                              })}
+                              className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] hover:bg-[#6C63FF]/10 transition-colors"
+                              aria-label="진행 현황 펼치기"
+                            >
+                              {grassOpen ? <IconChevronUp className="w-4 h-4" /> : <IconChevronDown className="w-4 h-4" />}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {showGrass && grassOpen && (
+                      <tr className={`${rowBg} border-t border-slate-100 dark:border-zinc-800`}>
+                        <td colSpan={7} className="px-4 pb-4 pt-1">
+                          <GrassGrid
+                            contractStart={c.contractStart}
+                            contractEnd={contractEnd!}
+                            dailyLog={c.dailyLog}
+                            onToggle={(date) => toggleDailyLog(c.id, date)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
