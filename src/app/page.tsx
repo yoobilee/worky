@@ -653,7 +653,14 @@ const DEFAULT_SPEED_LINKS: Array<{ name: string; href: string; Icon: IconComp | 
 
 function FaviconImg({ domain, name, size }: { domain: string; name: string; size: number }) {
   const [err, setErr] = useState(false);
-  if (err) {
+  const isLocal =
+    !domain ||
+    domain.startsWith("file://") ||
+    domain === "localhost" ||
+    domain.startsWith("localhost:") ||
+    domain === "127.0.0.1" ||
+    domain.startsWith("127.0.0.1:");
+  if (err || isLocal) {
     return (
       <div
         className="rounded-full flex items-center justify-center text-white font-bold"
