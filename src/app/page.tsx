@@ -663,8 +663,8 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
   if (err || isLocal) {
     return (
       <div
-        className="rounded-full flex items-center justify-center text-white font-bold leading-none shrink-0"
-        style={{ width: size, height: size, background: "#6C63FF", fontSize: Math.round(size * 0.6) }}
+        className="w-full h-full rounded-full flex items-center justify-center text-white font-semibold leading-none shrink-0"
+        style={{ background: "#6C63FF", fontSize: Math.round(size * 0.45), letterSpacing: "-0.02em" }}
       >
         {name.charAt(0).toUpperCase()}
       </div>
@@ -906,7 +906,9 @@ function SpeedDial() {
             </div>
             {previewDomain && (
               <div className="mt-3 flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
-                <FaviconImg domain={previewDomain} name={newName || newUrl} size={28} />
+                <div className="shrink-0" style={{ width: 28, height: 28 }}>
+                  <FaviconImg domain={previewDomain} name={newName || newUrl} size={28} />
+                </div>
                 <span className="text-xs text-slate-500 dark:text-zinc-400">아이콘 미리보기</span>
               </div>
             )}
