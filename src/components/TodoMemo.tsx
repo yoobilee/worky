@@ -358,7 +358,7 @@ export default function TodoMemo() {
 
         {/* 할 일 목록 */}
         <div
-          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4 h-full min-w-0"
+          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4 h-full min-w-0 overflow-hidden"
           style={isLargeScreen ? { width: `calc(${leftRatio * 100}% - 6px)`, flexShrink: 0 } : undefined}
         >
 
@@ -375,14 +375,14 @@ export default function TodoMemo() {
             <div className="flex items-center gap-2">
               <button
                 onClick={openPicker}
-                className="text-sm font-semibold text-slate-700 dark:text-zinc-200 hover:text-[#6C63FF] dark:hover:text-[#8B85FF] transition-colors"
+                className="text-sm font-semibold text-slate-700 dark:text-zinc-200 hover:text-[#6C63FF] dark:hover:text-[#8B85FF] transition-colors whitespace-nowrap"
               >
                 {formatDateLabel(selectedDate)}
               </button>
               {!isToday && (
                 <button
                   onClick={() => goToDate(todayKey())}
-                  className="text-xs px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#6C63FF] hover:bg-[#6C63FF]/20 transition-colors font-medium"
+                  className="text-xs px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#6C63FF] hover:bg-[#6C63FF]/20 transition-colors font-medium whitespace-nowrap"
                 >
                   오늘로
                 </button>
@@ -476,7 +476,7 @@ export default function TodoMemo() {
             <button
               onClick={addTodo}
               disabled={!input.trim()}
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40"
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 whitespace-nowrap shrink-0 min-w-fit"
               style={{ background: "var(--primary)" }}
             >
               추가
@@ -538,7 +538,7 @@ export default function TodoMemo() {
           {todos.some((t) => t.completed) && (
             <button
               onClick={() => setConfirmAction("completed")}
-              className="text-xs text-slate-400 hover:text-red-400 transition text-left"
+              className="text-xs text-slate-400 hover:text-red-400 transition text-left whitespace-nowrap"
             >
               완료된 항목 모두 삭제
             </button>
@@ -563,7 +563,7 @@ export default function TodoMemo() {
 
         {/* 메모 (날짜 무관) */}
         <div
-          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-3 h-full min-w-0"
+          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-3 h-full min-w-0 overflow-hidden"
           style={isLargeScreen ? { width: `calc(${(1 - leftRatio) * 100}% - 6px)`, flexShrink: 0 } : undefined}
         >
 
@@ -592,7 +592,7 @@ export default function TodoMemo() {
                 key={id}
                 onClick={() => handleTabChange(id)}
                 className={[
-                  "py-1.5 rounded-lg text-xs font-medium transition-colors",
+                  "py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap min-w-0",
                   memoTab === id
                     ? "bg-[#6C63FF] text-white shadow-sm"
                     : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
