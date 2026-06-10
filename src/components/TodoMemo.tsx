@@ -548,17 +548,14 @@ export default function TodoMemo() {
         {/* 리사이즈 핸들 */}
         <div
           onMouseDown={handleDragStart}
-          className="hidden lg:block relative w-3 shrink-0 cursor-col-resize group"
+          className="hidden lg:flex items-center justify-center w-3 h-full shrink-0 cursor-col-resize group hover:bg-[#6C63FF]/5 transition-colors"
         >
-          <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px bg-slate-200 dark:bg-zinc-800 group-hover:bg-[#6C63FF] transition-colors" />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <span
-                key={i}
-                className="w-1 h-1 rounded-full bg-slate-300 dark:bg-zinc-600 group-hover:bg-[#6C63FF] transition-colors"
-              />
-            ))}
-          </div>
+          <div
+            className={[
+              "w-1 h-8 rounded-full transition-all duration-200 ease-in-out group-hover:h-10",
+              isDragging ? "h-10 bg-[#6C63FF]" : "bg-[#6C63FF]/20 group-hover:bg-[#6C63FF]",
+            ].join(" ")}
+          />
         </div>
 
         {/* 메모 (날짜 무관) */}
