@@ -10,6 +10,9 @@ import {
   IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
   IconBuilding, IconSparkles, IconX,
   IconBrandOpenai, IconBrandGoogle, IconBrandGmail, IconBrandGoogleDrive, IconBrandNotion, IconSearch,
+  IconBrandGithub, IconBrandYoutube, IconBrandInstagram, IconBrandX, IconBrandFigma,
+  IconBrandLinkedin, IconBrandSlack, IconBrandDiscord, IconMessageCircle, IconBrandFacebook,
+  IconBrandTiktok, IconBrandTrello, IconBrandDropbox,
 } from "@tabler/icons-react";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
@@ -651,6 +654,33 @@ const DEFAULT_SPEED_LINKS: Array<{ name: string; href: string; Icon: IconComp | 
   { name: "Google Drive", href: "https://drive.google.com",   Icon: IconBrandGoogleDrive, letter: null },
 ];
 
+const BRAND_ICON_MAP: Record<string, IconComp> = {
+  "github.com":      IconBrandGithub,
+  "youtube.com":     IconBrandYoutube,
+  "instagram.com":   IconBrandInstagram,
+  "twitter.com":     IconBrandX,
+  "x.com":           IconBrandX,
+  "figma.com":       IconBrandFigma,
+  "linkedin.com":    IconBrandLinkedin,
+  "slack.com":       IconBrandSlack,
+  "discord.com":     IconBrandDiscord,
+  "notion.so":       IconBrandNotion,
+  "kakao.com":       IconMessageCircle,
+  "kakaowork.com":   IconMessageCircle,
+  "facebook.com":    IconBrandFacebook,
+  "tiktok.com":      IconBrandTiktok,
+  "trello.com":      IconBrandTrello,
+  "dropbox.com":     IconBrandDropbox,
+};
+
+function getBrandIcon(domain: string): IconComp | null {
+  const host = domain.replace(/^www\./, "");
+  for (const [key, Icon] of Object.entries(BRAND_ICON_MAP)) {
+    if (host === key || host.endsWith(`.${key}`)) return Icon;
+  }
+  return null;
+}
+
 function FaviconImg({ domain, name, size }: { domain: string; name: string; size: number }) {
   const [err, setErr] = useState(false);
   const isLocal =
@@ -660,6 +690,19 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
     domain.startsWith("localhost:") ||
     domain === "127.0.0.1" ||
     domain.startsWith("127.0.0.1:");
+
+  const BrandIcon = !isLocal ? getBrandIcon(domain) : null;
+  if (BrandIcon) {
+    return (
+      <div
+        className="w-full h-full rounded-full flex items-center justify-center text-white shrink-0"
+        style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+      >
+        <BrandIcon className="w-[18px] h-[18px]" />
+      </div>
+    );
+  }
+
   if (err || isLocal) {
     return (
       <div
