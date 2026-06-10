@@ -34,6 +34,10 @@ const MEMO_DB_KEYS: Record<MemoTab, "work_memo" | "meeting_memo" | "personal_mem
   개인: "personal_memo",
 };
 
+const LEFT_RATIO_KEY = "todoMemoLeftRatio";
+const MIN_RATIO = 0.2;
+const MAX_RATIO = 0.8;
+
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
@@ -117,11 +121,69 @@ export default function TodoMemo() {
   const [pickerYear,  setPickerYear]  = useState(() => new Date().getFullYear());
   const [pickerMonth, setPickerMonth] = useState(() => new Date().getMonth());
 
+  // 좌우 패널 리사이즈
+  const [leftRatio,    setLeftRatio]    = useState(0.5);
+  const [isDragging,   setIsDragging]   = useState(false);
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+
   const inputRef        = useRef<HTMLInputElement>(null);
   const debounceRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pickerRef       = useRef<HTMLDivElement>(null);
   const selectedDateRef = useRef<string>(selectedDate);
+  const containerRef    = useRef<HTMLDivElement>(null);
+  const leftRatioRef    = useRef(leftRatio);
+
+  // 패널 비율 복원 + 화면 크기 감지
+  useEffect(() => {
+    const saved = localStorage.getItem(LEFT_RATIO_KEY);
+    if (saved) {
+      const ratio = parseFloat(saved);
+      if (!isNaN(ratio) && ratio >= MIN_RATIO && ratio <= MAX_RATIO) {
+        setLeftRatio(ratio);
+        leftRatioRef.current = ratio;
+      }
+    }
+
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsLargeScreen(mq.matches);
+    const handleChange = (e: MediaQueryListEvent) => setIsLargeScreen(e.matches);
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
+  // 패널 드래그 리사이즈
+  const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const ratio = Math.min(MAX_RATIO, Math.max(MIN_RATIO, (e.clientX - rect.left) / rect.width));
+      leftRatioRef.current = ratio;
+      setLeftRatio(ratio);
+    };
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      localStorage.setItem(LEFT_RATIO_KEY, String(leftRatioRef.current));
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
 
   // 피커 외부 클릭 닫기
   useEffect(() => {
@@ -250,7 +312,7 @@ export default function TodoMemo() {
   if (!hydrated) return null;
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto w-full">
+    <div className="space-y-4 max-w-4xl mx-auto w-full h-full flex flex-col">
 
       {confirmAction === "completed" && (
         <ConfirmModal
@@ -268,7 +330,7 @@ export default function TodoMemo() {
       )}
 
       {/* Bento 통계 카드 */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 shrink-0">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider">전체 할 일</p>
           <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-slate-100">{total}</p>
@@ -292,10 +354,13 @@ export default function TodoMemo() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-5">
+      <div ref={containerRef} className="flex-1 min-h-0 flex flex-col lg:flex-row gap-5 lg:gap-0">
 
         {/* 할 일 목록 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4">
+        <div
+          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4 h-full min-w-0"
+          style={isLargeScreen ? { width: `calc(${leftRatio * 100}% - 6px)`, flexShrink: 0 } : undefined}
+        >
 
           {/* 날짜 네비게이션 */}
           <div className="flex items-center justify-between relative" ref={pickerRef}>
@@ -480,8 +545,27 @@ export default function TodoMemo() {
           )}
         </div>
 
+        {/* 리사이즈 핸들 */}
+        <div
+          onMouseDown={handleDragStart}
+          className="hidden lg:block relative w-3 shrink-0 cursor-col-resize group"
+        >
+          <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px bg-slate-200 dark:bg-zinc-800 group-hover:bg-[#6C63FF] transition-colors" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <span
+                key={i}
+                className="w-1 h-1 rounded-full bg-slate-300 dark:bg-zinc-600 group-hover:bg-[#6C63FF] transition-colors"
+              />
+            ))}
+          </div>
+        </div>
+
         {/* 메모 (날짜 무관) */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-3">
+        <div
+          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-3 h-full min-w-0"
+          style={isLargeScreen ? { width: `calc(${(1 - leftRatio) * 100}% - 6px)`, flexShrink: 0 } : undefined}
+        >
 
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">메모</h2>
