@@ -663,8 +663,14 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
   if (err || isLocal) {
     return (
       <div
-        className="w-full h-full rounded-full flex items-center justify-center text-white font-semibold leading-none shrink-0"
-        style={{ background: "#6C63FF", fontSize: Math.round(size * 0.45), letterSpacing: "-0.02em" }}
+        className="w-full h-full rounded-full flex items-center justify-center text-white font-bold leading-none shrink-0"
+        style={{
+          background: "#6C63FF",
+          fontSize: Math.round(size * 0.38),
+          letterSpacing: "-0.02em",
+          fontFamily: "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif",
+          fontWeight: 700,
+        }}
       >
         {name.charAt(0).toUpperCase()}
       </div>
