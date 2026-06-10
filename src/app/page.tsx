@@ -668,8 +668,8 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
           background: "#6C63FF",
           fontSize: Math.round(size * 0.38),
           letterSpacing: "-0.02em",
-          fontFamily: "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif",
-          fontWeight: 700,
+          fontFamily: "var(--font-nunito), 'Varela Round', 'Noto Sans KR', sans-serif",
+          fontWeight: 800,
         }}
       >
         {name.charAt(0).toUpperCase()}
