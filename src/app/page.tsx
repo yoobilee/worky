@@ -641,7 +641,7 @@ export default function HomePage() {
 
 interface CustomLink { url: string; name: string }
 
-type IconComp = React.ComponentType<{ className?: string }>;
+type IconComp = React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 
 const DEFAULT_SPEED_LINKS: Array<{ name: string; href: string; Icon: IconComp | null; letter: string | null }> = [
   { name: "Claude",       href: "https://claude.ai",         Icon: null,                 letter: "C" },
