@@ -25,22 +25,29 @@ interface Schedule {
 }
 
 function buildSystemPrompt(): string {
-  const now = new Date();
-  const y   = now.getFullYear();
-  const m   = String(now.getMonth() + 1).padStart(2, "0");
-  const d   = String(now.getDate()).padStart(2, "0");
-  const dow = ["일요일","월요일","화요일","수요일","목요일","금요일","토요일"][now.getDay()];
-  const today = `${y}년 ${Number(m)}월 ${Number(d)}일 (${dow})`;
+  const now   = new Date();
+  const y     = now.getFullYear();
+  const m     = String(now.getMonth() + 1).padStart(2, "0");
+  const d     = String(now.getDate()).padStart(2, "0");
+  const iso   = `${y}-${m}-${d}`;
+  const dow   = ["일","월","화","수","목","금","토"][now.getDay()];
 
   return `당신은 일정 추출 전문가입니다. 사용자가 붙여넣은 이메일, 공지, 메시지 텍스트에서 일정 정보를 모두 추출하세요.
 
-오늘 날짜: ${today}
-"다음 주 월요일", "이번 주 목요일", "내일", "모레" 등 상대적 날짜 표현은 반드시 위 오늘 날짜를 기준으로 실제 날짜(YYYY년 MM월 DD일)로 변환해서 반환하세요.
+오늘 날짜: ${iso} (YYYY-MM-DD 형식)
+오늘 요일: ${dow}요일
+
+상대적 날짜 표현은 반드시 위 오늘 날짜를 기준으로 아래 규칙에 따라 실제 날짜(YYYY-MM-DD)로 변환해서 반환하세요.
+- "내일", "모레" 등은 오늘 날짜 기준으로 계산하세요.
+- "이번주"는 이번 주 월요일부터 일요일까지를 의미합니다.
+- "다음주"는 오늘 날짜 기준 다음 주 월요일부터 시작하는 주를 의미합니다. (예: "다음 주 화요일"은 다음 주 월요일의 다음 날)
+- "다음달 첫째 주 월요일"처럼 다음 달을 기준으로 한 표현은, 다음 달 1일 이후 첫 번째로 오는 해당 요일로 계산하세요.
+- "이번달 말"은 이번 달의 마지막 날짜로 계산하세요.
 
 반드시 아래 JSON 형식으로만 응답하세요. 마크다운 코드블록이나 설명 텍스트는 절대 포함하지 마세요.
-{"schedules":[{"date":"날짜(예: ${y}년 ${Number(m)}월 ${Number(d)}일)","time":"시간(예: 오후 3시, 없으면 빈 문자열)","location":"장소(없으면 빈 문자열)","content":"일정 내용"}]}
+{"schedules":[{"date":"날짜(YYYY-MM-DD 형식, 예: ${iso})","time":"시간(예: 오후 3시, 없으면 빈 문자열)","location":"장소(없으면 빈 문자열)","content":"일정 내용"}]}
 
-- 날짜는 항상 구체적인 날짜로 변환하세요. 상대적 표현을 그대로 두지 마세요.
+- 날짜는 항상 YYYY-MM-DD 형식의 구체적인 날짜로 변환하세요. 상대적 표현을 그대로 두지 마세요.
 - 일정이 없으면 {"schedules":[]} 를 반환하세요.
 - 복수의 일정이 있으면 모두 추출하세요.`;
 }
