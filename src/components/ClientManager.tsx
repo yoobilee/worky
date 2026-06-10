@@ -287,33 +287,74 @@ function MiniGrassGrid({
     return toDateKey(d);
   }
 
-  const weekStart = today >= contractStart && today <= contractEnd
+  const startMonday = getMondayOf(contractStart);
+  const endMonday   = getMondayOf(contractEnd);
+  const initMonday  = today >= contractStart && today <= contractEnd
     ? getMondayOf(today)
-    : getMondayOf(contractStart);
-  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+    : startMonday;
 
-  const [, sm, sd] = contractStart.split("-").map(Number);
-  const [, em, ed] = contractEnd.split("-").map(Number);
-  const rangeLabel = `${sm}/${sd}~${em}/${ed}`;
+  const [weekStart, setWeekStart] = useState(initMonday);
+  const canPrev = weekStart > startMonday;
+  const canNext = weekStart < endMonday;
+
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const todayDate = todayKey();
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] text-slate-400 dark:text-zinc-500 whitespace-nowrap">{rangeLabel}</span>
-      <div className="flex gap-0.5">
+    <div className="flex flex-col gap-0.5">
+      {/* 날짜 레이블 행 */}
+      <div className="flex items-center gap-0.5">
+        <div className="w-4 h-4 shrink-0" />
+        {weekDates.map((date) => {
+          const [, m, d] = date.split("-").map(Number);
+          const isToday = date === todayDate;
+          return (
+            <span
+              key={date}
+              className={[
+                "w-5 text-center text-[9px] leading-none",
+                isToday ? "text-[#6C63FF] font-bold" : "text-slate-400 dark:text-zinc-500",
+              ].join(" ")}
+            >
+              {m}/{d}
+            </span>
+          );
+        })}
+        <div className="w-4 h-4 shrink-0" />
+      </div>
+
+      {/* 네비 + 셀 행 */}
+      <div className="flex items-center gap-0.5">
+        <button
+          type="button"
+          disabled={!canPrev}
+          onClick={() => setWeekStart((w) => addDays(w, -7))}
+          className="w-4 h-4 p-0.5 shrink-0 text-slate-400 dark:text-zinc-500 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
+        >
+          <IconChevronLeft className="w-full h-full" />
+        </button>
         {weekDates.map((date) => {
           if (date < contractStart || date > contractEnd) {
-            return <div key={date} className="w-4 h-4 rounded-sm" />;
+            return <div key={date} className="w-5 h-5 rounded-sm" />;
           }
           const ds  = dailyLog[date];
           const off = isOffDay(date);
           const [, m, d] = date.split("-").map(Number);
           const cls = off
-            ? "bg-slate-400 dark:bg-zinc-500"
+            ? "bg-slate-200 dark:bg-zinc-700 opacity-40"
             : ds === "done"   ? "bg-emerald-500"
             : ds === "failed" ? "bg-red-400"
             :                   "bg-slate-200 dark:bg-zinc-700";
-          return <div key={date} title={`${m}/${d}`} className={`w-4 h-4 rounded-sm ${cls}`} />;
+          return <div key={date} title={`${m}/${d}`} className={`w-5 h-5 rounded-sm ${cls}`} />;
         })}
+        <button
+          type="button"
+          disabled={!canNext}
+          onClick={() => setWeekStart((w) => addDays(w, 7))}
+          className="w-4 h-4 p-0.5 shrink-0 text-slate-400 dark:text-zinc-500 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
+        >
+          <IconChevronRight className="w-full h-full" />
+        </button>
       </div>
     </div>
   );
