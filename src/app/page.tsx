@@ -671,6 +671,10 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
       height={size}
       className="rounded-sm"
       onError={() => setErr(true)}
+      onLoad={(e) => {
+        const img = e.currentTarget;
+        if (img.naturalWidth <= 16 && img.naturalHeight <= 16) setErr(true);
+      }}
     />
   );
 }
