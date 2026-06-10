@@ -783,11 +783,11 @@ function SpeedDial() {
   })();
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2" ref={ref}>
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2 overflow-visible" ref={ref}>
 
       {/* 바로가기 목록 */}
       {open && (
-        <div className="relative">
+        <div className="relative overflow-visible">
           {/* 상단 fade */}
           {!atTop && (
             <div
