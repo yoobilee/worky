@@ -320,10 +320,17 @@ export default function QnA() {
       />
 
       {/* 히스토리 패널 */}
-      {showHistory && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setShowHistory(false)} />
-          <div className="absolute right-0 top-0 h-full w-72 bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-lg flex flex-col">
+      <div className={`fixed inset-0 z-50 ${showHistory ? "" : "pointer-events-none"}`}>
+        <div
+          className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ease-in-out ${showHistory ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setShowHistory(false)}
+        />
+        <div
+          className={`absolute right-0 top-0 h-full bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-lg flex flex-col transition-all duration-300 ease-in-out ${
+            showHistory ? "w-72 opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-full overflow-hidden"
+          }`}
+        >
+          <div className="w-72 h-full flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800 shrink-0">
               <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">대화 히스토리</h3>
               <button
@@ -352,7 +359,7 @@ export default function QnA() {
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* 히스토리 상세 보기 모달 */}
       {selectedHistory && (
