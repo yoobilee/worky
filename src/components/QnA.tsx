@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { IconHistory, IconX } from "@tabler/icons-react";
 import { trackUsage } from "@/lib/usageStats";
 import { createClient } from "@/lib/supabase/client";
-import { saveQaHistory, getQaHistories, type QaHistory } from "@/lib/db/qa_histories";
+import { saveQaHistory, updateQaHistory, getQaHistories, type QaHistory } from "@/lib/db/qa_histories";
 
 interface Message {
   id: string;
@@ -85,10 +85,9 @@ export default function QnA() {
   const [showHistory, setShowHistory] = useState(false);
   const [histories, setHistories] = useState<QaHistory[]>([]);
   const [selectedHistory, setSelectedHistory] = useState<QaHistory | null>(null);
+  const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
 
   useEffect(() => {
     const supabase = createClient();
@@ -101,18 +100,36 @@ export default function QnA() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const saveHistory = async () => {
-    const current = messagesRef.current;
-    if (!userId || current.length <= 1) return;
-    const firstUserMsg = current.find((m) => m.id !== "welcome" && m.role === "user");
+  // 대화가 진행될 때마다(어시스턴트 응답 완료 시) 히스토리 자동 저장/갱신
+  useEffect(() => {
+    if (!userId || messages.length < 3) return;
+    const last = messages[messages.length - 1];
+    if (last.role !== "assistant") return;
+
+    const firstUserMsg = messages.find((m) => m.id !== "welcome" && m.role === "user");
     if (!firstUserMsg) return;
     const title = firstUserMsg.content.slice(0, 30);
-    await saveQaHistory(userId, title, current);
-  };
+
+    (async () => {
+      if (currentHistoryId) {
+        await updateQaHistory(currentHistoryId, title, messages);
+      } else {
+        const { id, error } = await saveQaHistory(userId, title, messages);
+        if (!error && id) setCurrentHistoryId(id);
+      }
+    })();
+  }, [messages, userId, currentHistoryId]);
 
   const loadHistories = async () => {
-    if (!userId) return;
-    const rows = await getQaHistories(userId);
+    let uid = userId;
+    if (!uid) {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getUser();
+      uid = data.user?.id ?? null;
+      if (uid) setUserId(uid);
+    }
+    if (!uid) return;
+    const rows = await getQaHistories(uid);
     setHistories(rows);
   };
 
@@ -159,9 +176,9 @@ export default function QnA() {
     }
   };
 
-  const handleReset = async () => {
-    await saveHistory();
+  const handleReset = () => {
     setMessages([WELCOME_MESSAGE]);
+    setCurrentHistoryId(null);
     setError("");
   };
 
