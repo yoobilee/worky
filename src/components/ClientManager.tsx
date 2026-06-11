@@ -11,7 +11,7 @@ import {
   IconMessage, IconChevronDown, IconChevronUp,
   IconChevronLeft, IconChevronRight,
   IconCircleCheck, IconCircleX, IconClock, IconPlayerPlay,
-  IconLayoutGrid, IconLayoutList,
+  IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight,
 } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -660,6 +660,7 @@ export default function ClientManager() {
   const [openStatusId,      setOpenStatusId]      = useState<string | null>(null);
   const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null);
   const [viewMode,          setViewMode]          = useState<ViewMode>("grid");
+  const [showGrassPanel,    setShowGrassPanel]    = useState(false);
   const [hoveredRowId,      setHoveredRowId]      = useState<string | null>(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -924,6 +925,20 @@ export default function ClientManager() {
               <IconLayoutList className="w-4 h-4" />
             </button>
           </div>
+          {viewMode === "list" && (
+            <button
+              onClick={() => setShowGrassPanel((v) => !v)}
+              aria-label="진행현황 패널"
+              className={[
+                "p-1.5 rounded-xl border transition-colors",
+                showGrassPanel
+                  ? "border-[#6C63FF]/40 bg-[#6C63FF]/10 text-[#6C63FF]"
+                  : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800",
+              ].join(" ")}
+            >
+              <IconLayoutSidebarRight className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={() => setSortOrder((s) => SORT_CYCLE[(SORT_CYCLE.indexOf(s)+1)%SORT_CYCLE.length])}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
@@ -1157,7 +1172,8 @@ export default function ClientManager() {
           <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">위 버튼을 눌러 거래처를 추가하세요</p>
         </div>
       ) : viewMode === "list" ? (
-        <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+        <div className="flex items-stretch gap-3">
+        <div className="flex-1 min-w-0 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
         <div
           ref={tableScrollRef}
           onMouseDown={handleScrollMouseDown}
@@ -1199,10 +1215,6 @@ export default function ClientManager() {
                 <th className="px-4 py-3 whitespace-nowrap">계약 시작일</th>
                 <th className="px-4 py-3 whitespace-nowrap">D-day</th>
                 <th className="px-4 py-3 whitespace-nowrap">상태</th>
-                <th
-                  className="px-4 py-3 whitespace-nowrap sticky right-0 z-20 border-l border-slate-200 dark:border-zinc-700"
-                  style={{ backgroundColor: isDark ? "#27272a" : "#f8fafc" }}
-                >진행 현황</th>
               </tr>
             </thead>
             <tbody>
@@ -1211,7 +1223,6 @@ export default function ClientManager() {
                 const contractEnd = getContractEnd(c);
                 const dday        = contractEnd ? getDday(contractEnd) : null;
                 const ddayFmt     = dday != null ? formatDday(dday) : null;
-                const showGrass   = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!contractEnd;
                 const isHovered  = hoveredRowId === c.id;
                 const rowBgColor = isHovered
                   ? "rgba(108,99,255,0.05)"
@@ -1263,25 +1274,46 @@ export default function ClientManager() {
                         {STATUS_ICONS[c.status]}{cfg.label}
                       </span>
                     </td>
-                    <td
-                      className="px-4 py-3 sticky right-0 z-10 border-l border-slate-200 dark:border-zinc-700"
-                      style={{ backgroundColor: rowBgColor }}
-                    >
-                      {showGrass ? (
-                        <MiniGrassGrid
-                          contractStart={c.contractStart}
-                          contractEnd={contractEnd!}
-                          dailyLog={c.dailyLog}
-                        />
-                      ) : (
-                        <span className="text-xs text-slate-300 dark:text-zinc-600">-</span>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+        </div>
+
+        {/* 진행현황 패널 */}
+        <div
+          className={[
+            "shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
+            showGrassPanel ? "w-72 opacity-100" : "w-0 opacity-0",
+          ].join(" ")}
+        >
+          <div className="w-72 h-full max-h-[480px] overflow-y-auto rounded-2xl border-l-4 border-l-[#6C63FF]/40 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm p-3 flex flex-col gap-3">
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider px-1">진행 현황</p>
+            {sorted.filter((c) => {
+              const cEnd = getContractEnd(c);
+              return c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!cEnd;
+            }).length === 0 ? (
+              <p className="text-xs text-slate-300 dark:text-zinc-600 px-1">표시할 진행현황이 없습니다</p>
+            ) : (
+              sorted.map((c) => {
+                const cEnd = getContractEnd(c);
+                const show = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!cEnd;
+                if (!show) return null;
+                return (
+                  <div key={c.id} className="flex flex-col gap-1.5 pb-3 border-b border-slate-100 dark:border-zinc-800 last:border-b-0 last:pb-0">
+                    <p className="text-xs font-medium text-slate-700 dark:text-zinc-300 truncate">{c.name}</p>
+                    <MiniGrassGrid
+                      contractStart={c.contractStart}
+                      contractEnd={cEnd!}
+                      dailyLog={c.dailyLog}
+                    />
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
         </div>
       ) : (
