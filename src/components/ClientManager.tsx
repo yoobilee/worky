@@ -1348,8 +1348,8 @@ export default function ClientManager() {
                   className={[
                     "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
                     selectedIds.size === 1
-                      ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 hover:bg-[#6C63FF]/20 active:bg-[#6C63FF]/30"
-                      : "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 opacity-40 cursor-not-allowed",
+                      ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 hover:bg-[#6C63FF]/20 active:bg-[#6C63FF]/30 dark:bg-[#6C63FF]/20 dark:text-[#a99dff] dark:border-[#6C63FF]/50"
+                      : "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 opacity-40 cursor-not-allowed dark:text-zinc-500 dark:border-zinc-700",
                   ].join(" ")}
                 >
                   수정
@@ -1360,15 +1360,15 @@ export default function ClientManager() {
                   className={[
                     "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
                     selectedIds.size > 0
-                      ? "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/50"
-                      : "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-200 dark:border-red-800 opacity-40 cursor-not-allowed",
+                      ? "bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/50"
+                      : "bg-red-50 text-red-500 border-red-200 opacity-40 cursor-not-allowed dark:text-zinc-500 dark:border-zinc-700",
                   ].join(" ")}
                 >
                   {selectedIds.size > 0 ? `${selectedIds.size}개 삭제` : "삭제"}
                 </button>
                 <button
                   onClick={() => { setListEditMode("none"); setSelectedIds(new Set()); }}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-600 text-slate-500 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
                 >
                   취소
                 </button>
