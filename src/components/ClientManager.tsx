@@ -672,7 +672,7 @@ export default function ClientManager() {
   const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null);
   const [viewMode,          setViewMode]          = useState<ViewMode>("grid");
   const [showGrassPanel,    setShowGrassPanel]    = useState(false);
-  const [listEditMode,      setListEditMode]      = useState<"none" | "edit" | "delete">("none");
+  const [listEditMode,      setListEditMode]      = useState<"none" | "edit">("none");
   const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [hoveredTagId,      setHoveredTagId]      = useState<string | null>(null);
@@ -1256,43 +1256,53 @@ export default function ClientManager() {
         </div>
       </div>
 
-      {/* 목록형 수정/삭제 모드 버튼 바 */}
+      {/* 목록형 편집 모드 버튼 바 */}
       {viewMode === "list" && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {listEditMode === "none" ? (
             <button
-              onClick={() => setListEditMode((m) => m === "edit" ? "none" : "edit")}
-              className={[
-                "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
-                listEditMode === "edit"
-                  ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40"
-                  : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
-              ].join(" ")}
+              onClick={() => setListEditMode("edit")}
+              className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
             >
-              수정
+              편집
             </button>
-            <button
-              onClick={() => setListEditMode((m) => m === "delete" ? "none" : "delete")}
-              className={[
-                "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
-                listEditMode === "delete"
-                  ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40"
-                  : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
-              ].join(" ")}
-            >
-              삭제
-            </button>
-          </div>
-          {listEditMode === "delete" && selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-zinc-400">{selectedIds.size}개 선택됨</span>
+          ) : (
+            <>
               <button
-                onClick={() => setConfirmBulkDelete(true)}
-                className="px-3 py-1.5 rounded-xl text-xs font-medium border border-red-200 dark:border-red-900 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                disabled={selectedIds.size !== 1}
+                onClick={() => {
+                  const id = [...selectedIds][0];
+                  const target = sorted.find((c) => c.id === id);
+                  if (target) startEdit(target);
+                }}
+                className={[
+                  "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
+                  selectedIds.size === 1
+                    ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 hover:bg-[#6C63FF]/20 active:bg-[#6C63FF]/30"
+                    : "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 opacity-40 cursor-not-allowed",
+                ].join(" ")}
               >
-                삭제
+                수정
               </button>
-            </div>
+              <button
+                disabled={selectedIds.size === 0}
+                onClick={() => setConfirmBulkDelete(true)}
+                className={[
+                  "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
+                  selectedIds.size > 0
+                    ? "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/50"
+                    : "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-200 dark:border-red-800 opacity-40 cursor-not-allowed",
+                ].join(" ")}
+              >
+                {selectedIds.size > 0 ? `${selectedIds.size}개 삭제` : "삭제"}
+              </button>
+              <button
+                onClick={() => { setListEditMode("none"); setSelectedIds(new Set()); }}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
+              >
+                취소
+              </button>
+            </>
           )}
         </div>
       )}
@@ -1360,8 +1370,8 @@ export default function ClientManager() {
                 const ddayFmt     = dday != null ? formatDday(dday) : null;
                 const isHovered  = hoveredRowId === c.id;
                 const isSelected = selectedIds.has(c.id);
-                const rowBgColor = listEditMode === "delete" && isSelected
-                  ? (isDark ? "rgba(127,29,29,0.2)" : "#fef2f2")
+                const rowBgColor = listEditMode === "edit" && isSelected
+                  ? "rgba(108,99,255,0.05)"
                   : getRowBg(idx, isHovered);
 
                 return (
@@ -1374,11 +1384,6 @@ export default function ClientManager() {
                   >
                     <td className="px-2 h-[52px] whitespace-nowrap">
                       {listEditMode === "edit" ? (
-                        <button onClick={() => startEdit(c)} onMouseDown={(e) => e.stopPropagation()} aria-label="수정"
-                          className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] hover:bg-[#6C63FF]/10 transition-colors">
-                          <IconPencil className="w-3.5 h-3.5" />
-                        </button>
-                      ) : listEditMode === "delete" ? (
                         <button
                           type="button"
                           onClick={() => toggleSelected(c.id)}
@@ -1386,7 +1391,7 @@ export default function ClientManager() {
                           aria-label="선택"
                           className={[
                             "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
-                            isSelected ? "bg-red-500 border-red-500" : "border-slate-300 dark:border-zinc-600",
+                            isSelected ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
                           ].join(" ")}
                         >
                           {isSelected && (
