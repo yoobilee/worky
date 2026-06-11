@@ -1157,6 +1157,7 @@ export default function ClientManager() {
           <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">위 버튼을 눌러 거래처를 추가하세요</p>
         </div>
       ) : viewMode === "list" ? (
+        <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
         <div
           ref={tableScrollRef}
           onMouseDown={handleScrollMouseDown}
@@ -1164,7 +1165,7 @@ export default function ClientManager() {
           onMouseUp={handleScrollMouseUp}
           onMouseLeave={handleScrollMouseUp}
           className={[
-            "client-list-scroll overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm",
+            "client-list-scroll overflow-x-auto",
             isDragging ? "cursor-grabbing select-none" : "cursor-grab",
           ].join(" ")}
         >
@@ -1219,15 +1220,16 @@ export default function ClientManager() {
                 const stickyBg   = isHovered
                   ? "rgba(108,99,255,0.05)"
                   : idx % 2 === 0
-                    ? (isDark ? "#18181b" : "white")
-                    : (isDark ? "#27272a" : "#f8fafc");
+                    ? (isDark ? "#18181b" : "#ffffff")
+                    : (isDark ? "rgba(39,39,42,0.3)" : "rgba(248,250,252,0.6)");
 
                 return (
                   <tr
                     key={c.id}
                     onMouseEnter={() => setHoveredRowId(c.id)}
                     onMouseLeave={() => setHoveredRowId(null)}
-                    className={`${rowBg} group border-t border-slate-100 dark:border-zinc-800 hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition-colors`}
+                    className={`${rowBg} group border-t border-slate-100 dark:border-zinc-800 transition-colors`}
+                    style={isHovered ? { backgroundColor: "rgba(108,99,255,0.05)" } : undefined}
                   >
                     <td className="px-2 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
@@ -1284,6 +1286,7 @@ export default function ClientManager() {
               })}
             </tbody>
           </table>
+        </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
