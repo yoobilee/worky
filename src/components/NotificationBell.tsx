@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { IconBell, IconSparkles, IconCalendar, IconInfoCircle } from "@tabler/icons-react";
+import { IconBell, IconSparkles, IconCalendar, IconInfoCircle, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import {
   getAnnouncements,
   getReadIds,
@@ -32,6 +32,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [unreadCount, setUnreadCount] = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
@@ -70,6 +71,8 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   }, []);
 
   const handleItemClick = async (announcementId: string) => {
+    setExpandedId((prev) => (prev === announcementId ? null : announcementId));
+
     if (!userId || readIds.has(announcementId)) return;
     setReadIds((prev) => new Set(prev).add(announcementId));
     setUnreadCount((prev) => Math.max(0, prev - 1));
@@ -93,9 +96,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
       >
         <IconBell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
+          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-900" />
         )}
       </button>
 
@@ -118,6 +119,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                 const meta = TYPE_META[a.type] ?? TYPE_META.notice;
                 const Icon = meta.icon;
                 const isUnread = !readIds.has(a.id);
+                const isExpanded = expandedId === a.id;
                 return (
                   <button
                     key={a.id}
@@ -130,9 +132,18 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                     <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${meta.color}`} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 truncate">{a.title}</p>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{a.content}</p>
+                      <p
+                        className={`text-xs text-slate-500 dark:text-zinc-400 mt-0.5 transition-all duration-300 ease-in-out ${
+                          isExpanded ? "line-clamp-none" : "line-clamp-2"
+                        }`}
+                      >
+                        {a.content}
+                      </p>
                       <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">{formatDate(a.created_at)}</p>
                     </div>
+                    <span className="shrink-0 mt-1 text-slate-400 dark:text-zinc-500">
+                      {isExpanded ? <IconChevronUp className="w-4 h-4" /> : <IconChevronDown className="w-4 h-4" />}
+                    </span>
                   </button>
                 );
               })
