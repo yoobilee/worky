@@ -661,6 +661,7 @@ export default function ClientManager() {
   const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null);
   const [viewMode,          setViewMode]          = useState<ViewMode>("grid");
   const [showGrassPanel,    setShowGrassPanel]    = useState(false);
+  const [hoveredTagId,      setHoveredTagId]      = useState<string | null>(null);
   const [hoveredRowId,      setHoveredRowId]      = useState<string | null>(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -1255,10 +1256,26 @@ export default function ClientManager() {
                     <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
                     <td className="px-4 py-3">
                       {c.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {c.tags.map((t) => (
-                            <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{t}</span>
-                          ))}
+                        <div className="flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{c.tags[0]}</span>
+                          {c.tags.length > 1 && (
+                            <div
+                              className="relative"
+                              onMouseEnter={() => setHoveredTagId(c.id)}
+                              onMouseLeave={() => setHoveredTagId(null)}
+                            >
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 whitespace-nowrap cursor-default">
+                                +{c.tags.length - 1}
+                              </span>
+                              {hoveredTagId === c.id && (
+                                <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-slate-200 dark:border-zinc-800 p-2 flex flex-wrap gap-1 w-max max-w-[200px]">
+                                  {c.tags.slice(1).map((t) => (
+                                    <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ) : "-"}
                     </td>
@@ -1286,33 +1303,36 @@ export default function ClientManager() {
         <div
           className={[
             "shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
-            showGrassPanel ? "w-72 opacity-100" : "w-0 opacity-0",
+            showGrassPanel ? "w-[200px] opacity-100" : "w-0 opacity-0",
           ].join(" ")}
         >
-          <div className="w-72 h-full max-h-[480px] overflow-y-auto rounded-2xl border-l-4 border-l-[#6C63FF]/40 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm p-3 flex flex-col gap-3">
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider px-1">진행 현황</p>
-            {sorted.filter((c) => {
+          <div className="w-[200px] h-full overflow-y-auto rounded-2xl border-l-4 border-l-[#6C63FF]/40 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+            {/* thead 높이에 맞춘 spacer */}
+            <div className="h-9" />
+            {sorted.map((c, idx) => {
               const cEnd = getContractEnd(c);
-              return c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!cEnd;
-            }).length === 0 ? (
-              <p className="text-xs text-slate-300 dark:text-zinc-600 px-1">표시할 진행현황이 없습니다</p>
-            ) : (
-              sorted.map((c) => {
-                const cEnd = getContractEnd(c);
-                const show = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!cEnd;
-                if (!show) return null;
-                return (
-                  <div key={c.id} className="flex flex-col gap-1.5 pb-3 border-b border-slate-100 dark:border-zinc-800 last:border-b-0 last:pb-0">
-                    <p className="text-xs font-medium text-slate-700 dark:text-zinc-300 truncate">{c.name}</p>
+              const show = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!cEnd;
+              const rowBgColor = idx % 2 === 0
+                ? (isDark ? "#18181b" : "#ffffff")
+                : (isDark ? "#27272a" : "#f8fafc");
+              return (
+                <div
+                  key={c.id}
+                  className="h-11 px-2 flex items-center border-t border-slate-100 dark:border-zinc-800"
+                  style={{ backgroundColor: rowBgColor }}
+                >
+                  {show ? (
                     <MiniGrassGrid
                       contractStart={c.contractStart}
                       contractEnd={cEnd!}
                       dailyLog={c.dailyLog}
                     />
-                  </div>
-                );
-              })
-            )}
+                  ) : (
+                    <span className="text-xs text-slate-300 dark:text-zinc-600">-</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
         </div>
