@@ -269,10 +269,12 @@ function MiniGrassGrid({
   contractStart,
   contractEnd,
   dailyLog,
+  onToggle,
 }: {
   contractStart: string;
   contractEnd:   string;
   dailyLog:      Record<string, DayStatus>;
+  onToggle?:     (date: string) => void;
 }) {
   const today = todayKey();
 
@@ -356,12 +358,20 @@ function MiniGrassGrid({
             : ds === "done"   ? "bg-emerald-500"
             : ds === "failed" ? "bg-red-400"
             :                   "bg-slate-200 dark:bg-zinc-700";
+          const disabled = off || date > todayDate;
           return (
-            <div key={date} title={`${m}/${d}`} className={`w-5 h-5 rounded-sm flex items-center justify-center ${cls}`}>
+            <button
+              key={date}
+              type="button"
+              title={`${m}/${d}`}
+              disabled={disabled}
+              onClick={() => onToggle?.(date)}
+              className={`w-5 h-5 rounded-sm flex items-center justify-center transition-opacity ${cls} ${disabled ? "cursor-not-allowed" : "cursor-pointer hover:opacity-75"}`}
+            >
               {ds === "done" && (
                 <span className="text-[8px] font-bold text-white leading-none">{cumMap[date]}</span>
               )}
-            </div>
+            </button>
           );
         })}
         <button
@@ -1399,6 +1409,7 @@ export default function ClientManager() {
                       contractStart={c.contractStart}
                       contractEnd={cEnd!}
                       dailyLog={c.dailyLog}
+                      onToggle={(date) => toggleDailyLog(c.id, date)}
                     />
                   ) : (
                     <span className="text-xs text-slate-300 dark:text-zinc-600">-</span>
