@@ -67,6 +67,7 @@ interface FormState {
 /* ── 상수 ── */
 const RESET_DATE_KEY = "worky_clients_reset_date";
 const VIEW_MODE_KEY  = "worky_clients_view";
+const GRASS_PANEL_KEY = "worky_grass_panel";
 
 type ViewMode = "grid" | "list";
 
@@ -758,6 +759,8 @@ export default function ClientManager() {
       }
       const savedView = localStorage.getItem(VIEW_MODE_KEY);
       if (savedView === "grid" || savedView === "list") setViewMode(savedView);
+      const savedGrassPanel = localStorage.getItem(GRASS_PANEL_KEY);
+      if (savedGrassPanel === "true") setShowGrassPanel(true);
       setHydrated(true);
     });
   }, []);
@@ -1026,7 +1029,10 @@ export default function ClientManager() {
           </div>
           {viewMode === "list" && (
             <button
-              onClick={() => setShowGrassPanel((v) => !v)}
+              onClick={() => {
+                localStorage.setItem(GRASS_PANEL_KEY, String(!showGrassPanel));
+                setShowGrassPanel((v) => !v);
+              }}
               aria-label="진행현황 패널"
               className={[
                 "p-1.5 rounded-xl border transition-colors",
@@ -1265,7 +1271,7 @@ export default function ClientManager() {
 
       {/* 목록형 편집 모드 버튼 바 */}
       {viewMode === "list" && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           {listEditMode === "none" ? (
             <button
               onClick={() => setListEditMode("edit")}
@@ -1423,7 +1429,7 @@ export default function ClientManager() {
                         return el && el.scrollWidth > el.offsetWidth;
                       })() && (
                         <div className={[
-                          "absolute left-0 bottom-full mb-0.5 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                          "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
                           isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
                         ].join(" ")}>
                           {c.name}
@@ -1505,7 +1511,7 @@ export default function ClientManager() {
           <div className="w-[200px] h-full rounded-2xl overflow-hidden border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
             {/* thead 높이에 맞춘 헤더 */}
             <div
-              className="h-9 px-2 flex items-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider"
+              className="h-9 px-2 flex items-center justify-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider"
               style={{ backgroundColor: isDark ? "#27272a" : "#f8fafc" }}
             >
               진행 현황
