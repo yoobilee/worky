@@ -11,7 +11,7 @@ import {
   IconMessage, IconChevronDown, IconChevronUp,
   IconChevronLeft, IconChevronRight,
   IconCircleCheck, IconCircleX, IconClock, IconPlayerPlay,
-  IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight, IconCheck,
+  IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight, IconCheck, IconSearch,
 } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -683,6 +683,7 @@ export default function ClientManager() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [hoveredNameId,     setHoveredNameId]     = useState<string | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+  const [searchQuery,      setSearchQuery]        = useState("");
   const [sortDropdownOpen, setSortDropdownOpen]   = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -949,6 +950,17 @@ export default function ClientManager() {
     }
     return a.name.localeCompare(b.name, "ko");
   });
+
+  const filtered = (() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((c) => {
+      const fields = [
+        c.name, c.contact, c.phone, c.tags.join(" "), c.memo, c.reportTone, c.link,
+      ];
+      return fields.some((f) => (f ?? "").toLowerCase().includes(q));
+    });
+  })();
 
   const total       = clients.length;
   const cComplete   = clients.filter((c) => c.status === "complete").length;
@@ -1320,6 +1332,27 @@ export default function ClientManager() {
         </div>
       </div>
 
+      {/* 검색창 */}
+      <div className="relative">
+        <IconSearch className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="거래처명, 담당자, 연락처, 태그 등 검색..."
+          className="w-full pl-9 pr-9 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            aria-label="검색어 지우기"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
+          >
+            <IconX className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       {/* 목록형 편집 모드 버튼 바 */}
       {viewMode === "list" && (
         <div className="flex items-center justify-end gap-2">
@@ -1372,11 +1405,17 @@ export default function ClientManager() {
       )}
 
       {/* 거래처 목록 */}
-      {sorted.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-slate-300 dark:text-zinc-600">
           <IconBuilding className="w-12 h-12 mb-3" />
-          <p className="text-sm font-medium text-slate-400 dark:text-zinc-500">등록된 거래처가 없습니다</p>
-          <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">위 버튼을 눌러 거래처를 추가하세요</p>
+          {clients.length === 0 ? (
+            <>
+              <p className="text-sm font-medium text-slate-400 dark:text-zinc-500">등록된 거래처가 없습니다</p>
+              <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">위 버튼을 눌러 거래처를 추가하세요</p>
+            </>
+          ) : (
+            <p className="text-sm font-medium text-slate-400 dark:text-zinc-500">검색 결과가 없습니다</p>
+          )}
         </div>
       ) : viewMode === "list" ? (
         <div className="flex items-stretch gap-3">
@@ -1427,7 +1466,7 @@ export default function ClientManager() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((c, idx) => {
+              {filtered.map((c, idx) => {
                 const cfg         = STATUS_CONFIG[c.status];
                 const contractEnd = getContractEnd(c);
                 const dday        = contractEnd ? getDday(contractEnd) : null;
@@ -1567,7 +1606,7 @@ export default function ClientManager() {
             >
               진행 현황
             </div>
-            {sorted.map((c, idx) => {
+            {filtered.map((c, idx) => {
               const cEnd = getContractEnd(c);
               const show = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!cEnd;
               const rowBgColor = getRowBg(idx, hoveredRowId === c.id);
@@ -1597,7 +1636,7 @@ export default function ClientManager() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {sorted.map((c) => {
+          {filtered.map((c) => {
             const cfg         = STATUS_CONFIG[c.status];
             const contractEnd = getContractEnd(c);
             const dday        = contractEnd ? getDday(contractEnd) : null;
