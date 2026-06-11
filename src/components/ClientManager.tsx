@@ -24,7 +24,7 @@ import {
 /* ── 타입 ── */
 type ReportStatus = "pending" | "inprogress" | "complete" | "stopped";
 type DayStatus    = "done" | "failed";
-type SortOrder    = "inprogress" | "pending" | "expiry" | "name";
+type SortOrder    = "status" | "expiry" | "contractStart_asc" | "contractStart_desc" | "name_asc" | "name_desc" | "contact_asc" | "contact_desc";
 
 interface HistoryEntry {
   date:   string;
@@ -667,7 +667,7 @@ export default function ClientManager() {
   const [clients,           setClients]           = useState<Client[]>([]);
   const [hydrated,          setHydrated]          = useState(false);
   const [userId,            setUserId]            = useState<string | null>(null);
-  const [sortOrder,         setSortOrder]         = useState<SortOrder>("inprogress");
+  const [sortOrder,         setSortOrder]         = useState<SortOrder>("status");
   const [showForm,          setShowForm]          = useState(false);
   const [editingId,         setEditingId]         = useState<string | null>(null);
   const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
@@ -907,19 +907,33 @@ export default function ClientManager() {
   };
 
   const sorted = [...clients].sort((a, b) => {
-    if (sortOrder === "inprogress") {
+    if (sortOrder === "status") {
       const order: Record<ReportStatus, number> = { inprogress: 0, pending: 1, stopped: 2, complete: 3 };
       if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
-    }
-    if (sortOrder === "pending") {
-      const order: Record<ReportStatus, number> = { pending: 0, inprogress: 1, stopped: 2, complete: 3 };
-      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+      return a.name.localeCompare(b.name, "ko");
     }
     if (sortOrder === "expiry") {
       const ea = getContractEnd(a), eb = getContractEnd(b);
       if (!ea && !eb) return a.name.localeCompare(b.name, "ko");
       if (!ea) return 1; if (!eb) return -1;
       if (ea !== eb) return ea.localeCompare(eb);
+      return a.name.localeCompare(b.name, "ko");
+    }
+    if (sortOrder === "contractStart_asc" || sortOrder === "contractStart_desc") {
+      const sa = a.contractStart, sb = b.contractStart;
+      if (!sa && !sb) return a.name.localeCompare(b.name, "ko");
+      if (!sa) return 1; if (!sb) return -1;
+      if (sa !== sb) return sortOrder === "contractStart_asc" ? sa.localeCompare(sb) : sb.localeCompare(sa);
+      return a.name.localeCompare(b.name, "ko");
+    }
+    if (sortOrder === "name_asc") return a.name.localeCompare(b.name, "ko");
+    if (sortOrder === "name_desc") return b.name.localeCompare(a.name, "ko");
+    if (sortOrder === "contact_asc" || sortOrder === "contact_desc") {
+      const ca = a.contact, cb = b.contact;
+      if (!ca && !cb) return a.name.localeCompare(b.name, "ko");
+      if (!ca) return 1; if (!cb) return -1;
+      if (ca !== cb) return sortOrder === "contact_asc" ? ca.localeCompare(cb, "ko") : cb.localeCompare(ca, "ko");
+      return a.name.localeCompare(b.name, "ko");
     }
     return a.name.localeCompare(b.name, "ko");
   });
@@ -938,12 +952,15 @@ export default function ClientManager() {
   if (!hydrated) return null;
 
   const SORT_LABELS: Record<SortOrder, string> = {
-    inprogress: "진행 중 우선",
-    pending:    "대기 중 우선",
-    expiry:     "만료 임박순",
-    name:       "거래처명순",
+    status:             "상태순",
+    expiry:             "만료 임박순",
+    contractStart_asc:  "계약 시작일 ↑",
+    contractStart_desc: "계약 시작일 ↓",
+    name_asc:           "거래처명 ㄱ→ㅎ",
+    name_desc:          "거래처명 ㅎ→ㄱ",
+    contact_asc:        "담당자 ㄱ→ㅎ",
+    contact_desc:       "담당자 ㅎ→ㄱ",
   };
-  const SORT_CYCLE: SortOrder[] = ["inprogress", "pending", "expiry", "name"];
 
   const confirmDeleteName = clients.find((c) => c.id === confirmDeleteId)?.name ?? "";
 
@@ -1044,12 +1061,18 @@ export default function ClientManager() {
               <IconLayoutSidebarRight className="w-4 h-4" />
             </button>
           )}
-          <button
-            onClick={() => setSortOrder((s) => SORT_CYCLE[(SORT_CYCLE.indexOf(s)+1)%SORT_CYCLE.length])}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-          >
-            <IconArrowsSort className="w-3.5 h-3.5" />{SORT_LABELS[sortOrder]}
-          </button>
+          <div className="relative flex items-center">
+            <IconArrowsSort className="w-3.5 h-3.5 absolute left-2.5 pointer-events-none text-slate-500 dark:text-zinc-400" />
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+              className="appearance-none pl-7 pr-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 bg-white dark:bg-zinc-900 transition cursor-pointer"
+            >
+              {(Object.keys(SORT_LABELS) as SortOrder[]).map((key) => (
+                <option key={key} value={key}>{SORT_LABELS[key]}</option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
