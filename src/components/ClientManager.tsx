@@ -161,6 +161,11 @@ function formatDate(s: string): string {
   return `${y}년 ${m}월 ${d}일`;
 }
 
+const fmtShort = (s: string) => {
+  const [y, m, d] = s.split("-");
+  return `'${y.slice(2)}.${m}.${d}`;
+};
+
 // 구형 데이터 마이그레이션
 function normalize(raw: Record<string, unknown>): Client {
   // 구형 status 매핑
@@ -1402,7 +1407,7 @@ export default function ClientManager() {
                         </button>
                       ) : null}
                     </td>
-                    <td className="px-4 h-[52px] font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap">{c.name}</td>
+                    <td className="px-4 h-[52px] font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap"><span className="max-w-[120px] block truncate" title={c.name}>{c.name}</span></td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
                     <td className="px-4 h-[52px]">
@@ -1437,7 +1442,7 @@ export default function ClientManager() {
                         </div>
                       ) : "-"}
                     </td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? formatDate(c.contractStart) : "-"}</td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? fmtShort(c.contractStart) : "-"}</td>
                     <td className="px-4 h-[52px] whitespace-nowrap">
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
                     </td>
