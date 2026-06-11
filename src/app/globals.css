@@ -79,3 +79,12 @@ body {
     background: #4b5563;
   }
 }
+
+/* 알림 벨 흔들림 애니메이션 */
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-15deg); }
+  60% { transform: rotate(10deg); }
+  80% { transform: rotate(-10deg); }
+}

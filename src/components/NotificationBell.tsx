@@ -107,11 +107,14 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
       <button
         onClick={() => setOpen((prev) => !prev)}
         aria-label="알림"
-        className="relative p-2 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+        className="group relative p-2 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
       >
-        <IconBell className="w-5 h-5" />
+        <IconBell className="w-5 h-5 group-hover:animate-[bell-ring_0.5s_ease-in-out]" />
         {unreadCount > 0 && (
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-900" />
+          <span className="absolute top-1 right-1 flex w-2 h-2">
+            <span className="absolute inline-flex w-full h-full rounded-full bg-red-500 opacity-75 animate-ping" />
+            <span className="relative inline-flex w-2 h-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-900" />
+          </span>
         )}
       </button>
 
