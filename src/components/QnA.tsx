@@ -20,6 +20,35 @@ const WELCOME_MESSAGE: Message = {
   content: "안녕하세요! 저는 Worky예요.\n업무 관련 궁금한 점이 있으시면 뭐든지 물어보세요. 이메일 작성, 보고서 형식, 사내 커뮤니케이션 등 신입사원으로서 어려운 부분을 함께 해결해드릴게요!",
 };
 
+const QUESTION_POOL = [
+  "KPI가 뭔가요?",
+  "상사에게 휴가 신청 메일 어떻게 써요?",
+  "회의록 작성법 알려줘",
+  "회의 내용을 요약하는 방법은?",
+  "이메일 초안 작성 도와줘",
+  "업무 우선순위는 어떻게 정하나요?",
+  "주간 보고서 작성 팁 알려줘",
+  "프로젝트 진행 상황 정리하는 법",
+  "거래처 미팅 준비 체크리스트",
+  "업무 인수인계 문서는 어떻게 작성하나요?",
+  "정중하게 거절하는 메시지 작성법",
+  "동료에게 피드백 전달하는 방법",
+  "클라이언트 불만에 어떻게 대응하나요?",
+  "팀원에게 칭찬 메시지 보내는 법",
+  "효과적인 시간 관리 팁 알려줘",
+  "집중력을 높이는 방법은?",
+  "번아웃 예방법 알려줘",
+  "효율적인 회의 진행법",
+  "자주 쓰는 엑셀 함수 추천해줘",
+  "발표 자료는 어떻게 구성하나요?",
+  "데이터 분석은 어떻게 시작하나요?",
+  "협업 툴 활용법 알려줘",
+];
+
+function getRandomSuggestions(pool: string[], count: number): string[] {
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+}
+
 function formatHistoryDate(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -86,6 +115,7 @@ export default function QnA() {
   const [histories, setHistories] = useState<QaHistory[]>([]);
   const [selectedHistory, setSelectedHistory] = useState<QaHistory | null>(null);
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState(() => getRandomSuggestions(QUESTION_POOL, 3));
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -180,6 +210,7 @@ export default function QnA() {
     setMessages([WELCOME_MESSAGE]);
     setCurrentHistoryId(null);
     setError("");
+    setSuggestions(getRandomSuggestions(QUESTION_POOL, 3));
   };
 
   return (
@@ -241,7 +272,7 @@ export default function QnA() {
 
       {/* 추천 질문 */}
       <div className="flex gap-2 flex-wrap shrink-0">
-        {["KPI가 뭔가요?", "상사에게 휴가 신청 메일 어떻게 써요?", "회의록 작성법 알려줘"].map((q) => (
+        {suggestions.map((q) => (
           <button
             key={q}
             onClick={() => { setInput(q); inputRef.current?.focus(); }}
