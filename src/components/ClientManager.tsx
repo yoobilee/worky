@@ -1184,7 +1184,7 @@ export default function ClientManager() {
         </div>
       ) : viewMode === "list" ? (
         <div className="flex items-stretch gap-3">
-        <div className="flex-1 min-w-0 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+        <div className="flex-1 min-w-0 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-visible">
         <div
           ref={tableScrollRef}
           onMouseDown={handleScrollMouseDown}
@@ -1250,7 +1250,7 @@ export default function ClientManager() {
                     className="group border-t border-slate-100 dark:border-zinc-800 transition-colors"
                     style={{ backgroundColor: rowBgColor }}
                   >
-                    <td className="px-2 py-3 whitespace-nowrap">
+                    <td className="px-2 h-[52px] whitespace-nowrap">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                         <button onClick={() => startEdit(c)} onMouseDown={(e) => e.stopPropagation()} aria-label="수정"
                           className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] hover:bg-[#6C63FF]/10 transition-colors">
@@ -1262,10 +1262,10 @@ export default function ClientManager() {
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap">{c.name}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 h-[52px] font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap">{c.name}</td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
+                    <td className="px-4 h-[52px]">
                       {c.tags.length > 0 ? (
                         <div className="flex items-center gap-1">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{c.tags[0]}</span>
@@ -1297,11 +1297,11 @@ export default function ClientManager() {
                         </div>
                       ) : "-"}
                     </td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? formatDate(c.contractStart) : "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? formatDate(c.contractStart) : "-"}</td>
+                    <td className="px-4 h-[52px] whitespace-nowrap">
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap relative">
+                    <td className="px-4 h-[52px] whitespace-nowrap relative">
                       <div className="relative w-fit" ref={openStatusId === c.id ? statusDropdownRef : null}>
                         <button
                           onClick={() => setOpenStatusId((prev) => prev === c.id ? null : c.id)}
@@ -1364,7 +1364,7 @@ export default function ClientManager() {
               return (
                 <div
                   key={c.id}
-                  className="h-11 px-2 flex items-center justify-center border-t border-slate-100 dark:border-zinc-800"
+                  className="h-[52px] px-2 flex items-center justify-center border-t border-slate-100 dark:border-zinc-800"
                   style={{ backgroundColor: rowBgColor }}
                 >
                   {show ? (
