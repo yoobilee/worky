@@ -1186,16 +1186,19 @@ export default function ClientManager() {
         <div className="flex items-stretch gap-3">
         <div className="flex-1 min-w-0 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-visible">
         <div
-          ref={tableScrollRef}
           onMouseDown={handleScrollMouseDown}
           onMouseMove={handleScrollMouseMove}
           onMouseUp={handleScrollMouseUp}
           onMouseLeave={handleScrollMouseUp}
           onClickCapture={handleScrollClickCapture}
           className={[
-            "client-list-scroll overflow-x-auto",
+            "overflow-visible",
             isDragging ? "cursor-grabbing select-none" : "cursor-grab",
           ].join(" ")}
+        >
+        <div
+          ref={tableScrollRef}
+          className="client-list-scroll overflow-x-auto"
         >
           <style jsx>{`
             .client-list-scroll::-webkit-scrollbar {
@@ -1337,6 +1340,7 @@ export default function ClientManager() {
               })}
             </tbody>
           </table>
+        </div>
         </div>
         </div>
 
