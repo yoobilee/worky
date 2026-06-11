@@ -33,7 +33,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [unreadCount, setUnreadCount] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [overflowIds, setOverflowIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRefs = useRef<Map<string, HTMLParagraphElement>>(new Map());
 
   const fetchData = async () => {
     const list = await getAnnouncements();
@@ -70,9 +72,22 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleItemClick = async (announcementId: string) => {
-    setExpandedId((prev) => (prev === announcementId ? null : announcementId));
+  useEffect(() => {
+    if (!open) return;
+    const overflowing = new Set<string>();
+    contentRefs.current.forEach((el, id) => {
+      if (el.scrollHeight > el.clientHeight) {
+        overflowing.add(id);
+      }
+    });
+    setOverflowIds(overflowing);
+  }, [open, announcements]);
 
+  const handleItemClick = async (announcementId: string) => {
+    const willExpand = expandedId !== announcementId;
+    setExpandedId(willExpand ? announcementId : null);
+
+    if (!willExpand) return;
     if (!userId || readIds.has(announcementId)) return;
     setReadIds((prev) => new Set(prev).add(announcementId));
     setUnreadCount((prev) => Math.max(0, prev - 1));
@@ -133,6 +148,10 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 truncate">{a.title}</p>
                       <p
+                        ref={(el) => {
+                          if (el) contentRefs.current.set(a.id, el);
+                          else contentRefs.current.delete(a.id);
+                        }}
                         className={`text-xs text-slate-500 dark:text-zinc-400 mt-0.5 transition-all duration-300 ease-in-out ${
                           isExpanded ? "line-clamp-none" : "line-clamp-2"
                         }`}
@@ -141,9 +160,11 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                       </p>
                       <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">{formatDate(a.created_at)}</p>
                     </div>
-                    <span className="shrink-0 mt-1 text-slate-400 dark:text-zinc-500">
-                      {isExpanded ? <IconChevronUp className="w-4 h-4" /> : <IconChevronDown className="w-4 h-4" />}
-                    </span>
+                    {overflowIds.has(a.id) && (
+                      <span className="shrink-0 mt-1 text-slate-400 dark:text-zinc-500">
+                        {isExpanded ? <IconChevronUp className="w-4 h-4" /> : <IconChevronDown className="w-4 h-4" />}
+                      </span>
+                    )}
                   </button>
                 );
               })
