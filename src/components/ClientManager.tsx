@@ -662,6 +662,7 @@ export default function ClientManager() {
   const [viewMode,          setViewMode]          = useState<ViewMode>("grid");
   const [showGrassPanel,    setShowGrassPanel]    = useState(false);
   const [hoveredTagId,      setHoveredTagId]      = useState<string | null>(null);
+  const [tagTooltipAlign,   setTagTooltipAlign]   = useState<"left" | "right">("left");
   const [hoveredRowId,      setHoveredRowId]      = useState<string | null>(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -669,13 +670,14 @@ export default function ClientManager() {
 
   /* 가로 스크롤 드래그 */
   const tableScrollRef = useRef<HTMLDivElement>(null);
-  const dragStateRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
+  const dragStateRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, hasMoved: false });
   const [isDragging, setIsDragging] = useState(false);
 
   const handleScrollMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = tableScrollRef.current;
     if (!el) return;
     dragStateRef.current.isDown = true;
+    dragStateRef.current.hasMoved = false;
     dragStateRef.current.startX = e.pageX - el.offsetLeft;
     dragStateRef.current.scrollLeft = el.scrollLeft;
     setIsDragging(true);
@@ -684,6 +686,7 @@ export default function ClientManager() {
     const el = tableScrollRef.current;
     if (!el || !dragStateRef.current.isDown) return;
     e.preventDefault();
+    dragStateRef.current.hasMoved = true;
     const x = e.pageX - el.offsetLeft;
     const walk = x - dragStateRef.current.startX;
     el.scrollLeft = dragStateRef.current.scrollLeft - walk;
@@ -691,6 +694,12 @@ export default function ClientManager() {
   const handleScrollMouseUp = () => {
     dragStateRef.current.isDown = false;
     setIsDragging(false);
+  };
+  const handleScrollClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragStateRef.current.hasMoved) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
   useEffect(() => {
@@ -1181,6 +1190,7 @@ export default function ClientManager() {
           onMouseMove={handleScrollMouseMove}
           onMouseUp={handleScrollMouseUp}
           onMouseLeave={handleScrollMouseUp}
+          onClickCapture={handleScrollClickCapture}
           className={[
             "client-list-scroll overflow-x-auto",
             isDragging ? "cursor-grabbing select-none" : "cursor-grab",
@@ -1241,11 +1251,11 @@ export default function ClientManager() {
                   >
                     <td className="px-2 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        <button onClick={() => startEdit(c)} aria-label="수정"
+                        <button onClick={() => startEdit(c)} onMouseDown={(e) => e.stopPropagation()} aria-label="수정"
                           className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] hover:bg-[#6C63FF]/10 transition-colors">
                           <IconPencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleDelete(c.id)} aria-label="삭제"
+                        <button onClick={() => handleDelete(c.id)} onMouseDown={(e) => e.stopPropagation()} aria-label="삭제"
                           className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
                           <IconTrash className="w-3.5 h-3.5" />
                         </button>
@@ -1261,14 +1271,21 @@ export default function ClientManager() {
                           {c.tags.length > 1 && (
                             <div
                               className="relative"
-                              onMouseEnter={() => setHoveredTagId(c.id)}
+                              onMouseEnter={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setTagTooltipAlign(rect.right + 200 > window.innerWidth ? "right" : "left");
+                                setHoveredTagId(c.id);
+                              }}
                               onMouseLeave={() => setHoveredTagId(null)}
                             >
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 whitespace-nowrap cursor-default">
                                 +{c.tags.length - 1}
                               </span>
                               {hoveredTagId === c.id && (
-                                <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-slate-200 dark:border-zinc-800 p-2 flex flex-wrap gap-1 w-max max-w-[200px]">
+                                <div className={[
+                                  "absolute top-0 z-50 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#6C63FF]/20 p-2 flex flex-wrap gap-1 w-max max-w-[200px]",
+                                  tagTooltipAlign === "left" ? "left-full ml-1" : "right-full mr-1",
+                                ].join(" ")}>
                                   {c.tags.slice(1).map((t) => (
                                     <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{t}</span>
                                   ))}
@@ -1306,9 +1323,14 @@ export default function ClientManager() {
             showGrassPanel ? "w-[200px] opacity-100" : "w-0 opacity-0",
           ].join(" ")}
         >
-          <div className="w-[200px] h-full overflow-y-auto rounded-2xl border-l-4 border-l-[#6C63FF]/40 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-            {/* thead 높이에 맞춘 spacer */}
-            <div className="h-9" />
+          <div className="w-[200px] h-full rounded-2xl overflow-hidden border-l-4 border-l-[#6C63FF]/40 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+            {/* thead 높이에 맞춘 헤더 */}
+            <div
+              className="h-9 px-2 flex items-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider"
+              style={{ backgroundColor: isDark ? "#27272a" : "#f8fafc" }}
+            >
+              진행 현황
+            </div>
             {sorted.map((c, idx) => {
               const cEnd = getContractEnd(c);
               const show = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!cEnd;
@@ -1318,7 +1340,7 @@ export default function ClientManager() {
               return (
                 <div
                   key={c.id}
-                  className="h-11 px-2 flex items-center border-t border-slate-100 dark:border-zinc-800"
+                  className="h-11 px-2 flex items-center justify-center border-t border-slate-100 dark:border-zinc-800"
                   style={{ backgroundColor: rowBgColor }}
                 >
                   {show ? (
