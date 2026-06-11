@@ -271,12 +271,12 @@ export default function QnA() {
       </div>
 
       {/* 추천 질문 */}
-      <div className="flex gap-2 flex-wrap shrink-0">
+      <div className="flex gap-2 flex-wrap shrink-0 mb-3">
         {suggestions.map((q) => (
           <button
             key={q}
             onClick={() => { setInput(q); inputRef.current?.focus(); }}
-            className="px-3 py-1.5 rounded-full text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 hover:text-[#6C63FF] transition-all"
+            className="px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:border-[#6C63FF]/40 hover:text-[#6C63FF] transition-all"
           >
             {q}
           </button>
