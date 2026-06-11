@@ -1,0 +1,37 @@
+name: Patch Announcement
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse CHANGELOG and create announcement
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # 태그명 추출 (예: v1.1.2)
+          TAG=${GITHUB_REF#refs/tags/}
+
+          # CHANGELOG.md에서 해당 버전 내용 파싱
+          # ## [v1.1.2] 섹션부터 다음 ## 섹션 전까지 추출
+          CONTENT=$(awk "/^## \[${TAG}\]/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md | sed '/^$/d' | head -20 | tr '\n' ' ' | sed 's/### //g' | sed 's/\*\*//g' | sed 's/- /• /g')
+
+          TITLE="${TAG} 업데이트"
+
+          # Supabase에 insert
+          curl -s -X POST "${SUPABASE_URL}/rest/v1/announcements" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"title\": \"${TITLE}\", \"content\": \"${CONTENT}\", \"type\": \"patch\", \"is_active\": true}"
+
+          echo "Announcement created for ${TAG}"
