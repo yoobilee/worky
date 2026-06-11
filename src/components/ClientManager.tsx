@@ -672,6 +672,9 @@ export default function ClientManager() {
   const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null);
   const [viewMode,          setViewMode]          = useState<ViewMode>("grid");
   const [showGrassPanel,    setShowGrassPanel]    = useState(false);
+  const [listEditMode,      setListEditMode]      = useState<"none" | "edit" | "delete">("none");
+  const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [hoveredTagId,      setHoveredTagId]      = useState<string | null>(null);
   const [tagTooltipAlign,   setTagTooltipAlign]   = useState<"left" | "right">("left");
   const [hoveredRowId,      setHoveredRowId]      = useState<string | null>(null);
@@ -755,6 +758,26 @@ export default function ClientManager() {
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem(VIEW_MODE_KEY, mode);
+  };
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [listEditMode]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const doBulkDelete = async () => {
+    const ids = [...selectedIds];
+    await Promise.all(ids.map((id) => deleteDbClient(id)));
+    setClients((prev) => prev.filter((c) => !selectedIds.has(c.id)));
+    setSelectedIds(new Set());
+    setConfirmBulkDelete(false);
   };
 
   useEffect(() => {
@@ -922,6 +945,14 @@ export default function ClientManager() {
           message={`'${confirmDeleteName}'을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
           onConfirm={doDelete}
           onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
+
+      {confirmBulkDelete && (
+        <ConfirmModal
+          message={`${selectedIds.size}개 거래처를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+          onConfirm={doBulkDelete}
+          onCancel={() => setConfirmBulkDelete(false)}
         />
       )}
 
@@ -1225,6 +1256,47 @@ export default function ClientManager() {
         </div>
       </div>
 
+      {/* 목록형 수정/삭제 모드 버튼 바 */}
+      {viewMode === "list" && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setListEditMode((m) => m === "edit" ? "none" : "edit")}
+              className={[
+                "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
+                listEditMode === "edit"
+                  ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40"
+                  : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+              ].join(" ")}
+            >
+              수정
+            </button>
+            <button
+              onClick={() => setListEditMode((m) => m === "delete" ? "none" : "delete")}
+              className={[
+                "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
+                listEditMode === "delete"
+                  ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40"
+                  : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+              ].join(" ")}
+            >
+              삭제
+            </button>
+          </div>
+          {listEditMode === "delete" && selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 dark:text-zinc-400">{selectedIds.size}개 선택됨</span>
+              <button
+                onClick={() => setConfirmBulkDelete(true)}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium border border-red-200 dark:border-red-900 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              >
+                삭제
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 거래처 목록 */}
       {sorted.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-slate-300 dark:text-zinc-600">
@@ -1287,7 +1359,10 @@ export default function ClientManager() {
                 const dday        = contractEnd ? getDday(contractEnd) : null;
                 const ddayFmt     = dday != null ? formatDday(dday) : null;
                 const isHovered  = hoveredRowId === c.id;
-                const rowBgColor = getRowBg(idx, isHovered);
+                const isSelected = selectedIds.has(c.id);
+                const rowBgColor = listEditMode === "delete" && isSelected
+                  ? (isDark ? "rgba(127,29,29,0.2)" : "#fef2f2")
+                  : getRowBg(idx, isHovered);
 
                 return (
                   <tr
@@ -1298,16 +1373,29 @@ export default function ClientManager() {
                     style={{ backgroundColor: rowBgColor }}
                   >
                     <td className="px-2 h-[52px] whitespace-nowrap">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      {listEditMode === "edit" ? (
                         <button onClick={() => startEdit(c)} onMouseDown={(e) => e.stopPropagation()} aria-label="수정"
                           className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] hover:bg-[#6C63FF]/10 transition-colors">
                           <IconPencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleDelete(c.id)} onMouseDown={(e) => e.stopPropagation()} aria-label="삭제"
-                          className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
-                          <IconTrash className="w-3.5 h-3.5" />
+                      ) : listEditMode === "delete" ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleSelected(c.id)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          aria-label="선택"
+                          className={[
+                            "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
+                            isSelected ? "bg-red-500 border-red-500" : "border-slate-300 dark:border-zinc-600",
+                          ].join(" ")}
+                        >
+                          {isSelected && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                            </svg>
+                          )}
                         </button>
-                      </div>
+                      ) : null}
                     </td>
                     <td className="px-4 h-[52px] font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap">{c.name}</td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
