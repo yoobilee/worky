@@ -677,6 +677,12 @@ export default function ClientManager() {
   const [hoveredRowId,      setHoveredRowId]      = useState<string | null>(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
+
+  const getRowBg = (idx: number, isHovered: boolean) => isHovered
+    ? "rgba(108,99,255,0.05)"
+    : idx % 2 === 0
+      ? (isDark ? "#18181b" : "#ffffff")
+      : (isDark ? "#27272a" : "#f8fafc");
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   /* 가로 스크롤 드래그 */
@@ -1228,7 +1234,7 @@ export default function ClientManager() {
         </div>
       ) : viewMode === "list" ? (
         <div className="flex items-stretch gap-3">
-        <div className="flex-1 min-w-0 rounded-2xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-visible">
+        <div className="flex-1 min-w-0 rounded-2xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
         <div
           onMouseDown={handleScrollMouseDown}
           onMouseMove={handleScrollMouseMove}
@@ -1243,26 +1249,22 @@ export default function ClientManager() {
         <div
           ref={tableScrollRef}
           onWheel={handleScrollWheel}
-          style={{ overflowX: "scroll", overflowY: "visible" }}
+          style={{ overflowX: "auto", overflowY: "visible", paddingBottom: "4px" }}
           className="client-list-scroll"
         >
           <style jsx>{`
             .client-list-scroll::-webkit-scrollbar {
-              height: 6px;
+              height: 4px;
             }
             .client-list-scroll::-webkit-scrollbar-track {
-              background-color: #f1f5f9;
-              border-radius: 9999px;
-            }
-            :global(.dark) .client-list-scroll::-webkit-scrollbar-track {
-              background-color: #27272a;
+              background-color: transparent;
             }
             .client-list-scroll::-webkit-scrollbar-thumb {
-              background-color: rgba(108, 99, 255, 0.4);
+              background-color: rgba(108, 99, 255, 0.25);
               border-radius: 9999px;
             }
             .client-list-scroll::-webkit-scrollbar-thumb:hover {
-              background-color: rgba(108, 99, 255, 0.7);
+              background-color: rgba(108, 99, 255, 0.5);
             }
           `}</style>
           <table className="w-full text-sm border-collapse">
@@ -1285,11 +1287,7 @@ export default function ClientManager() {
                 const dday        = contractEnd ? getDday(contractEnd) : null;
                 const ddayFmt     = dday != null ? formatDday(dday) : null;
                 const isHovered  = hoveredRowId === c.id;
-                const rowBgColor = isHovered
-                  ? "rgba(108,99,255,0.05)"
-                  : idx % 2 === 0
-                    ? (isDark ? "#18181b" : "#ffffff")
-                    : (isDark ? "#27272a" : "#f8fafc");
+                const rowBgColor = getRowBg(idx, isHovered);
 
                 return (
                   <tr
@@ -1395,12 +1393,12 @@ export default function ClientManager() {
             {sorted.map((c, idx) => {
               const cEnd = getContractEnd(c);
               const show = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!cEnd;
-              const rowBgColor = idx % 2 === 0
-                ? (isDark ? "#18181b" : "#ffffff")
-                : (isDark ? "#27272a" : "#f8fafc");
+              const rowBgColor = getRowBg(idx, hoveredRowId === c.id);
               return (
                 <div
                   key={c.id}
+                  onMouseEnter={() => setHoveredRowId(c.id)}
+                  onMouseLeave={() => setHoveredRowId(null)}
                   className="h-[52px] px-2 flex items-center justify-center border-t border-slate-100 dark:border-zinc-800"
                   style={{ backgroundColor: rowBgColor }}
                 >
