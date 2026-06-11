@@ -13,6 +13,7 @@ import {
   IconCircleCheck, IconCircleX, IconClock, IconPlayerPlay,
   IconLayoutGrid, IconLayoutList,
 } from "@tabler/icons-react";
+import { useTheme } from "./ThemeProvider";
 import { createClient } from "@/lib/supabase/client";
 import {
   getClients as getDbClients, addClient as addDbClient,
@@ -300,6 +301,16 @@ function MiniGrassGrid({
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const todayDate = todayKey();
 
+  const allDates: string[] = [];
+  {
+    const cur = new Date(contractStart + "T00:00:00");
+    const end = new Date(contractEnd   + "T00:00:00");
+    while (cur <= end) { allDates.push(toDateKey(cur)); cur.setDate(cur.getDate() + 1); }
+  }
+  let cumDone = 0;
+  const cumMap: Record<string, number> = {};
+  for (const d of allDates) { if (dailyLog[d] === "done") cumDone++; cumMap[d] = cumDone; }
+
   return (
     <div className="flex flex-col gap-0.5">
       {/* 날짜 레이블 행 */}
@@ -345,7 +356,13 @@ function MiniGrassGrid({
             : ds === "done"   ? "bg-emerald-500"
             : ds === "failed" ? "bg-red-400"
             :                   "bg-slate-200 dark:bg-zinc-700";
-          return <div key={date} title={`${m}/${d}`} className={`w-5 h-5 rounded-sm ${cls}`} />;
+          return (
+            <div key={date} title={`${m}/${d}`} className={`w-5 h-5 rounded-sm flex items-center justify-center ${cls}`}>
+              {ds === "done" && (
+                <span className="text-[8px] font-bold text-white leading-none">{cumMap[date]}</span>
+              )}
+            </div>
+          );
         })}
         <button
           type="button"
@@ -643,7 +660,36 @@ export default function ClientManager() {
   const [openStatusId,      setOpenStatusId]      = useState<string | null>(null);
   const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null);
   const [viewMode,          setViewMode]          = useState<ViewMode>("grid");
+  const [hoveredRowId,      setHoveredRowId]      = useState<string | null>(null);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+
+  /* 가로 스크롤 드래그 */
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const dragStateRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleScrollMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = tableScrollRef.current;
+    if (!el) return;
+    dragStateRef.current.isDown = true;
+    dragStateRef.current.startX = e.pageX - el.offsetLeft;
+    dragStateRef.current.scrollLeft = el.scrollLeft;
+    setIsDragging(true);
+  };
+  const handleScrollMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = tableScrollRef.current;
+    if (!el || !dragStateRef.current.isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = x - dragStateRef.current.startX;
+    el.scrollLeft = dragStateRef.current.scrollLeft - walk;
+  };
+  const handleScrollMouseUp = () => {
+    dragStateRef.current.isDown = false;
+    setIsDragging(false);
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -1111,7 +1157,36 @@ export default function ClientManager() {
           <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">위 버튼을 눌러 거래처를 추가하세요</p>
         </div>
       ) : viewMode === "list" ? (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+        <div
+          ref={tableScrollRef}
+          onMouseDown={handleScrollMouseDown}
+          onMouseMove={handleScrollMouseMove}
+          onMouseUp={handleScrollMouseUp}
+          onMouseLeave={handleScrollMouseUp}
+          className={[
+            "client-list-scroll overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm",
+            isDragging ? "cursor-grabbing select-none" : "cursor-grab",
+          ].join(" ")}
+        >
+          <style jsx>{`
+            .client-list-scroll::-webkit-scrollbar {
+              height: 6px;
+            }
+            .client-list-scroll::-webkit-scrollbar-track {
+              background-color: #f1f5f9;
+              border-radius: 9999px;
+            }
+            :global(.dark) .client-list-scroll::-webkit-scrollbar-track {
+              background-color: #27272a;
+            }
+            .client-list-scroll::-webkit-scrollbar-thumb {
+              background-color: rgba(108, 99, 255, 0.4);
+              border-radius: 9999px;
+            }
+            .client-list-scroll::-webkit-scrollbar-thumb:hover {
+              background-color: rgba(108, 99, 255, 0.7);
+            }
+          `}</style>
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="text-left text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
@@ -1123,7 +1198,10 @@ export default function ClientManager() {
                 <th className="px-4 py-3 whitespace-nowrap">계약 시작일</th>
                 <th className="px-4 py-3 whitespace-nowrap">D-day</th>
                 <th className="px-4 py-3 whitespace-nowrap">상태</th>
-                <th className="px-4 py-3 whitespace-nowrap sticky right-0 z-20 bg-slate-50 dark:bg-zinc-800 border-l border-slate-200 dark:border-zinc-700">진행 현황</th>
+                <th
+                  className="px-4 py-3 whitespace-nowrap sticky right-0 z-20 border-l border-slate-200 dark:border-zinc-700"
+                  style={{ backgroundColor: isDark ? "#27272a" : "#f8fafc" }}
+                >진행 현황</th>
               </tr>
             </thead>
             <tbody>
@@ -1137,8 +1215,20 @@ export default function ClientManager() {
                   ? "bg-white dark:bg-zinc-900"
                   : "bg-slate-50/60 dark:bg-zinc-800/30";
 
+                const isHovered  = hoveredRowId === c.id;
+                const stickyBg   = isHovered
+                  ? "rgba(108,99,255,0.05)"
+                  : idx % 2 === 0
+                    ? (isDark ? "#18181b" : "white")
+                    : (isDark ? "#27272a" : "#f8fafc");
+
                 return (
-                  <tr key={c.id} className={`${rowBg} group border-t border-slate-100 dark:border-zinc-800 hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition-colors`}>
+                  <tr
+                    key={c.id}
+                    onMouseEnter={() => setHoveredRowId(c.id)}
+                    onMouseLeave={() => setHoveredRowId(null)}
+                    className={`${rowBg} group border-t border-slate-100 dark:border-zinc-800 hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition-colors`}
+                  >
                     <td className="px-2 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                         <button onClick={() => startEdit(c)} aria-label="수정"
@@ -1175,11 +1265,10 @@ export default function ClientManager() {
                         {STATUS_ICONS[c.status]}{cfg.label}
                       </span>
                     </td>
-                    <td className={[
-                      "px-4 py-3 sticky right-0 z-10 border-l border-slate-200 dark:border-zinc-700",
-                      "group-hover:bg-[#6C63FF]/5 dark:group-hover:bg-[#6C63FF]/10",
-                      idx % 2 === 0 ? "bg-white dark:bg-zinc-900" : "bg-slate-50/60 dark:bg-zinc-800/30",
-                    ].join(" ")}>
+                    <td
+                      className="px-4 py-3 sticky right-0 z-10 border-l border-slate-200 dark:border-zinc-700"
+                      style={{ backgroundColor: stickyBg }}
+                    >
                       {showGrass ? (
                         <MiniGrassGrid
                           contractStart={c.contractStart}
