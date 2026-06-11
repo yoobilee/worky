@@ -1212,24 +1212,20 @@ export default function ClientManager() {
                 const dday        = contractEnd ? getDday(contractEnd) : null;
                 const ddayFmt     = dday != null ? formatDday(dday) : null;
                 const showGrass   = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!contractEnd;
-                const rowBg       = idx % 2 === 0
-                  ? "bg-white dark:bg-zinc-900"
-                  : "bg-slate-50/60 dark:bg-zinc-800/30";
-
                 const isHovered  = hoveredRowId === c.id;
-                const stickyBg   = isHovered
+                const rowBgColor = isHovered
                   ? "rgba(108,99,255,0.05)"
                   : idx % 2 === 0
                     ? (isDark ? "#18181b" : "#ffffff")
-                    : (isDark ? "rgba(39,39,42,0.3)" : "rgba(248,250,252,0.6)");
+                    : (isDark ? "#27272a" : "#f8fafc");
 
                 return (
                   <tr
                     key={c.id}
                     onMouseEnter={() => setHoveredRowId(c.id)}
                     onMouseLeave={() => setHoveredRowId(null)}
-                    className={`${rowBg} group border-t border-slate-100 dark:border-zinc-800 transition-colors`}
-                    style={isHovered ? { backgroundColor: "rgba(108,99,255,0.05)" } : undefined}
+                    className="group border-t border-slate-100 dark:border-zinc-800 transition-colors"
+                    style={{ backgroundColor: rowBgColor }}
                   >
                     <td className="px-2 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
@@ -1269,7 +1265,7 @@ export default function ClientManager() {
                     </td>
                     <td
                       className="px-4 py-3 sticky right-0 z-10 border-l border-slate-200 dark:border-zinc-700"
-                      style={{ backgroundColor: stickyBg }}
+                      style={{ backgroundColor: rowBgColor }}
                     >
                       {showGrass ? (
                         <MiniGrassGrid
