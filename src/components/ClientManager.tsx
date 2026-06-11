@@ -693,14 +693,20 @@ export default function ClientManager() {
   };
   const handleScrollMouseUp = () => {
     dragStateRef.current.isDown = false;
-    dragStateRef.current.hasMoved = false;
     setIsDragging(false);
   };
-  const handleScrollClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleScrollClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (dragStateRef.current.hasMoved) {
       e.preventDefault();
       e.stopPropagation();
     }
+    dragStateRef.current.hasMoved = false;
+  };
+  const handleScrollWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = tableScrollRef.current;
+    if (!el) return;
+    e.preventDefault();
+    el.scrollLeft += e.deltaY;
   };
 
   useEffect(() => {
@@ -1190,7 +1196,7 @@ export default function ClientManager() {
           onMouseMove={handleScrollMouseMove}
           onMouseUp={handleScrollMouseUp}
           onMouseLeave={handleScrollMouseUp}
-          onClickCapture={handleScrollClickCapture}
+          onClick={handleScrollClick}
           className={[
             "overflow-visible",
             isDragging ? "cursor-grabbing select-none" : "cursor-grab",
@@ -1198,7 +1204,9 @@ export default function ClientManager() {
         >
         <div
           ref={tableScrollRef}
-          className="client-list-scroll overflow-x-auto"
+          onWheel={handleScrollWheel}
+          style={{ overflowX: "scroll", overflowY: "visible" }}
+          className="client-list-scroll"
         >
           <style jsx>{`
             .client-list-scroll::-webkit-scrollbar {
