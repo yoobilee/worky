@@ -1349,7 +1349,7 @@ export default function ClientManager() {
                     "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
                     selectedIds.size === 1
                       ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 hover:bg-[#6C63FF]/20 active:bg-[#6C63FF]/30 dark:bg-[#6C63FF]/20 dark:text-[#a99dff] dark:border-[#6C63FF]/50"
-                      : "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 opacity-40 cursor-not-allowed dark:text-zinc-500 dark:border-zinc-700",
+                      : "bg-transparent text-slate-300 dark:text-zinc-600 border-slate-200 dark:border-zinc-700 opacity-100 cursor-not-allowed",
                   ].join(" ")}
                 >
                   수정
@@ -1361,7 +1361,7 @@ export default function ClientManager() {
                     "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
                     selectedIds.size > 0
                       ? "bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/50"
-                      : "bg-red-50 text-red-500 border-red-200 opacity-40 cursor-not-allowed dark:text-zinc-500 dark:border-zinc-700",
+                      : "bg-transparent text-slate-300 dark:text-zinc-600 border-slate-200 dark:border-zinc-700 opacity-100 cursor-not-allowed",
                   ].join(" ")}
                 >
                   {selectedIds.size > 0 ? `${selectedIds.size}개 삭제` : "삭제"}
