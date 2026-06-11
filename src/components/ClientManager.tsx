@@ -331,7 +331,7 @@ function MiniGrassGrid({
               key={date}
               className={[
                 "w-5 text-center text-[9px] leading-none",
-                isToday ? "text-[#6C63FF] font-bold" : "text-slate-400 dark:text-zinc-500",
+                isToday ? "text-[#6C63FF] dark:text-[#a99dff] font-bold" : "text-slate-400 dark:text-zinc-300",
               ].join(" ")}
             >
               {m}/{d}
@@ -347,7 +347,7 @@ function MiniGrassGrid({
           type="button"
           disabled={!canPrev}
           onClick={() => setWeekStart((w) => addDays(w, -7))}
-          className="w-4 h-4 p-0.5 shrink-0 text-slate-400 dark:text-zinc-500 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
+          className="w-4 h-4 p-0.5 shrink-0 text-slate-400 dark:text-zinc-300 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
         >
           <IconChevronLeft className="w-full h-full" />
         </button>
@@ -383,7 +383,7 @@ function MiniGrassGrid({
           type="button"
           disabled={!canNext}
           onClick={() => setWeekStart((w) => addDays(w, 7))}
-          className="w-4 h-4 p-0.5 shrink-0 text-slate-400 dark:text-zinc-500 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
+          className="w-4 h-4 p-0.5 shrink-0 text-slate-400 dark:text-zinc-300 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
         >
           <IconChevronRight className="w-full h-full" />
         </button>
@@ -465,18 +465,18 @@ function GrassGrid({
           type="button"
           disabled={!canPrev}
           onClick={() => setWeekStart((w) => addDays(w, -7))}
-          className="p-1 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-slate-400 dark:text-zinc-500"
+          className="p-1 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-slate-400 dark:text-zinc-300"
         >
           <IconChevronLeft className="w-3.5 h-3.5" />
         </button>
-        <span className="text-[10px] font-medium text-slate-400 dark:text-zinc-500">
+        <span className="text-[10px] font-medium text-slate-400 dark:text-zinc-300">
           {ws_m}/{ws_d} – {we_m}/{we_d}
         </span>
         <button
           type="button"
           disabled={!canNext}
           onClick={() => setWeekStart((w) => addDays(w, 7))}
-          className="p-1 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-slate-400 dark:text-zinc-500"
+          className="p-1 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-slate-400 dark:text-zinc-300"
         >
           <IconChevronRight className="w-3.5 h-3.5" />
         </button>
@@ -511,9 +511,9 @@ function GrassGrid({
 
           const labelCls = [
             "text-[9px] leading-none font-medium",
-            isToday ? "text-[#6C63FF] font-bold"
+            isToday ? "text-[#6C63FF] dark:text-[#a99dff] font-bold"
             : off   ? "text-slate-400 dark:text-zinc-600"
-            :         "text-slate-400 dark:text-zinc-500",
+            :         "text-slate-400 dark:text-zinc-300",
           ].join(" ");
 
           if (off) {
@@ -560,7 +560,7 @@ function GrassGrid({
         ].map(({ cls, label, count, showCount }) => (
           <div key={label} className="flex items-center gap-1">
             <div className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cls}`} />
-            <span className="text-[9px] text-slate-500 dark:text-zinc-400">{label}</span>
+            <span className="text-[9px] text-slate-500 dark:text-zinc-300">{label}</span>
             {showCount && <span className="text-[9px] font-semibold text-slate-700 dark:text-zinc-200">{count}건</span>}
           </div>
         ))}
@@ -1422,7 +1422,10 @@ export default function ClientManager() {
                         const el = nameRefs.current.get(c.id);
                         return el && el.scrollWidth > el.offsetWidth;
                       })() && (
-                        <div className="absolute left-0 top-full mt-1 z-50 bg-zinc-900 dark:bg-zinc-800 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none">
+                        <div className={[
+                          "absolute left-0 top-full mt-1 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                          isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
+                        ].join(" ")}>
                           {c.name}
                         </div>
                       )}
@@ -1432,7 +1435,7 @@ export default function ClientManager() {
                     <td className="px-4 h-[52px]">
                       {c.tags.length > 0 ? (
                         <div className="flex items-center gap-1">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{c.tags[0]}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 dark:bg-[#6C63FF]/25 text-[#6C63FF] dark:text-[#a99dff] whitespace-nowrap">{c.tags[0]}</span>
                           {c.tags.length > 1 && (
                             <div
                               className="relative"
@@ -1452,7 +1455,7 @@ export default function ClientManager() {
                                   tagTooltipAlign === "left" ? "left-full ml-1" : "right-full mr-1",
                                 ].join(" ")}>
                                   {c.tags.slice(1).map((t) => (
-                                    <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF] whitespace-nowrap">{t}</span>
+                                    <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 dark:bg-[#6C63FF]/25 text-[#6C63FF] dark:text-[#a99dff] whitespace-nowrap">{t}</span>
                                   ))}
                                 </div>
                               )}
@@ -1600,7 +1603,7 @@ export default function ClientManager() {
                 {c.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {c.tags.map((t) => (
-                      <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 text-[#6C63FF]">{t}</span>
+                      <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 dark:bg-[#6C63FF]/25 text-[#6C63FF] dark:text-[#a99dff]">{t}</span>
                     ))}
                   </div>
                 )}
