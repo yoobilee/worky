@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
+import NotificationBell from "./NotificationBell";
+import { createClient } from "@/lib/supabase/client";
 
 const routeMeta: Record<string, { title: string; desc: string; aiChip: boolean }> = {
   "/":         { title: "Home",         desc: "오늘의 업무 현황을 한눈에 확인하세요",                 aiChip: false },
@@ -28,6 +30,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState<"checking" | "connected" | "error">("checking");
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+  }, []);
 
   // 라우트 변경 시 모바일 사이드바 닫기
   useEffect(() => {
@@ -83,7 +93,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-bold text-base" style={{ color: "var(--primary)" }}>Worky</span>
+          <span className="font-bold text-base flex-1" style={{ color: "var(--primary)" }}>Worky</span>
+          <NotificationBell userId={userId} />
         </header>
 
         {/* Topbar */}
@@ -92,15 +103,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <h1 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-tight">{meta.title}</h1>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{meta.desc}</p>
           </div>
-          {meta.aiChip && (
-            <span
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white shrink-0"
-              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
-              AI 처리
-            </span>
-          )}
+          <div className="flex items-center gap-3 shrink-0">
+            {meta.aiChip && (
+              <span
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
+                AI 처리
+              </span>
+            )}
+            <NotificationBell userId={userId} />
+          </div>
         </div>
 
         <main className="flex-1 overflow-auto p-6 flex flex-col">
