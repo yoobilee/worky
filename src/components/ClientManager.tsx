@@ -1423,7 +1423,7 @@ export default function ClientManager() {
                         return el && el.scrollWidth > el.offsetWidth;
                       })() && (
                         <div className={[
-                          "absolute left-0 top-full mt-1 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                          "absolute left-0 bottom-full mb-1 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
                           isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
                         ].join(" ")}>
                           {c.name}
