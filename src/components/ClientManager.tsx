@@ -680,6 +680,8 @@ export default function ClientManager() {
   const [listEditMode,      setListEditMode]      = useState<"none" | "edit">("none");
   const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [hoveredNameId,     setHoveredNameId]     = useState<string | null>(null);
+  const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
   const [hoveredTagId,      setHoveredTagId]      = useState<string | null>(null);
   const [tagTooltipAlign,   setTagTooltipAlign]   = useState<"left" | "right">("left");
   const [hoveredRowId,      setHoveredRowId]      = useState<string | null>(null);
@@ -1358,13 +1360,13 @@ export default function ClientManager() {
             <thead>
               <tr className="text-left text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
                 <th className="px-2 py-3 whitespace-nowrap"></th>
-                <th className="px-4 py-3 whitespace-nowrap">거래처명</th>
-                <th className="px-4 py-3 whitespace-nowrap">담당자</th>
-                <th className="px-4 py-3 whitespace-nowrap">연락처</th>
-                <th className="px-4 py-3 whitespace-nowrap">태그</th>
-                <th className="px-4 py-3 whitespace-nowrap">계약 시작일</th>
-                <th className="px-4 py-3 whitespace-nowrap">D-day</th>
-                <th className="px-4 py-3 whitespace-nowrap">상태</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">거래처명</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">담당자</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">연락처</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">태그</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">계약 시작일</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">D-day</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">상태</th>
               </tr>
             </thead>
             <tbody>
@@ -1407,7 +1409,24 @@ export default function ClientManager() {
                         </button>
                       ) : null}
                     </td>
-                    <td className="px-4 h-[52px] font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap"><span className="max-w-[120px] block truncate" title={c.name}>{c.name}</span></td>
+                    <td className="px-4 h-[52px] font-medium text-slate-800 dark:text-zinc-100 whitespace-nowrap relative">
+                      <span
+                        ref={(el) => { if (el) nameRefs.current.set(c.id, el); else nameRefs.current.delete(c.id); }}
+                        className="max-w-[120px] block truncate"
+                        onMouseEnter={() => setHoveredNameId(c.id)}
+                        onMouseLeave={() => setHoveredNameId(null)}
+                      >
+                        {c.name}
+                      </span>
+                      {hoveredNameId === c.id && (() => {
+                        const el = nameRefs.current.get(c.id);
+                        return el && el.scrollWidth > el.offsetWidth;
+                      })() && (
+                        <div className="absolute left-0 top-full mt-1 z-50 bg-zinc-900 dark:bg-zinc-800 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none">
+                          {c.name}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
                     <td className="px-4 h-[52px]">
