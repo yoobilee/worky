@@ -11,7 +11,7 @@ import {
   IconMessage, IconChevronDown, IconChevronUp,
   IconChevronLeft, IconChevronRight,
   IconCircleCheck, IconCircleX, IconClock, IconPlayerPlay,
-  IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight,
+  IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight, IconCheck,
 } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -683,6 +683,18 @@ export default function ClientManager() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [hoveredNameId,     setHoveredNameId]     = useState<string | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+  const [sortDropdownOpen, setSortDropdownOpen]   = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
+        setSortDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const [hoveredTagId,      setHoveredTagId]      = useState<string | null>(null);
   const [tagTooltipAlign,   setTagTooltipAlign]   = useState<"left" | "right">("left");
   const [hoveredRowId,      setHoveredRowId]      = useState<string | null>(null);
@@ -956,10 +968,10 @@ export default function ClientManager() {
     expiry:             "만료 임박순",
     contractStart_asc:  "계약 시작일 ↑",
     contractStart_desc: "계약 시작일 ↓",
-    name_asc:           "거래처명 ㄱ→ㅎ",
-    name_desc:          "거래처명 ㅎ→ㄱ",
-    contact_asc:        "담당자 ㄱ→ㅎ",
-    contact_desc:       "담당자 ㅎ→ㄱ",
+    name_asc:           "거래처명 ↑",
+    name_desc:          "거래처명 ↓",
+    contact_asc:        "담당자 ↑",
+    contact_desc:       "담당자 ↓",
   };
 
   const confirmDeleteName = clients.find((c) => c.id === confirmDeleteId)?.name ?? "";
@@ -1061,17 +1073,33 @@ export default function ClientManager() {
               <IconLayoutSidebarRight className="w-4 h-4" />
             </button>
           )}
-          <div className="relative flex items-center">
-            <IconArrowsSort className="w-3.5 h-3.5 absolute left-2.5 pointer-events-none text-slate-500 dark:text-zinc-400" />
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-              className="appearance-none pl-7 pr-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 bg-white dark:bg-zinc-900 transition cursor-pointer"
+          <div className="relative" ref={sortDropdownRef}>
+            <button
+              onClick={() => setSortDropdownOpen((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
             >
-              {(Object.keys(SORT_LABELS) as SortOrder[]).map((key) => (
-                <option key={key} value={key}>{SORT_LABELS[key]}</option>
-              ))}
-            </select>
+              <IconArrowsSort className="w-3.5 h-3.5" />{SORT_LABELS[sortOrder]}
+              {sortDropdownOpen ? <IconChevronUp className="w-3.5 h-3.5" /> : <IconChevronDown className="w-3.5 h-3.5" />}
+            </button>
+            {sortDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[160px]">
+                {(Object.keys(SORT_LABELS) as SortOrder[]).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => { setSortOrder(key); setSortDropdownOpen(false); }}
+                    className={[
+                      "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors",
+                      sortOrder === key
+                        ? "bg-[#6C63FF]/10 text-[#6C63FF]"
+                        : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                    ].join(" ")}
+                  >
+                    {sortOrder === key ? <IconCheck className="w-3 h-3" /> : <span className="w-3 h-3" />}
+                    {SORT_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <button
             onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); }}
