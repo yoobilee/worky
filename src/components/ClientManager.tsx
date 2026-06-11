@@ -693,6 +693,7 @@ export default function ClientManager() {
   };
   const handleScrollMouseUp = () => {
     dragStateRef.current.isDown = false;
+    dragStateRef.current.hasMoved = false;
     setIsDragging(false);
   };
   const handleScrollClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
