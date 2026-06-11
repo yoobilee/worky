@@ -1382,7 +1382,7 @@ export default function ClientManager() {
             showGrassPanel ? "w-[200px] opacity-100" : "w-0 opacity-0",
           ].join(" ")}
         >
-          <div className="w-[200px] h-full rounded-2xl overflow-visible border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+          <div className="w-[200px] h-full rounded-2xl overflow-visible border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
             {/* thead 높이에 맞춘 헤더 */}
             <div
               className="h-9 px-2 flex items-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider"
