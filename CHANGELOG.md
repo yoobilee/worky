@@ -4,6 +4,23 @@ All notable changes to Worky will be documented in this file.
 
 ---
 
+## [v1.1.1] - 2026-06-11
+
+### 🔔 알림 시스템 추가
+- 페이지 헤더 우측 알림 벨 아이콘 추가
+- 읽지 않은 알림 있을 때 빨간 점 뱃지 표시
+- 알림 내용 펼치기/접기 (긴 내용만 chevron 표시)
+- 펼칠 때 자동 읽음 처리
+
+### ⚙️ 자동 알림 생성
+- Supabase Edge Function (daily-notifications) 추가
+- 매일 KST 09:00 Cron Job으로 자동 실행
+- 계약 만료 D-7, D-3, D-1, D-day 자동 알림 생성
+- 진행 중 거래처 일일 보고 알림 자동 생성
+- 중복 알림 방지 (metadata 기반)
+
+---
+
 ## [v1.1.0] - 2026-06-11
 
 ### ✨ 거래처 관리 개선
