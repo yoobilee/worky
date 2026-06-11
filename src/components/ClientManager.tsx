@@ -1300,13 +1300,36 @@ export default function ClientManager() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={[
-                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border whitespace-nowrap w-fit",
-                        cfg.bgCls, cfg.borderCls, cfg.textCls,
-                      ].join(" ")}>
-                        {STATUS_ICONS[c.status]}{cfg.label}
-                      </span>
+                    <td className="px-4 py-3 whitespace-nowrap relative">
+                      <div className="relative w-fit" ref={openStatusId === c.id ? statusDropdownRef : null}>
+                        <button
+                          onClick={() => setOpenStatusId((prev) => prev === c.id ? null : c.id)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          className={[
+                            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border whitespace-nowrap w-fit transition-all cursor-pointer active:scale-95",
+                            cfg.bgCls, cfg.borderCls, cfg.textCls, cfg.hoverCls,
+                          ].join(" ")}
+                        >
+                          {STATUS_ICONS[c.status]}{cfg.label}
+                        </button>
+                        {openStatusId === c.id && (
+                          <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[110px]">
+                            {(["pending","inprogress","complete","stopped"] as ReportStatus[]).map((s) => {
+                              const sc = STATUS_CONFIG[s];
+                              return (
+                                <button key={s} onClick={() => setStatus(c.id, s)} onMouseDown={(e) => e.stopPropagation()}
+                                  className={[
+                                    "flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold transition-colors",
+                                    c.status === s ? `${sc.bgCls} ${sc.textCls}` : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                                  ].join(" ")}
+                                >
+                                  {STATUS_ICONS[s]}{sc.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
