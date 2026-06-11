@@ -658,6 +658,7 @@ export default function ClientManager() {
   const [expandedHistories, setExpandedHistories] = useState<Set<string>>(new Set());
   const [expandedGrass,     setExpandedGrass]     = useState<Set<string>>(new Set());
   const [openStatusId,      setOpenStatusId]      = useState<string | null>(null);
+  const [dropdownPos,       setDropdownPos]       = useState<{ top: number; right: number } | null>(null);
   const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null);
   const [viewMode,          setViewMode]          = useState<ViewMode>("grid");
   const [showGrassPanel,    setShowGrassPanel]    = useState(false);
@@ -907,6 +908,33 @@ export default function ClientManager() {
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
+
+      {/* 목록형 상태 드롭다운 (fixed) */}
+      {openStatusId && dropdownPos && (() => {
+        const dc = sorted.find((c) => c.id === openStatusId);
+        if (!dc) return null;
+        return (
+          <div
+            ref={statusDropdownRef}
+            style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right }}
+            className="z-[9999] bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[110px]"
+          >
+            {(["pending","inprogress","complete","stopped"] as ReportStatus[]).map((s) => {
+              const sc = STATUS_CONFIG[s];
+              return (
+                <button key={s} onClick={() => setStatus(dc.id, s)} onMouseDown={(e) => e.stopPropagation()}
+                  className={[
+                    "flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold transition-colors",
+                    dc.status === s ? `${sc.bgCls} ${sc.textCls}` : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                  ].join(" ")}
+                >
+                  {STATUS_ICONS[s]}{sc.label}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* 헤더 */}
       <div className="flex items-center justify-between">
@@ -1313,9 +1341,13 @@ export default function ClientManager() {
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
                     </td>
                     <td className="px-4 h-[52px] whitespace-nowrap relative">
-                      <div className="relative w-fit" ref={openStatusId === c.id ? statusDropdownRef : null}>
+                      <div className="relative w-fit">
                         <button
-                          onClick={() => setOpenStatusId((prev) => prev === c.id ? null : c.id)}
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+                            setOpenStatusId((prev) => prev === c.id ? null : c.id);
+                          }}
                           onMouseDown={(e) => e.stopPropagation()}
                           className={[
                             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border whitespace-nowrap w-fit transition-all cursor-pointer active:scale-95",
@@ -1324,23 +1356,6 @@ export default function ClientManager() {
                         >
                           {STATUS_ICONS[c.status]}{cfg.label}
                         </button>
-                        {openStatusId === c.id && (
-                          <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[110px]">
-                            {(["pending","inprogress","complete","stopped"] as ReportStatus[]).map((s) => {
-                              const sc = STATUS_CONFIG[s];
-                              return (
-                                <button key={s} onClick={() => setStatus(c.id, s)} onMouseDown={(e) => e.stopPropagation()}
-                                  className={[
-                                    "flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold transition-colors",
-                                    c.status === s ? `${sc.bgCls} ${sc.textCls}` : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                                  ].join(" ")}
-                                >
-                                  {STATUS_ICONS[s]}{sc.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -1359,7 +1374,7 @@ export default function ClientManager() {
             showGrassPanel ? "w-[200px] opacity-100" : "w-0 opacity-0",
           ].join(" ")}
         >
-          <div className="w-[200px] h-full rounded-2xl overflow-hidden border-l-4 border-l-[#6C63FF]/40 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+          <div className="w-[200px] h-full rounded-2xl overflow-visible border-l-4 border-l-[#6C63FF]/40 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
             {/* thead 높이에 맞춘 헤더 */}
             <div
               className="h-9 px-2 flex items-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider"
