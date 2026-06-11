@@ -1085,34 +1085,6 @@ export default function ClientManager() {
               <IconLayoutSidebarRight className="w-4 h-4" />
             </button>
           )}
-          <div className="relative" ref={sortDropdownRef}>
-            <button
-              onClick={() => setSortDropdownOpen((v) => !v)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-            >
-              <IconArrowsSort className="w-3.5 h-3.5" />{SORT_LABELS[sortOrder]}
-              {sortDropdownOpen ? <IconChevronUp className="w-3.5 h-3.5" /> : <IconChevronDown className="w-3.5 h-3.5" />}
-            </button>
-            {sortDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[160px]">
-                {(Object.keys(SORT_LABELS) as SortOrder[]).map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => { setSortOrder(key); setSortDropdownOpen(false); }}
-                    className={[
-                      "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors",
-                      sortOrder === key
-                        ? "bg-[#6C63FF]/10 text-[#6C63FF]"
-                        : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                    ].join(" ")}
-                  >
-                    {sortOrder === key ? <IconCheck className="w-3 h-3" /> : <span className="w-3 h-3" />}
-                    {SORT_LABELS[key]}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
           <button
             onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
@@ -1332,77 +1304,109 @@ export default function ClientManager() {
         </div>
       </div>
 
-      {/* 검색창 */}
-      <div className="relative">
-        <IconSearch className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="거래처명, 담당자, 연락처, 태그 등 검색..."
-          className="w-full pl-9 pr-9 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            aria-label="검색어 지우기"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
-          >
-            <IconX className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-
-      {/* 목록형 편집 모드 버튼 바 */}
-      {viewMode === "list" && (
-        <div className="flex items-center justify-end gap-2">
-          {listEditMode === "none" ? (
+      {/* 검색창 + 편집/정렬 버튼 바 */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <IconSearch className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="거래처명, 담당자, 연락처, 태그 등 검색..."
+            className="w-full pl-9 pr-9 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40"
+          />
+          {searchQuery && (
             <button
-              onClick={() => setListEditMode("edit")}
-              className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
+              onClick={() => setSearchQuery("")}
+              aria-label="검색어 지우기"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
             >
-              편집
+              <IconX className="w-3.5 h-3.5" />
             </button>
-          ) : (
-            <>
-              <button
-                disabled={selectedIds.size !== 1}
-                onClick={() => {
-                  const id = [...selectedIds][0];
-                  const target = sorted.find((c) => c.id === id);
-                  if (target) startEdit(target);
-                }}
-                className={[
-                  "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
-                  selectedIds.size === 1
-                    ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 hover:bg-[#6C63FF]/20 active:bg-[#6C63FF]/30"
-                    : "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 opacity-40 cursor-not-allowed",
-                ].join(" ")}
-              >
-                수정
-              </button>
-              <button
-                disabled={selectedIds.size === 0}
-                onClick={() => setConfirmBulkDelete(true)}
-                className={[
-                  "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
-                  selectedIds.size > 0
-                    ? "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/50"
-                    : "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-200 dark:border-red-800 opacity-40 cursor-not-allowed",
-                ].join(" ")}
-              >
-                {selectedIds.size > 0 ? `${selectedIds.size}개 삭제` : "삭제"}
-              </button>
-              <button
-                onClick={() => { setListEditMode("none"); setSelectedIds(new Set()); }}
-                className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
-              >
-                취소
-              </button>
-            </>
           )}
         </div>
-      )}
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* 목록형 편집 모드 버튼 바 */}
+          {viewMode === "list" && (
+            listEditMode === "none" ? (
+              <button
+                onClick={() => setListEditMode("edit")}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
+              >
+                편집
+              </button>
+            ) : (
+              <>
+                <button
+                  disabled={selectedIds.size !== 1}
+                  onClick={() => {
+                    const id = [...selectedIds][0];
+                    const target = sorted.find((c) => c.id === id);
+                    if (target) startEdit(target);
+                  }}
+                  className={[
+                    "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
+                    selectedIds.size === 1
+                      ? "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 hover:bg-[#6C63FF]/20 active:bg-[#6C63FF]/30"
+                      : "bg-[#6C63FF]/10 text-[#6C63FF] border-[#6C63FF]/40 opacity-40 cursor-not-allowed",
+                  ].join(" ")}
+                >
+                  수정
+                </button>
+                <button
+                  disabled={selectedIds.size === 0}
+                  onClick={() => setConfirmBulkDelete(true)}
+                  className={[
+                    "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors",
+                    selectedIds.size > 0
+                      ? "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/50"
+                      : "bg-red-50 dark:bg-red-950/30 text-red-500 border-red-200 dark:border-red-800 opacity-40 cursor-not-allowed",
+                  ].join(" ")}
+                >
+                  {selectedIds.size > 0 ? `${selectedIds.size}개 삭제` : "삭제"}
+                </button>
+                <button
+                  onClick={() => { setListEditMode("none"); setSelectedIds(new Set()); }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
+                >
+                  취소
+                </button>
+              </>
+            )
+          )}
+
+          {/* 정렬 드롭다운 */}
+          <div className="relative" ref={sortDropdownRef}>
+            <button
+              onClick={() => setSortDropdownOpen((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+            >
+              <IconArrowsSort className="w-3.5 h-3.5" />{SORT_LABELS[sortOrder]}
+              {sortDropdownOpen ? <IconChevronUp className="w-3.5 h-3.5" /> : <IconChevronDown className="w-3.5 h-3.5" />}
+            </button>
+            {sortDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[160px]">
+                {(Object.keys(SORT_LABELS) as SortOrder[]).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => { setSortOrder(key); setSortDropdownOpen(false); }}
+                    className={[
+                      "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors",
+                      sortOrder === key
+                        ? "bg-[#6C63FF]/10 text-[#6C63FF]"
+                        : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                    ].join(" ")}
+                  >
+                    {sortOrder === key ? <IconCheck className="w-3 h-3" /> : <span className="w-3 h-3" />}
+                    {SORT_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* 거래처 목록 */}
       {filtered.length === 0 ? (
