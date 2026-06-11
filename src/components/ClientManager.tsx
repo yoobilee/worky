@@ -288,22 +288,22 @@ function MiniGrassGrid({
     d.setDate(d.getDate() + n);
     return toDateKey(d);
   }
-  function getMondayOf(dateKey: string): string {
+  function getWeekStartOf(dateKey: string): string {
     const d = new Date(dateKey + "T00:00:00");
-    const offset = (d.getDay() + 6) % 7;
+    const offset = d.getDay();
     d.setDate(d.getDate() - offset);
     return toDateKey(d);
   }
 
-  const startMonday = getMondayOf(contractStart);
-  const endMonday   = getMondayOf(contractEnd);
-  const initMonday  = today >= contractStart && today <= contractEnd
-    ? getMondayOf(today)
-    : startMonday;
+  const startWeek = getWeekStartOf(contractStart);
+  const endWeek   = getWeekStartOf(contractEnd);
+  const initWeek  = today >= contractStart && today <= contractEnd
+    ? getWeekStartOf(today)
+    : startWeek;
 
-  const [weekStart, setWeekStart] = useState(initMonday);
-  const canPrev = weekStart > startMonday;
-  const canNext = weekStart < endMonday;
+  const [weekStart, setWeekStart] = useState(initWeek);
+  const canPrev = weekStart > startWeek;
+  const canNext = weekStart < endWeek;
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const todayDate = todayKey();
@@ -412,26 +412,26 @@ function GrassGrid({
     return toDateKey(d);
   }
 
-  // 주의 월요일 계산 (ISO: Mon=0)
-  function getMondayOf(dateKey: string): string {
+  // 주의 시작일 계산 (일요일 기준)
+  function getWeekStartOf(dateKey: string): string {
     const d = new Date(dateKey + "T00:00:00");
-    const offset = (d.getDay() + 6) % 7;
+    const offset = d.getDay();
     d.setDate(d.getDate() - offset);
     return toDateKey(d);
   }
 
-  const startMonday = getMondayOf(contractStart);
-  const endMonday   = getMondayOf(contractEnd);
+  const startWeek = getWeekStartOf(contractStart);
+  const endWeek   = getWeekStartOf(contractEnd);
 
   // 초기 주: 오늘이 계약 기간 내면 오늘의 주, 아니면 시작 주
-  const initMonday = today >= contractStart && today <= contractEnd
-    ? getMondayOf(today)
-    : startMonday;
+  const initWeek = today >= contractStart && today <= contractEnd
+    ? getWeekStartOf(today)
+    : startWeek;
 
-  const [weekStart, setWeekStart] = useState(initMonday);
+  const [weekStart, setWeekStart] = useState(initWeek);
 
-  const canPrev = weekStart > startMonday;
-  const canNext = weekStart < endMonday;
+  const canPrev = weekStart > startWeek;
+  const canNext = weekStart < endWeek;
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -1423,7 +1423,7 @@ export default function ClientManager() {
                         return el && el.scrollWidth > el.offsetWidth;
                       })() && (
                         <div className={[
-                          "absolute left-0 bottom-full mb-1 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                          "absolute left-0 bottom-full mb-0.5 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
                           isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
                         ].join(" ")}>
                           {c.name}
