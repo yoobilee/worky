@@ -1188,6 +1188,34 @@ export default function ClientManager() {
               />
             </div>
 
+            {/* 거래처 연락처 */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">거래처 연락처</label>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, maskCompanyPhone: !f.maskCompanyPhone }))}
+                  className="flex items-center gap-1.5 text-xs cursor-pointer"
+                >
+                  <span className={[
+                    "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
+                    form.maskCompanyPhone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+                  ].join(" ")}>
+                    {form.maskCompanyPhone && (
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                      </svg>
+                    )}
+                  </span>
+                  <span className="text-slate-500 dark:text-zinc-400">연락처 마스킹</span>
+                </button>
+              </div>
+              <input value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: e.target.value }))}
+                placeholder="02-0000-0000"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              />
+            </div>
+
             {/* 상태 */}
             <div>
               <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">
@@ -1248,34 +1276,6 @@ export default function ClientManager() {
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                 />
               </div>
-            </div>
-
-            {/* 거래처 연락처 */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">거래처 연락처</label>
-                <button
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, maskCompanyPhone: !f.maskCompanyPhone }))}
-                  className="flex items-center gap-1.5 text-xs cursor-pointer"
-                >
-                  <span className={[
-                    "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
-                    form.maskCompanyPhone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
-                  ].join(" ")}>
-                    {form.maskCompanyPhone && (
-                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
-                      </svg>
-                    )}
-                  </span>
-                  <span className="text-slate-500 dark:text-zinc-400">연락처 마스킹</span>
-                </button>
-              </div>
-              <input value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: e.target.value }))}
-                placeholder="02-0000-0000"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-              />
             </div>
 
             {/* 링크 */}
