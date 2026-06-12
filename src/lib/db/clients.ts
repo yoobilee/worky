@@ -16,6 +16,8 @@ export interface DbClient {
   progress:         Record<string, string>;
   show_grass_grid:  boolean;
   mask_phone:       boolean;
+  company_phone:    string;
+  mask_company_phone: boolean;
   created_at:       string;
 }
 
@@ -23,7 +25,7 @@ export async function getClients(userId: string): Promise<DbClient[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("clients")
-    .select("id, name, status, contact_person, phone, link, tags, contract_start, contract_days, report_tone, memo, history, progress, show_grass_grid, mask_phone, created_at")
+    .select("id, name, status, contact_person, phone, link, tags, contract_start, contract_days, report_tone, memo, history, progress, show_grass_grid, mask_phone, company_phone, mask_company_phone, created_at")
     .eq("user_id", userId)
     .order("created_at");
   return (data as DbClient[]) ?? [];
@@ -34,7 +36,7 @@ export async function addClient(userId: string, client: Omit<DbClient, "id" | "c
   const { data } = await supabase
     .from("clients")
     .insert({ user_id: userId, ...client })
-    .select("id, name, status, contact_person, phone, link, tags, contract_start, contract_days, report_tone, memo, history, progress, show_grass_grid, mask_phone, created_at")
+    .select("id, name, status, contact_person, phone, link, tags, contract_start, contract_days, report_tone, memo, history, progress, show_grass_grid, mask_phone, company_phone, mask_company_phone, created_at")
     .single();
   return data as DbClient | null;
 }
