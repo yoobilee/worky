@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
   IconBuilding, IconPlus, IconPencil, IconTrash,
@@ -731,11 +731,12 @@ export default function ClientManager() {
   const [listEditMode,      setListEditMode]      = useState<"none" | "edit">("none");
   const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; id: string; type: "name" | "memo" | "tone" | "custom" } | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; id: string; type: "name" | "memo" | "tone" } | null>(null);
   const [revealingPhoneId, setRevealingPhoneId] = useState<string | null>(null);
   const [revealingCompanyPhoneId, setRevealingCompanyPhoneId] = useState<string | null>(null);
   const [savedCustomKeys, setSavedCustomKeys] = useState<string[]>([]);
   const [revealingCustomField, setRevealingCustomField] = useState<{ clientId: string; key: string } | null>(null);
+  const [expandedCustomIds, setExpandedCustomIds] = useState<Set<string>>(new Set());
   const [focusedCustomKeyIdx, setFocusedCustomKeyIdx] = useState<number | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
   const memoRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
@@ -1088,8 +1089,6 @@ export default function ClientManager() {
           ? filtered.find((c) => c.id === tooltipPos.id)?.name
           : tooltipPos.type === "memo"
           ? filtered.find((c) => c.id === tooltipPos.id)?.memo
-          : tooltipPos.type === "custom"
-          ? filtered.find((c) => c.id === tooltipPos.id)?.customFields.map((f) => f.key).join(", ")
           : filtered.find((c) => c.id === tooltipPos.id)?.reportTone;
         if (!text) return null;
         return (
@@ -1735,8 +1734,8 @@ export default function ClientManager() {
                   : getRowBg(idx, isHovered);
 
                 return (
+                  <Fragment key={c.id}>
                   <tr
-                    key={c.id}
                     onMouseEnter={() => setHoveredRowId(c.id)}
                     onMouseLeave={() => setHoveredRowId(null)}
                     className="group border-t border-slate-100 dark:border-zinc-800 transition-colors"
@@ -1778,14 +1777,20 @@ export default function ClientManager() {
                           {c.name}
                         </span>
                         {c.customFields.length > 0 && (
-                          <IconTag
-                            className="w-3.5 h-3.5 text-slate-400 shrink-0"
-                            onMouseEnter={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setTooltipPos({ x: rect.left, y: rect.top, id: c.id, type: "custom" });
-                            }}
-                            onMouseLeave={() => setTooltipPos(null)}
-                          />
+                          <button
+                            type="button"
+                            onClick={() => setExpandedCustomIds((prev) => {
+                              const next = new Set(prev);
+                              next.has(c.id) ? next.delete(c.id) : next.add(c.id);
+                              return next;
+                            })}
+                            aria-label="커스텀 속성 펼치기/접기"
+                            className="shrink-0"
+                          >
+                            {expandedCustomIds.has(c.id)
+                              ? <IconChevronUp className="w-3.5 h-3.5 text-[#6C63FF]" />
+                              : <IconTag className="w-3.5 h-3.5 text-slate-400" />}
+                          </button>
                         )}
                       </div>
                     </td>
@@ -1926,6 +1931,39 @@ export default function ClientManager() {
                       </div>
                     </td>
                   </tr>
+                  {expandedCustomIds.has(c.id) && c.customFields.length > 0 && (
+                    <tr>
+                      <td colSpan={12} className="px-4 py-2 bg-[#6C63FF]/5 dark:bg-[#6C63FF]/10 border-t border-[#6C63FF]/10">
+                        <div className="flex flex-wrap gap-3">
+                          {c.customFields.map((f) => {
+                            const revealing = revealingCustomField?.clientId === c.id && revealingCustomField?.key === f.key;
+                            return (
+                              <div key={f.key} className="flex items-center gap-1.5 text-xs">
+                                <span className="text-slate-400 dark:text-zinc-500 font-medium">{f.key}</span>
+                                <span className="text-slate-700 dark:text-zinc-200">
+                                  {f.masked && !revealing ? "****" : f.value}
+                                </span>
+                                {f.masked && (
+                                  <button
+                                    type="button"
+                                    onMouseDown={() => setRevealingCustomField({ clientId: c.id, key: f.key })}
+                                    onMouseUp={() => setRevealingCustomField(null)}
+                                    onMouseLeave={() => setRevealingCustomField(null)}
+                                    className="text-slate-400 hover:text-[#6C63FF] transition"
+                                  >
+                                    {revealing
+                                      ? <IconEyeOff className="w-3 h-3" />
+                                      : <IconEye className="w-3 h-3" />}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
