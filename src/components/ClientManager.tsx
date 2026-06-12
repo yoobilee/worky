@@ -1547,7 +1547,9 @@ export default function ClientManager() {
                         ref={(el) => { if (el) nameRefs.current.set(c.id, el); else nameRefs.current.delete(c.id); }}
                         className="max-w-[120px] block truncate"
                         onMouseEnter={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
+                          const el = e.currentTarget;
+                          if (el.scrollWidth <= el.offsetWidth) return;
+                          const rect = el.getBoundingClientRect();
                           setTooltipPos({ x: rect.left, y: rect.top, id: c.id, type: "name" });
                         }}
                         onMouseLeave={() => setTooltipPos(null)}
@@ -1600,7 +1602,9 @@ export default function ClientManager() {
                           ref={(el) => { if (el) memoRefs.current.set(c.id, el); else memoRefs.current.delete(c.id); }}
                           className="max-w-[150px] block truncate"
                           onMouseEnter={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
+                            const el = e.currentTarget;
+                            if (el.scrollWidth <= el.offsetWidth) return;
+                            const rect = el.getBoundingClientRect();
                             setTooltipPos({ x: rect.left, y: rect.top, id: c.id, type: "memo" });
                           }}
                           onMouseLeave={() => setTooltipPos(null)}
@@ -1615,7 +1619,9 @@ export default function ClientManager() {
                           ref={(el) => { if (el) toneRefs.current.set(c.id, el); else toneRefs.current.delete(c.id); }}
                           className="max-w-[120px] block truncate"
                           onMouseEnter={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
+                            const el = e.currentTarget;
+                            if (el.scrollWidth <= el.offsetWidth) return;
+                            const rect = el.getBoundingClientRect();
                             setTooltipPos({ x: rect.left, y: rect.top, id: c.id, type: "tone" });
                           }}
                           onMouseLeave={() => setTooltipPos(null)}
