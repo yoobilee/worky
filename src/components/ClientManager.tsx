@@ -736,7 +736,7 @@ export default function ClientManager() {
   const [revealingCompanyPhoneId, setRevealingCompanyPhoneId] = useState<string | null>(null);
   const [savedCustomKeys, setSavedCustomKeys] = useState<string[]>([]);
   const [revealingCustomField, setRevealingCustomField] = useState<{ clientId: string; key: string } | null>(null);
-  const [expandedCustomIds, setExpandedCustomIds] = useState<Set<string>>(new Set());
+  const [customPopover, setCustomPopover] = useState<{ id: string; x: number; y: number } | null>(null);
   const [focusedCustomKeyIdx, setFocusedCustomKeyIdx] = useState<number | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
   const memoRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
@@ -770,6 +770,7 @@ export default function ClientManager() {
       ? (isDark ? "#18181b" : "#ffffff")
       : (isDark ? "#27272a" : "#f8fafc");
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const customPopoverRef = useRef<HTMLDivElement>(null);
 
   /* 가로 스크롤 드래그 */
   const tableScrollRef = useRef<HTMLDivElement>(null);
@@ -876,6 +877,16 @@ export default function ClientManager() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [openStatusId]);
+
+  useEffect(() => {
+    if (!customPopover) return;
+    const handler = (e: MouseEvent) => {
+      if (customPopoverRef.current && !customPopoverRef.current.contains(e.target as Node))
+        setCustomPopover(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [customPopover]);
 
   const setStatus = (id: string, newStatus: ReportStatus) => {
     const today = todayKey();
@@ -1138,6 +1149,44 @@ export default function ClientManager() {
                 </button>
               );
             })}
+          </div>
+        );
+      })()}
+
+      {customPopover && (() => {
+        const client = filtered.find((c) => c.id === customPopover.id);
+        if (!client || client.customFields.length === 0) return null;
+        return (
+          <div
+            ref={customPopoverRef}
+            style={{ position: "fixed", left: customPopover.x, top: customPopover.y }}
+            className="z-[9999] bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-xl p-3 min-w-[180px] max-w-[280px]"
+          >
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">커스텀 속성</p>
+            <div className="space-y-1.5">
+              {client.customFields.map((f) => {
+                const revealing = revealingCustomField?.clientId === client.id && revealingCustomField?.key === f.key;
+                return (
+                  <div key={f.key} className="flex items-center gap-2 text-xs">
+                    <span className="text-slate-400 dark:text-zinc-500 shrink-0 font-medium">{f.key}</span>
+                    <span className="text-slate-700 dark:text-zinc-200 flex-1">
+                      {f.masked && !revealing ? "****" : f.value}
+                    </span>
+                    {f.masked && (
+                      <button
+                        type="button"
+                        onMouseDown={() => setRevealingCustomField({ clientId: client.id, key: f.key })}
+                        onMouseUp={() => setRevealingCustomField(null)}
+                        onMouseLeave={() => setRevealingCustomField(null)}
+                        className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
+                      >
+                        {revealing ? <IconEyeOff className="w-3 h-3" /> : <IconEye className="w-3 h-3" />}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       })()}
@@ -1779,17 +1828,14 @@ export default function ClientManager() {
                         {c.customFields.length > 0 && (
                           <button
                             type="button"
-                            onClick={() => setExpandedCustomIds((prev) => {
-                              const next = new Set(prev);
-                              next.has(c.id) ? next.delete(c.id) : next.add(c.id);
-                              return next;
-                            })}
-                            aria-label="커스텀 속성 펼치기/접기"
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setCustomPopover((prev) => prev?.id === c.id ? null : { id: c.id, x: rect.left, y: rect.bottom + 4 });
+                            }}
+                            aria-label="커스텀 속성 보기"
                             className="shrink-0"
                           >
-                            {expandedCustomIds.has(c.id)
-                              ? <IconChevronUp className="w-3.5 h-3.5 text-[#6C63FF]" />
-                              : <IconTag className="w-3.5 h-3.5 text-slate-400" />}
+                            <IconTag className={["w-3.5 h-3.5", customPopover?.id === c.id ? "text-[#6C63FF]" : "text-slate-400"].join(" ")} />
                           </button>
                         )}
                       </div>
@@ -1931,38 +1977,6 @@ export default function ClientManager() {
                       </div>
                     </td>
                   </tr>
-                  {expandedCustomIds.has(c.id) && c.customFields.length > 0 && (
-                    <tr>
-                      <td colSpan={12} className="px-4 py-2 bg-[#6C63FF]/5 dark:bg-[#6C63FF]/10 border-t border-[#6C63FF]/10">
-                        <div className="flex flex-wrap gap-3">
-                          {c.customFields.map((f) => {
-                            const revealing = revealingCustomField?.clientId === c.id && revealingCustomField?.key === f.key;
-                            return (
-                              <div key={f.key} className="flex items-center gap-1.5 text-xs">
-                                <span className="text-slate-400 dark:text-zinc-500 font-medium">{f.key}</span>
-                                <span className="text-slate-700 dark:text-zinc-200">
-                                  {f.masked && !revealing ? "****" : f.value}
-                                </span>
-                                {f.masked && (
-                                  <button
-                                    type="button"
-                                    onMouseDown={() => setRevealingCustomField({ clientId: c.id, key: f.key })}
-                                    onMouseUp={() => setRevealingCustomField(null)}
-                                    onMouseLeave={() => setRevealingCustomField(null)}
-                                    className="text-slate-400 hover:text-[#6C63FF] transition"
-                                  >
-                                    {revealing
-                                      ? <IconEyeOff className="w-3 h-3" />
-                                      : <IconEye className="w-3 h-3" />}
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
                   </Fragment>
                 );
               })}
