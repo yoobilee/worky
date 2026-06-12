@@ -1175,7 +1175,7 @@ export default function ClientManager() {
                     {f.masked && (
                       <button
                         type="button"
-                        onMouseDown={() => setRevealingCustomField({ clientId: client.id, key: f.key })}
+                        onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField({ clientId: client.id, key: f.key }); }}
                         onMouseUp={() => setRevealingCustomField(null)}
                         onMouseLeave={() => setRevealingCustomField(null)}
                         className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
@@ -1828,6 +1828,7 @@ export default function ClientManager() {
                         {c.customFields.length > 0 && (
                           <button
                             type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setCustomPopover((prev) => prev?.id === c.id ? null : { id: c.id, x: rect.left, y: rect.bottom + 4 });
