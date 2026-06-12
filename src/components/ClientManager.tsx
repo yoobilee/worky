@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
   IconBuilding, IconPlus, IconPencil, IconTrash,
-  IconUser, IconNotes, IconCalendar, IconArrowsSort,
+  IconUser, IconNotes, IconCalendar, IconCalendarPlus, IconCalendarX, IconArrowsSort,
   IconX, IconExternalLink, IconPhone,
   IconMessage, IconChevronDown, IconChevronUp,
   IconChevronLeft, IconChevronRight,
@@ -687,6 +687,10 @@ export default function ClientManager() {
   const memoRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
   const [hoveredToneId,     setHoveredToneId]     = useState<string | null>(null);
   const toneRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+  const [hoveredMemoIdBox,  setHoveredMemoIdBox]  = useState<string | null>(null);
+  const memoBoxRefs = useRef<Map<string, HTMLParagraphElement>>(new Map());
+  const [hoveredToneIdBox,  setHoveredToneIdBox]  = useState<string | null>(null);
+  const toneBoxRefs = useRef<Map<string, HTMLParagraphElement>>(new Map());
   const [searchQuery,      setSearchQuery]        = useState("");
   const [sortDropdownOpen, setSortDropdownOpen]   = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
@@ -1769,7 +1773,7 @@ export default function ClientManager() {
                 {/* 계약 시작일 */}
                 {c.contractStart && (
                   <div className="flex items-center gap-1.5">
-                    <IconCalendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <IconCalendarPlus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <p className="text-xs text-slate-500 dark:text-zinc-400">{formatDate(c.contractStart)}</p>
                   </div>
                 )}
@@ -1777,7 +1781,7 @@ export default function ClientManager() {
                 {/* 계약 D-day */}
                 {contractEnd && ddayFmt && (
                   <div className="flex items-center gap-1.5">
-                    <IconCalendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <IconCalendarX className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <p className="text-xs text-slate-500 dark:text-zinc-400">{formatDate(contractEnd)}</p>
                     <span className={`text-xs font-medium ml-auto ${ddayFmt.cls}`}>{ddayFmt.text}</span>
                   </div>
@@ -1785,17 +1789,53 @@ export default function ClientManager() {
 
                 {/* 메모 */}
                 {c.memo && (
-                  <div className="flex items-start gap-1.5">
+                  <div className="flex items-start gap-1.5 relative">
                     <IconNotes className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 truncate" title={c.memo}>{c.memo}</p>
+                    <p
+                      ref={(el) => { if (el) memoBoxRefs.current.set(c.id, el); else memoBoxRefs.current.delete(c.id); }}
+                      className="text-xs text-slate-500 dark:text-zinc-400 truncate"
+                      onMouseEnter={() => setHoveredMemoIdBox(c.id)}
+                      onMouseLeave={() => setHoveredMemoIdBox(null)}
+                    >
+                      {c.memo}
+                    </p>
+                    {hoveredMemoIdBox === c.id && (() => {
+                      const el = memoBoxRefs.current.get(c.id);
+                      return el && el.scrollWidth > el.offsetWidth;
+                    })() && (
+                      <div className={[
+                        "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                        isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
+                      ].join(" ")}>
+                        {c.memo}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* 보고 메시지 톤 */}
                 {c.reportTone && (
-                  <div className="flex items-start gap-1.5">
+                  <div className="flex items-start gap-1.5 relative">
                     <IconMessage className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 truncate" title={c.reportTone}>{c.reportTone}</p>
+                    <p
+                      ref={(el) => { if (el) toneBoxRefs.current.set(c.id, el); else toneBoxRefs.current.delete(c.id); }}
+                      className="text-xs text-slate-500 dark:text-zinc-400 truncate"
+                      onMouseEnter={() => setHoveredToneIdBox(c.id)}
+                      onMouseLeave={() => setHoveredToneIdBox(null)}
+                    >
+                      {c.reportTone}
+                    </p>
+                    {hoveredToneIdBox === c.id && (() => {
+                      const el = toneBoxRefs.current.get(c.id);
+                      return el && el.scrollWidth > el.offsetWidth;
+                    })() && (
+                      <div className={[
+                        "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                        isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
+                      ].join(" ")}>
+                        {c.reportTone}
+                      </div>
+                    )}
                   </div>
                 )}
 
