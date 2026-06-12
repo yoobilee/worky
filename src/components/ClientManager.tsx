@@ -1465,6 +1465,9 @@ export default function ClientManager() {
                 <th className="px-4 py-3 whitespace-nowrap text-center">연락처</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">태그</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">계약 시작일</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">메모</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">보고 톤</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">계약 만료일</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">D-day</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">상태</th>
               </tr>
@@ -1565,6 +1568,9 @@ export default function ClientManager() {
                       ) : "-"}
                     </td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? fmtShort(c.contractStart) : "-"}</td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 max-w-[150px] truncate" title={c.memo}>{c.memo || "-"}</td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 max-w-[120px] truncate" title={c.reportTone}>{c.reportTone || "-"}</td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{contractEnd ? fmtShort(contractEnd) : "-"}</td>
                     <td className="px-4 h-[52px] whitespace-nowrap">
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
                     </td>
@@ -1721,6 +1727,14 @@ export default function ClientManager() {
                   <div className="flex items-start gap-1.5">
                     <IconMessage className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{c.reportTone}</p>
+                  </div>
+                )}
+
+                {/* 계약 시작일 */}
+                {c.contractStart && (
+                  <div className="flex items-center gap-1.5">
+                    <IconCalendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <p className="text-xs text-slate-500 dark:text-zinc-400">시작 {fmtShort(c.contractStart)}</p>
                   </div>
                 )}
 
