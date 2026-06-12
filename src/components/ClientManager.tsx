@@ -189,7 +189,10 @@ const formatPhone = (phone: string) => {
 
 const maskPhoneNum = (phone: string) => {
   const formatted = formatPhone(phone);
-  return formatted.replace(/(\d{3})-(\d{3,4})-(\d{4})/, (_, a, _b, c) => `${a}-****-${c}`);
+  const parts = formatted.split("-");
+  if (parts.length === 3) return `${parts[0]}-****-${parts[2]}`;
+  if (parts.length === 2) return `${parts[0]}-****`;
+  return formatted;
 };
 
 // 구형 데이터 마이그레이션
