@@ -683,6 +683,10 @@ export default function ClientManager() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [hoveredNameId,     setHoveredNameId]     = useState<string | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+  const [hoveredMemoId,     setHoveredMemoId]     = useState<string | null>(null);
+  const memoRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+  const [hoveredToneId,     setHoveredToneId]     = useState<string | null>(null);
+  const toneRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
   const [searchQuery,      setSearchQuery]        = useState("");
   const [sortDropdownOpen, setSortDropdownOpen]   = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
@@ -1465,10 +1469,10 @@ export default function ClientManager() {
                 <th className="px-4 py-3 whitespace-nowrap text-center">연락처</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">태그</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">계약 시작일</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">메모</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">보고 톤</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">계약 만료일</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">D-day</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">메모</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">보고 톤</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">상태</th>
               </tr>
             </thead>
@@ -1568,11 +1572,59 @@ export default function ClientManager() {
                       ) : "-"}
                     </td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? fmtShort(c.contractStart) : "-"}</td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 max-w-[150px] truncate" title={c.memo}>{c.memo || "-"}</td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 max-w-[120px] truncate" title={c.reportTone}>{c.reportTone || "-"}</td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{contractEnd ? fmtShort(contractEnd) : "-"}</td>
                     <td className="px-4 h-[52px] whitespace-nowrap">
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
+                    </td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
+                      {c.memo ? (
+                        <>
+                          <span
+                            ref={(el) => { if (el) memoRefs.current.set(c.id, el); else memoRefs.current.delete(c.id); }}
+                            className="max-w-[150px] block truncate"
+                            onMouseEnter={() => setHoveredMemoId(c.id)}
+                            onMouseLeave={() => setHoveredMemoId(null)}
+                          >
+                            {c.memo}
+                          </span>
+                          {hoveredMemoId === c.id && (() => {
+                            const el = memoRefs.current.get(c.id);
+                            return el && el.scrollWidth > el.offsetWidth;
+                          })() && (
+                            <div className={[
+                              "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                              isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
+                            ].join(" ")}>
+                              {c.memo}
+                            </div>
+                          )}
+                        </>
+                      ) : "-"}
+                    </td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
+                      {c.reportTone ? (
+                        <>
+                          <span
+                            ref={(el) => { if (el) toneRefs.current.set(c.id, el); else toneRefs.current.delete(c.id); }}
+                            className="max-w-[120px] block truncate"
+                            onMouseEnter={() => setHoveredToneId(c.id)}
+                            onMouseLeave={() => setHoveredToneId(null)}
+                          >
+                            {c.reportTone}
+                          </span>
+                          {hoveredToneId === c.id && (() => {
+                            const el = toneRefs.current.get(c.id);
+                            return el && el.scrollWidth > el.offsetWidth;
+                          })() && (
+                            <div className={[
+                              "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                              isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
+                            ].join(" ")}>
+                              {c.reportTone}
+                            </div>
+                          )}
+                        </>
+                      ) : "-"}
                     </td>
                     <td className="px-4 h-[52px] whitespace-nowrap relative">
                       <div className="relative w-fit">
@@ -1714,27 +1766,11 @@ export default function ClientManager() {
                   </div>
                 )}
 
-                {/* 메모 */}
-                {c.memo && (
-                  <div className="flex items-start gap-1.5">
-                    <IconNotes className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-1">{c.memo}</p>
-                  </div>
-                )}
-
-                {/* 보고 메시지 톤 */}
-                {c.reportTone && (
-                  <div className="flex items-start gap-1.5">
-                    <IconMessage className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{c.reportTone}</p>
-                  </div>
-                )}
-
                 {/* 계약 시작일 */}
                 {c.contractStart && (
                   <div className="flex items-center gap-1.5">
                     <IconCalendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">시작 {fmtShort(c.contractStart)}</p>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400">{formatDate(c.contractStart)}</p>
                   </div>
                 )}
 
@@ -1744,6 +1780,22 @@ export default function ClientManager() {
                     <IconCalendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <p className="text-xs text-slate-500 dark:text-zinc-400">{formatDate(contractEnd)}</p>
                     <span className={`text-xs font-medium ml-auto ${ddayFmt.cls}`}>{ddayFmt.text}</span>
+                  </div>
+                )}
+
+                {/* 메모 */}
+                {c.memo && (
+                  <div className="flex items-start gap-1.5">
+                    <IconNotes className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 truncate" title={c.memo}>{c.memo}</p>
+                  </div>
+                )}
+
+                {/* 보고 메시지 톤 */}
+                {c.reportTone && (
+                  <div className="flex items-start gap-1.5">
+                    <IconMessage className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 truncate" title={c.reportTone}>{c.reportTone}</p>
                   </div>
                 )}
 
