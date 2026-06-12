@@ -170,8 +170,17 @@ const fmtShort = (s: string) => {
   return `'${y.slice(2)}.${m}.${d}`;
 };
 
-const maskPhoneNum = (phone: string) =>
-  phone.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, (_, a, _b, c) => `${a}-****-${c}`);
+const formatPhone = (phone: string) => {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 11) return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
+  return phone;
+};
+
+const maskPhoneNum = (phone: string) => {
+  const formatted = formatPhone(phone);
+  return formatted.replace(/(\d{3})-(\d{3,4})-(\d{4})/, (_, a, _b, c) => `${a}-****-${c}`);
+};
 
 // 구형 데이터 마이그레이션
 function normalize(raw: Record<string, unknown>): Client {
@@ -691,14 +700,7 @@ export default function ClientManager() {
   const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; id: string; type: "name" | "memo" | "tone" } | null>(null);
-  const [revealPhoneIds, setRevealPhoneIds] = useState<Set<string>>(new Set());
-  const togglePhoneReveal = (id: string) => {
-    setRevealPhoneIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+  const [revealingPhoneId, setRevealingPhoneId] = useState<string | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
   const memoRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
   const toneRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
@@ -1205,28 +1207,30 @@ export default function ClientManager() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">연락처</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">연락처</label>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, maskPhone: !f.maskPhone }))}
+                    className="flex items-center gap-1.5 text-xs cursor-pointer"
+                  >
+                    <span className={[
+                      "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
+                      form.maskPhone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+                    ].join(" ")}>
+                      {form.maskPhone && (
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                        </svg>
+                      )}
+                    </span>
+                    <span className="text-slate-500 dark:text-zinc-400">연락처 마스킹</span>
+                  </button>
+                </div>
                 <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                   placeholder="010-0000-0000"
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                 />
-                <button
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, maskPhone: !f.maskPhone }))}
-                  className="flex items-center gap-1.5 text-xs mt-1.5 cursor-pointer"
-                >
-                  <span className={[
-                    "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
-                    form.maskPhone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
-                  ].join(" ")}>
-                    {form.maskPhone && (
-                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
-                      </svg>
-                    )}
-                  </span>
-                  <span className="text-slate-500 dark:text-zinc-400">연락처 마스킹</span>
-                </button>
               </div>
             </div>
 
@@ -1597,15 +1601,19 @@ export default function ClientManager() {
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                       {c.phone ? (
                         <div className="flex items-center gap-1.5">
-                          <span>{c.maskPhone && !revealPhoneIds.has(c.id) ? maskPhoneNum(c.phone) : c.phone}</span>
+                          <span>
+                            {c.maskPhone && revealingPhoneId !== c.id ? maskPhoneNum(c.phone) : formatPhone(c.phone)}
+                          </span>
                           {c.maskPhone && (
                             <button
                               type="button"
-                              onClick={() => togglePhoneReveal(c.id)}
-                              aria-label="연락처 표시 전환"
+                              onMouseDown={() => setRevealingPhoneId(c.id)}
+                              onMouseUp={() => setRevealingPhoneId(null)}
+                              onMouseLeave={() => setRevealingPhoneId(null)}
+                              aria-label="연락처 임시 표시"
                               className="text-slate-400 hover:text-[#6C63FF] transition"
                             >
-                              {revealPhoneIds.has(c.id)
+                              {revealingPhoneId === c.id
                                 ? <IconEyeOff className="w-3.5 h-3.5" />
                                 : <IconEye className="w-3.5 h-3.5" />}
                             </button>
@@ -1782,16 +1790,18 @@ export default function ClientManager() {
                       <div className="flex items-center gap-1 mt-0.5">
                         <IconPhone className="w-3 h-3 text-slate-400 shrink-0" />
                         <p className="text-xs text-slate-500 dark:text-zinc-400">
-                          {c.maskPhone && !revealPhoneIds.has(c.id) ? maskPhoneNum(c.phone) : c.phone}
+                          {c.maskPhone && revealingPhoneId !== c.id ? maskPhoneNum(c.phone) : formatPhone(c.phone)}
                         </p>
                         {c.maskPhone && (
                           <button
                             type="button"
-                            onClick={() => togglePhoneReveal(c.id)}
-                            aria-label="연락처 표시 전환"
+                            onMouseDown={() => setRevealingPhoneId(c.id)}
+                            onMouseUp={() => setRevealingPhoneId(null)}
+                            onMouseLeave={() => setRevealingPhoneId(null)}
+                            aria-label="연락처 임시 표시"
                             className="text-slate-400 hover:text-[#6C63FF] transition"
                           >
-                            {revealPhoneIds.has(c.id)
+                            {revealingPhoneId === c.id
                               ? <IconEyeOff className="w-3 h-3" />
                               : <IconEye className="w-3 h-3" />}
                           </button>
