@@ -10,6 +10,7 @@ interface RequestBody {
   messages:    Message[];
   systemPrompt?: string;
   max_tokens?: number;
+  model?: string;
 }
 
 const KOREAN_RULES = `
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: RequestBody = await req.json();
-    const { messages, systemPrompt, max_tokens } = body;
+    const { messages, systemPrompt, max_tokens, model } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       : messages;
 
     const completion = await groq.chat.completions.create({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: model ?? "meta-llama/llama-4-scout-17b-16e-instruct",
       messages: fullMessages,
       ...(max_tokens ? { max_tokens } : {}),
     });
