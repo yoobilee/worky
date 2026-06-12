@@ -681,11 +681,9 @@ export default function ClientManager() {
   const [listEditMode,      setListEditMode]      = useState<"none" | "edit">("none");
   const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
-  const [hoveredNameId,     setHoveredNameId]     = useState<string | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; id: string; type: "name" | "memo" | "tone" } | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
-  const [hoveredMemoId,     setHoveredMemoId]     = useState<string | null>(null);
   const memoRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
-  const [hoveredToneId,     setHoveredToneId]     = useState<string | null>(null);
   const toneRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
   const [hoveredMemoIdBox,  setHoveredMemoIdBox]  = useState<string | null>(null);
   const memoBoxRefs = useRef<Map<string, HTMLParagraphElement>>(new Map());
@@ -1006,6 +1004,30 @@ export default function ClientManager() {
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
+
+      {/* 목록형 셀 호버 툴팁 (fixed) */}
+      {tooltipPos && (() => {
+        const text = tooltipPos.type === "name"
+          ? filtered.find((c) => c.id === tooltipPos.id)?.name
+          : tooltipPos.type === "memo"
+          ? filtered.find((c) => c.id === tooltipPos.id)?.memo
+          : filtered.find((c) => c.id === tooltipPos.id)?.reportTone;
+        if (!text) return null;
+        return (
+          <div
+            style={{ position: "fixed", left: tooltipPos.x, top: tooltipPos.y - 6, transform: "translateY(-100%)" }}
+            className={[
+              "z-[9999] text-xs px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none",
+              tooltipPos.type === "memo"
+                ? "whitespace-normal break-words max-w-[240px]"
+                : "whitespace-nowrap",
+              isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
+            ].join(" ")}
+          >
+            {text}
+          </div>
+        );
+      })()}
 
       {confirmBulkDelete && (
         <ConfirmModal
@@ -1524,22 +1546,14 @@ export default function ClientManager() {
                       <span
                         ref={(el) => { if (el) nameRefs.current.set(c.id, el); else nameRefs.current.delete(c.id); }}
                         className="max-w-[120px] block truncate"
-                        onMouseEnter={() => setHoveredNameId(c.id)}
-                        onMouseLeave={() => setHoveredNameId(null)}
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setTooltipPos({ x: rect.left, y: rect.top, id: c.id, type: "name" });
+                        }}
+                        onMouseLeave={() => setTooltipPos(null)}
                       >
                         {c.name}
                       </span>
-                      {hoveredNameId === c.id && (() => {
-                        const el = nameRefs.current.get(c.id);
-                        return el && el.scrollWidth > el.offsetWidth;
-                      })() && (
-                        <div className={[
-                          "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
-                          isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
-                        ].join(" ")}>
-                          {c.name}
-                        </div>
-                      )}
                     </td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.phone || "-"}</td>
@@ -1582,52 +1596,32 @@ export default function ClientManager() {
                     </td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
                       {c.memo ? (
-                        <>
-                          <span
-                            ref={(el) => { if (el) memoRefs.current.set(c.id, el); else memoRefs.current.delete(c.id); }}
-                            className="max-w-[150px] block truncate"
-                            onMouseEnter={() => setHoveredMemoId(c.id)}
-                            onMouseLeave={() => setHoveredMemoId(null)}
-                          >
-                            {c.memo}
-                          </span>
-                          {hoveredMemoId === c.id && (() => {
-                            const el = memoRefs.current.get(c.id);
-                            return el && el.scrollWidth > el.offsetWidth;
-                          })() && (
-                            <div className={[
-                              "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-normal break-words max-w-[240px] pointer-events-none",
-                              isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
-                            ].join(" ")}>
-                              {c.memo}
-                            </div>
-                          )}
-                        </>
+                        <span
+                          ref={(el) => { if (el) memoRefs.current.set(c.id, el); else memoRefs.current.delete(c.id); }}
+                          className="max-w-[150px] block truncate"
+                          onMouseEnter={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setTooltipPos({ x: rect.left, y: rect.top, id: c.id, type: "memo" });
+                          }}
+                          onMouseLeave={() => setTooltipPos(null)}
+                        >
+                          {c.memo}
+                        </span>
                       ) : "-"}
                     </td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
                       {c.reportTone ? (
-                        <>
-                          <span
-                            ref={(el) => { if (el) toneRefs.current.set(c.id, el); else toneRefs.current.delete(c.id); }}
-                            className="max-w-[120px] block truncate"
-                            onMouseEnter={() => setHoveredToneId(c.id)}
-                            onMouseLeave={() => setHoveredToneId(null)}
-                          >
-                            {c.reportTone}
-                          </span>
-                          {hoveredToneId === c.id && (() => {
-                            const el = toneRefs.current.get(c.id);
-                            return el && el.scrollWidth > el.offsetWidth;
-                          })() && (
-                            <div className={[
-                              "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
-                              isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
-                            ].join(" ")}>
-                              {c.reportTone}
-                            </div>
-                          )}
-                        </>
+                        <span
+                          ref={(el) => { if (el) toneRefs.current.set(c.id, el); else toneRefs.current.delete(c.id); }}
+                          className="max-w-[120px] block truncate"
+                          onMouseEnter={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setTooltipPos({ x: rect.left, y: rect.top, id: c.id, type: "tone" });
+                          }}
+                          onMouseLeave={() => setTooltipPos(null)}
+                        >
+                          {c.reportTone}
+                        </span>
                       ) : "-"}
                     </td>
                     <td className="px-4 h-[52px] whitespace-nowrap relative">
