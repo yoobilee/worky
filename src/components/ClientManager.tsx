@@ -1534,7 +1534,7 @@ export default function ClientManager() {
                         return el && el.scrollWidth > el.offsetWidth;
                       })() && (
                         <div className={[
-                          "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                          "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
                           isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
                         ].join(" ")}>
                           {c.name}
@@ -1596,7 +1596,7 @@ export default function ClientManager() {
                             return el && el.scrollWidth > el.offsetWidth;
                           })() && (
                             <div className={[
-                              "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-normal break-words max-w-[240px] pointer-events-none",
+                              "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-normal break-words max-w-[240px] pointer-events-none",
                               isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
                             ].join(" ")}>
                               {c.memo}
@@ -1621,7 +1621,7 @@ export default function ClientManager() {
                             return el && el.scrollWidth > el.offsetWidth;
                           })() && (
                             <div className={[
-                              "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                              "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
                               isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
                             ].join(" ")}>
                               {c.reportTone}
@@ -1804,7 +1804,7 @@ export default function ClientManager() {
                       return el && el.scrollWidth > el.offsetWidth;
                     })() && (
                       <div className={[
-                        "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-pre-wrap max-w-[240px] pointer-events-none",
+                        "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-normal break-words max-w-[240px] pointer-events-none",
                         isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
                       ].join(" ")}>
                         {c.memo}
@@ -1830,7 +1830,7 @@ export default function ClientManager() {
                       return el && el.scrollWidth > el.offsetWidth;
                     })() && (
                       <div className={[
-                        "absolute left-0 top-0 -translate-y-full z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
+                        "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
                         isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
                       ].join(" ")}>
                         {c.reportTone}
