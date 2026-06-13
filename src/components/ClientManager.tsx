@@ -2266,15 +2266,15 @@ export default function ClientManager() {
                           {f.masked && (
                             <button
                               type="button"
-                              onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField({ clientId: c.id, key: f.key }); }}
-                              onMouseUp={() => setTimeout(() => setRevealingCustomField(null), 0)}
+                              onMouseDown={() => setRevealingCustomField({ clientId: c.id, key: f.key })}
+                              onMouseUp={() => setRevealingCustomField(null)}
+                              onMouseLeave={() => setRevealingCustomField(null)}
                               aria-label="속성 임시 표시"
-                              className="text-slate-400 hover:text-[#6C63FF] transition shrink-0 w-4 h-4 flex items-center justify-center"
+                              className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
                             >
-                              <div className="relative w-3 h-3">
-                                <IconEye className={["w-3 h-3 absolute", revealing ? "opacity-0" : "opacity-100"].join(" ")} />
-                                <IconEyeOff className={["w-3 h-3 absolute", revealing ? "opacity-100" : "opacity-0"].join(" ")} />
-                              </div>
+                              {revealing
+                                ? <IconEyeOff className="w-3 h-3" />
+                                : <IconEye className="w-3 h-3" />}
                             </button>
                           )}
                         </div>
