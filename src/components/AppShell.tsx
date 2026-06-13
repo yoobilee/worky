@@ -39,6 +39,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // 스크롤바 드래그 중 강조 표시
+  useEffect(() => {
+    const onGrab = (e: MouseEvent) => {
+      const el = e.target as HTMLElement;
+      const rect = el.getBoundingClientRect();
+      const isScrollbarX = e.clientY > rect.bottom - 12 && e.clientY <= rect.bottom;
+      const isScrollbarY = e.clientX > rect.right - 12 && e.clientX <= rect.right;
+      if (isScrollbarX || isScrollbarY) {
+        document.documentElement.setAttribute("data-scrolling", "true");
+      }
+    };
+    const onRelease = () => {
+      document.documentElement.removeAttribute("data-scrolling");
+    };
+    document.addEventListener("mousedown", onGrab);
+    document.addEventListener("mouseup", onRelease);
+    return () => {
+      document.removeEventListener("mousedown", onGrab);
+      document.removeEventListener("mouseup", onRelease);
+    };
+  }, []);
+
   // 라우트 변경 시 모바일 사이드바 닫기
   useEffect(() => {
     setSidebarOpen(false);

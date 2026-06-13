@@ -7,6 +7,7 @@
   --primary: #6C63FF;
   --primary-light: #8B85FF;
   --primary-dark: #4D44CC;
+  --scrollbar-size: 6px;
 }
 
 * {
@@ -120,6 +121,14 @@ body {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(108, 99, 255, 0.65);
+}
+
+/* 스크롤바 드래그 중 강조 */
+[data-scrolling="true"] ::-webkit-scrollbar-thumb,
+[data-scrolling="true"]::-webkit-scrollbar-thumb {
+  background: rgba(108, 99, 255, 0.9) !important;
+  width: 10px;
+  height: 10px;
 }
 
 /* 알림 벨 흔들림 애니메이션 */
