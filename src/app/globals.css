@@ -59,8 +59,8 @@ body {
 
 /* 전역 스크롤바 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -91,8 +91,8 @@ body {
 .overflow-auto::-webkit-scrollbar,
 .overflow-y-auto::-webkit-scrollbar,
 .overflow-x-auto::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 .overflow-auto::-webkit-scrollbar-thumb,
@@ -127,8 +127,8 @@ body {
 [data-scrolling="true"] ::-webkit-scrollbar-thumb,
 [data-scrolling="true"]::-webkit-scrollbar-thumb {
   background: rgba(108, 99, 255, 0.9) !important;
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
 }
 
 /* 알림 벨 흔들림 애니메이션 */
