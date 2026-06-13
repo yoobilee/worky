@@ -13,12 +13,6 @@ import { CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
 import { getEvents, addEvent, updateEvent, deleteEvent } from "@/lib/db/calendar";
 
-declare global {
-  interface Window {
-    kakao: any;
-  }
-}
-
 const DAY_LABELS  = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
@@ -177,28 +171,6 @@ interface KakaoPlace {
   address_name: string;
 }
 
-let kakaoLoadPromise: Promise<void> | null = null;
-function loadKakaoMaps(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.kakao?.maps?.services) return Promise.resolve();
-  if (kakaoLoadPromise) return kakaoLoadPromise;
-  kakaoLoadPromise = new Promise((resolve) => {
-    console.log('카카오맵 SDK 로드 시작');
-    const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`;
-    script.onload = () => {
-      console.log('카카오맵 SDK 로드 완료');
-      window.kakao.maps.load(() => {
-        console.log('카카오맵 초기화 완료');
-        resolve();
-      });
-    };
-    script.onerror = (e) => console.error('카카오맵 SDK 로드 실패', e);
-    document.head.appendChild(script);
-  });
-  return kakaoLoadPromise;
-}
-
 function LocationInput({ value, onChange, urlValue, onUrlChange }: {
   value: string;
   onChange: (v: string) => void;
@@ -223,20 +195,15 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query.trim()) { setResults([]); setShowResults(false); return; }
     debounceRef.current = setTimeout(async () => {
-      console.log('검색 시작:', query);
-      await loadKakaoMaps();
-      console.log('kakao 객체:', window.kakao);
-      if (!window.kakao?.maps?.services) return;
-      const places = new window.kakao.maps.services.Places();
-      places.keywordSearch(query, (data: KakaoPlace[], status: string) => {
-        if (status === window.kakao.maps.services.Status.OK) {
-          setResults(data.slice(0, 5));
-          setShowResults(true);
-        } else {
-          setResults([]);
-          setShowResults(false);
-        }
-      });
+      const res = await fetch(`/api/kakao-places?query=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (data.documents && data.documents.length > 0) {
+        setResults(data.documents.slice(0, 5));
+        setShowResults(true);
+      } else {
+        setResults([]);
+        setShowResults(false);
+      }
     }, 300);
   };
 
