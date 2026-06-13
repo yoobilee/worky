@@ -361,10 +361,10 @@ export default function CalendarComponent() {
         ) : (
           <div className="space-y-2 mb-4">
             {selectedEvents.map(ev => (
-              <div key={ev.id} className="rounded-xl bg-slate-50 dark:bg-zinc-800 group overflow-hidden">
+              <div key={ev.id} className="rounded-xl bg-slate-50 dark:bg-zinc-800 group overflow-visible">
                 {editingId === ev.id ? (
                   /* 인라인 편집 폼 */
-                  <div className="px-3 py-3 space-y-2">
+                  <div className="px-3 py-3 space-y-2 overflow-visible">
                     <input
                       value={editTitle}
                       onChange={e => setEditTitle(e.target.value)}
