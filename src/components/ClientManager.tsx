@@ -167,6 +167,21 @@ function getDday(endDate: string): number {
   return Math.ceil((end.getTime() - today.getTime()) / 86400000);
 }
 
+function RevealButton({ onReveal, onHide }: { onReveal: () => void; onHide: () => void }) {
+  const [revealing, setRevealing] = useState(false);
+  return (
+    <button
+      type="button"
+      onMouseDown={() => { setRevealing(true); onReveal(); }}
+      onMouseUp={() => { setRevealing(false); onHide(); }}
+      onMouseLeave={() => { setRevealing(false); onHide(); }}
+      className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
+    >
+      {revealing ? <IconEyeOff className="w-3 h-3" /> : <IconEye className="w-3 h-3" />}
+    </button>
+  );
+}
+
 function formatDday(dday: number): { text: string; cls: string } {
   if (dday < 0)   return { text: `D+${Math.abs(dday)}`, cls: "text-slate-400 dark:text-zinc-500" };
   if (dday === 0) return { text: "D-Day",                cls: "text-red-500 font-bold" };
@@ -736,6 +751,7 @@ export default function ClientManager() {
   const [revealingCompanyPhoneId, setRevealingCompanyPhoneId] = useState<string | null>(null);
   const [savedCustomKeys, setSavedCustomKeys] = useState<string[]>([]);
   const [revealedCustomFields, setRevealedCustomFields] = useState<Set<string>>(new Set());
+  const [revealingCustomField, setRevealingCustomField] = useState<string | null>(null);
   const [customPopover, setCustomPopover] = useState<{ id: string; x: number; y: number } | null>(null);
   const [focusedCustomKeyIdx, setFocusedCustomKeyIdx] = useState<number | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
@@ -2260,28 +2276,17 @@ export default function ClientManager() {
                   <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-1">
                     {c.customFields.map((f) => {
                       const fieldKey = `${c.id}:${f.key}`;
-                      const isRevealed = revealedCustomFields.has(fieldKey);
                       return (
                         <div key={f.key} className="flex items-center gap-1.5 text-xs">
                           <span className="text-slate-400 dark:text-zinc-500 shrink-0">{f.key}</span>
                           <span className="text-slate-600 dark:text-zinc-300 truncate">
-                            {f.masked && !isRevealed ? "****" : f.value}
+                            {f.masked && revealingCustomField !== fieldKey ? "****" : f.value}
                           </span>
                           {f.masked && (
-                            <button
-                              type="button"
-                              onClick={() => setRevealedCustomFields(prev => {
-                                const next = new Set(prev);
-                                next.has(fieldKey) ? next.delete(fieldKey) : next.add(fieldKey);
-                                return next;
-                              })}
-                              aria-label="속성 표시 전환"
-                              className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
-                            >
-                              {isRevealed
-                                ? <IconEyeOff className="w-3 h-3" />
-                                : <IconEye className="w-3 h-3" />}
-                            </button>
+                            <RevealButton
+                              onReveal={() => setRevealingCustomField(fieldKey)}
+                              onHide={() => setRevealingCustomField(null)}
+                            />
                           )}
                         </div>
                       );
