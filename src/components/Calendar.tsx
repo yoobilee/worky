@@ -183,9 +183,17 @@ function loadKakaoMaps(): Promise<void> {
   if (window.kakao?.maps?.services) return Promise.resolve();
   if (kakaoLoadPromise) return kakaoLoadPromise;
   kakaoLoadPromise = new Promise((resolve) => {
+    console.log('카카오맵 SDK 로드 시작');
     const script = document.createElement("script");
     script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`;
-    script.onload = () => { window.kakao.maps.load(() => resolve()); };
+    script.onload = () => {
+      console.log('카카오맵 SDK 로드 완료');
+      window.kakao.maps.load(() => {
+        console.log('카카오맵 초기화 완료');
+        resolve();
+      });
+    };
+    script.onerror = (e) => console.error('카카오맵 SDK 로드 실패', e);
     document.head.appendChild(script);
   });
   return kakaoLoadPromise;
@@ -215,7 +223,9 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query.trim()) { setResults([]); setShowResults(false); return; }
     debounceRef.current = setTimeout(async () => {
+      console.log('검색 시작:', query);
       await loadKakaoMaps();
+      console.log('kakao 객체:', window.kakao);
       if (!window.kakao?.maps?.services) return;
       const places = new window.kakao.maps.services.Places();
       places.keywordSearch(query, (data: KakaoPlace[], status: string) => {
