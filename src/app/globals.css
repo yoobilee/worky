@@ -133,7 +133,7 @@ body {
 
 /* 거래처 목록 표 가로 스크롤바 */
 .client-list-scroll::-webkit-scrollbar {
-  height: 8px;
+  height: 6px;
 }
 
 .client-list-scroll::-webkit-scrollbar-thumb {
