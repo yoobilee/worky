@@ -102,11 +102,12 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
       <div className="relative flex-1" ref={hourRef}>
         <button type="button" onClick={() => setHourOpen(v => !v)}
           className={[
-            "w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-left transition",
+            "w-full px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-left transition",
+            hourOpen ? "border-[#6C63FF] ring-2 ring-[#6C63FF]/40" : "border-slate-200 dark:border-zinc-700",
             parsed ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
           ].join(" ")}
         >
-          {hour}시
+          {parsed ? `${hour}시` : "- 시 -"}
         </button>
         {hourOpen && (
           <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-40 overflow-y-auto w-full">
@@ -124,11 +125,12 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
       <div className="relative flex-1" ref={minuteRef}>
         <button type="button" onClick={() => setMinuteOpen(v => !v)}
           className={[
-            "w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-left transition",
+            "w-full px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-left transition",
+            minuteOpen ? "border-[#6C63FF] ring-2 ring-[#6C63FF]/40" : "border-slate-200 dark:border-zinc-700",
             parsed ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
           ].join(" ")}
         >
-          {minute}분
+          {parsed ? `${minute}분` : "- 분 -"}
         </button>
         {minuteOpen && (
           <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-40 overflow-y-auto w-full">
