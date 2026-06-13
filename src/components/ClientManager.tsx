@@ -2272,9 +2272,7 @@ export default function ClientManager() {
                               aria-label="속성 임시 표시"
                               className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
                             >
-                              {revealing
-                                ? <IconEyeOff className="w-3 h-3" />
-                                : <IconEye className="w-3 h-3" />}
+                              <IconEye className="w-3 h-3" />
                             </button>
                           )}
                         </div>
