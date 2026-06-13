@@ -4,6 +4,7 @@ export interface CalendarEvent {
   title:     string;
   time?:     string;
   location?: string;
+  location_url?: string;
 }
 
 export const CALENDAR_KEY = "worky_calendar_events";

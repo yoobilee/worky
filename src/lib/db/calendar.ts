@@ -6,6 +6,7 @@ export interface DbEvent {
   title:       string;
   time?:       string;
   location?:   string;
+  location_url?: string;
   description?: string;
 }
 
@@ -13,7 +14,7 @@ export async function getEvents(userId: string): Promise<DbEvent[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("calendar_events")
-    .select("id, date, title, time, location, description")
+    .select("id, date, title, time, location, location_url, description")
     .eq("user_id", userId)
     .order("date");
   return (data as DbEvent[]) ?? [];
@@ -27,7 +28,7 @@ export async function addEvent(
   const { data } = await supabase
     .from("calendar_events")
     .insert({ user_id: userId, ...event })
-    .select("id, date, title, time, location, description")
+    .select("id, date, title, time, location, location_url, description")
     .single();
   return data as DbEvent | null;
 }

@@ -2,7 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
   IconChevronLeft, IconChevronRight, IconPlus,
@@ -51,6 +51,139 @@ function formatKey(key: string): string {
   );
 }
 
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${String(h).padStart(2, "0")}:${m}`;
+});
+
+function TimePickerInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className={[
+          "w-full px-3 py-2 rounded-xl border text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 flex items-center justify-between gap-1.5",
+          "border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800",
+          value ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
+        ].join(" ")}
+      >
+        <span className="flex items-center gap-1.5 truncate"><IconClock className="w-3.5 h-3.5 shrink-0" />{value || "시간 선택"}</span>
+        {value && (
+          <span onClick={(e) => { e.stopPropagation(); onChange(""); }}
+            className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-zinc-700 shrink-0" aria-label="시간 초기화">
+            <IconX className="w-3.5 h-3.5" />
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-48 overflow-y-auto w-full">
+          {TIME_OPTIONS.map(t => (
+            <button key={t} type="button" onClick={() => { onChange(t); setOpen(false); }}
+              className={[
+                "w-full px-3 py-1.5 text-xs text-left transition",
+                t === value ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+              ].join(" ")}
+            >{t}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LocationInput({ value, onChange, urlValue, onUrlChange }: {
+  value: string;
+  onChange: (v: string) => void;
+  urlValue?: string;
+  onUrlChange: (v: string | undefined) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const trimmed = value.trim();
+  const hasUrl  = !!urlValue;
+
+  return (
+    <div className="flex gap-2">
+      <div className="relative flex-1">
+        <input
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="장소 (선택)"
+          className={[
+            "w-full px-3 py-2 rounded-xl border text-sm bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition",
+            hasUrl ? "border-[#6C63FF] pr-8" : "border-slate-200 dark:border-zinc-700",
+          ].join(" ")}
+        />
+        {hasUrl && (
+          <button type="button" onClick={() => onUrlChange(undefined)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[#6C63FF] hover:bg-[#6C63FF]/10 transition"
+            aria-label="장소 연결 해제">
+            <IconX className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="relative" ref={ref}>
+        <button type="button" disabled={!trimmed} onClick={() => setOpen(v => !v)}
+          className={[
+            "p-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 transition",
+            trimmed ? "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-700" : "text-slate-300 dark:text-zinc-600 cursor-not-allowed",
+          ].join(" ")}
+          aria-label="지도 연결"
+        >
+          <IconMapPin className="w-4 h-4" />
+        </button>
+        {open && trimmed && (
+          <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[180px]">
+            <button type="button"
+              onClick={() => { window.open(`https://maps.google.com/?q=${encodeURIComponent(trimmed)}`, "_blank"); setOpen(false); }}
+              className="w-full px-3 py-2 text-xs text-left text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+              구글맵에서 검색
+            </button>
+            <button type="button"
+              onClick={() => { window.open(`https://map.kakao.com/?q=${encodeURIComponent(trimmed)}`, "_blank"); setOpen(false); }}
+              className="w-full px-3 py-2 text-xs text-left text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+              카카오맵에서 검색
+            </button>
+            <div className="border-t border-slate-100 dark:border-zinc-800" />
+            <button type="button"
+              onClick={() => { onUrlChange(`https://maps.google.com/?q=${encodeURIComponent(trimmed)}`); setOpen(false); }}
+              className="w-full px-3 py-2 text-xs text-left text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+              이 장소로 연결 (구글맵)
+            </button>
+            <button type="button"
+              onClick={() => { onUrlChange(`https://map.kakao.com/?q=${encodeURIComponent(trimmed)}`); setOpen(false); }}
+              className="w-full px-3 py-2 text-xs text-left text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+              이 장소로 연결 (카카오맵)
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CalendarComponent() {
   const today    = new Date();
   const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
@@ -59,17 +192,19 @@ export default function CalendarComponent() {
   const [month, setMonth] = useState(today.getMonth());
   const [selected, setSelected] = useState<string | null>(null);
   const [events,   setEvents]   = useState<CalendarEvent[]>([]);
-  const [formTitle,    setFormTitle]    = useState("");
-  const [formTime,     setFormTime]     = useState("");
-  const [formLocation, setFormLocation] = useState("");
+  const [formTitle,       setFormTitle]       = useState("");
+  const [formTime,        setFormTime]        = useState("");
+  const [formLocation,    setFormLocation]    = useState("");
+  const [formLocationUrl, setFormLocationUrl] = useState<string | undefined>(undefined);
   const [hydrated,   setHydrated]   = useState(false);
   const [userId,     setUserId]     = useState<string | null>(null);
   const [editingId,       setEditingId]       = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [displayed, setDisplayed] = useState<string | null>(null);
-  const [editTitle,    setEditTitle]    = useState("");
-  const [editTime,     setEditTime]     = useState("");
-  const [editLocation, setEditLocation] = useState("");
+  const [editTitle,       setEditTitle]       = useState("");
+  const [editTime,        setEditTime]        = useState("");
+  const [editLocation,    setEditLocation]    = useState("");
+  const [editLocationUrl, setEditLocationUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const supabase = createClient();
@@ -78,7 +213,7 @@ export default function CalendarComponent() {
       setUserId(uid);
       if (uid) {
         const rows = await getEvents(uid);
-        setEvents(rows.map((r) => ({ id: r.id, date: r.date, title: r.title, time: r.time, location: r.location })));
+        setEvents(rows.map((r) => ({ id: r.id, date: r.date, title: r.title, time: r.time, location: r.location, location_url: r.location_url })));
       }
       setHydrated(true);
     });
@@ -110,9 +245,10 @@ export default function CalendarComponent() {
       title: formTitle.trim(),
       time: formTime.trim() || undefined,
       location: formLocation.trim() || undefined,
+      location_url: formLocation.trim() ? formLocationUrl : undefined,
     });
-    if (row) setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time, location: row.location }]);
-    setFormTitle(""); setFormTime(""); setFormLocation("");
+    if (row) setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time, location: row.location, location_url: row.location_url }]);
+    setFormTitle(""); setFormTime(""); setFormLocation(""); setFormLocationUrl(undefined);
   };
 
   const handleDelete = (id: string) => setConfirmDeleteId(id);
@@ -129,6 +265,7 @@ export default function CalendarComponent() {
     setEditTitle(ev.title);
     setEditTime(ev.time || "");
     setEditLocation(ev.location || "");
+    setEditLocationUrl(ev.location_url);
   };
 
   const saveEdit = async (id: string) => {
@@ -137,6 +274,7 @@ export default function CalendarComponent() {
       title: editTitle.trim(),
       time: editTime.trim() || undefined,
       location: editLocation.trim() || undefined,
+      location_url: editLocation.trim() ? editLocationUrl : undefined,
     };
     await updateEvent(id, patch);
     setEvents((prev) => prev.map(e => e.id !== id ? e : { ...e, ...patch }));
@@ -181,17 +319,12 @@ export default function CalendarComponent() {
                       className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                     />
                     <div className="flex flex-col gap-2">
-                      <input
-                        value={editTime}
-                        onChange={e => setEditTime(e.target.value)}
-                        placeholder="시간 (선택)"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                      />
-                      <input
+                      <TimePickerInput value={editTime} onChange={setEditTime} />
+                      <LocationInput
                         value={editLocation}
-                        onChange={e => setEditLocation(e.target.value)}
-                        placeholder="장소 (선택)"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                        onChange={setEditLocation}
+                        urlValue={editLocationUrl}
+                        onUrlChange={setEditLocationUrl}
                       />
                     </div>
                     <div className="flex justify-end gap-2">
@@ -219,9 +352,18 @@ export default function CalendarComponent() {
                             </span>
                           )}
                           {ev.location && (
-                            <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
-                              <IconMapPin className="w-3 h-3" />{ev.location}
-                            </span>
+                            ev.location_url ? (
+                              <span
+                                onClick={() => window.open(ev.location_url, "_blank")}
+                                className="text-xs text-[#6C63FF] underline cursor-pointer flex items-center gap-1"
+                              >
+                                <IconMapPin className="w-3 h-3" />{ev.location}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                                <IconMapPin className="w-3 h-3" />{ev.location}
+                              </span>
+                            )
                           )}
                         </div>
                       )}
@@ -246,7 +388,7 @@ export default function CalendarComponent() {
 
       {/* 일정 추가 폼 */}
       <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800 shrink-0">
-        <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">일정 추가</p>
+        <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">일정 추가 <span className="text-red-400">*</span></p>
         <input
           value={formTitle}
           onChange={e => setFormTitle(e.target.value)}
@@ -255,17 +397,12 @@ export default function CalendarComponent() {
           className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
         <div className="flex flex-col gap-2">
-          <input
-            value={formTime}
-            onChange={e => setFormTime(e.target.value)}
-            placeholder="시간 (선택)"
-            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-          />
-          <input
+          <TimePickerInput value={formTime} onChange={setFormTime} />
+          <LocationInput
             value={formLocation}
-            onChange={e => setFormLocation(e.target.value)}
-            placeholder="장소 (선택)"
-            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+            onChange={setFormLocation}
+            urlValue={formLocationUrl}
+            onUrlChange={setFormLocationUrl}
           />
         </div>
         <div className="flex justify-end">
