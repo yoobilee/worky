@@ -26,7 +26,7 @@
 | todos | 날짜별 할 일 |
 | memos | 업무/회의/개인 메모 |
 | calendar_events | 일정 관리 이벤트 |
-| clients | 거래처 관리 (kakao_chat_name, report_template, group_name 컬럼 포함) |
+| clients | 거래처 관리 (company_phone, mask_phone, mask_company_phone, custom_fields, kakao_chat_name, report_template, group_name 컬럼 포함) |
 | glossary | 용어집 |
 | usage_stats | 기능별 사용 통계 |
 
@@ -160,10 +160,17 @@ src/
 - Supabase glossary 연동
 
 ### 14. 거래처 관리 (`/clients`)
-- 거래처 카드 등록/수정/삭제
+- 박스형/목록형 두 가지 뷰 지원
 - 상태 4단계: 대기 중/진행 중/완료/중단
-- 계약 D-day, 진행 현황 잔디밭
-- Supabase clients 연동 (kakao_chat_name, report_template, group_name 포함)
+- 계약 기간 단위 선택 (일/주/월/년), 영업일 기준 D-day 자동 계산
+- 박스형 카드: 거래처 연락처 → 담당자 → 계약정보(한 줄) → 링크 → 메모 → 보고톤 → 잔디밭 → 커스텀 속성 순
+- 목록형: 컬럼 표시/숨김 (표시 항목 버튼, localStorage 저장), 편집 버튼으로 수정/일괄 삭제, 진행현황 패널
+- 커스텀 속성: key/value + 숨김 처리, 박스형 토글 방식 / 목록형 팝오버
+- 연락처 숨김: 담당자/거래처 연락처 각각 숨김 설정, 눈 아이콘 클릭으로 임시 확인 (꾹 누르기 방식)
+- 검색: 거래처명/담당자/연락처/태그/메모/보고톤/링크/커스텀 속성 전체 검색
+- 정렬: 상태순/만료임박순/계약시작일↑↓/거래처명↑↓/담당자↑↓
+- 진행 현황 잔디밭: 계약 기간 내 일별 완료/실패 기록, 주 단위 네비게이션
+- Supabase clients 연동: mask_phone, mask_company_phone, company_phone, custom_fields(JSONB), user_settings.custom_field_keys(JSONB)
 
 ### 15. 공문서 작성 (`/document`)
 - 유형: 품의서/공문/지출결의서/업무협조 요청서
