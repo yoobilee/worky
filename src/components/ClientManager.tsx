@@ -1810,16 +1810,16 @@ export default function ClientManager() {
             <thead>
               <tr className="text-left text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
                 <th className="px-2 py-3 whitespace-nowrap"></th>
-                <th className="px-4 py-3 whitespace-nowrap text-left">거래처명</th>
-                <th className="px-4 py-3 whitespace-nowrap text-left">담당자</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">거래처명</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">담당자</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">담당자 연락처</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">거래처 연락처</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">태그</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">계약 시작일</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">계약 만료일</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">D-day</th>
-                <th className="px-4 py-3 whitespace-nowrap text-left">메모</th>
-                <th className="px-4 py-3 whitespace-nowrap text-left">보고 톤</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">메모</th>
+                <th className="px-4 py-3 whitespace-nowrap text-center">보고 톤</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">상태</th>
               </tr>
             </thead>
