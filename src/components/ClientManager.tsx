@@ -1177,8 +1177,8 @@ export default function ClientManager() {
                       <button
                         type="button"
                         onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField({ clientId: client.id, key: f.key }); }}
-                        onMouseUp={(e) => { e.stopPropagation(); setRevealingCustomField(null); }}
-                        onMouseLeave={(e) => { e.stopPropagation(); setRevealingCustomField(null); }}
+                        onMouseUp={(e) => { e.stopPropagation(); console.log('reset from:', new Error().stack); setRevealingCustomField(null); }}
+                        onMouseLeave={(e) => { e.stopPropagation(); console.log('reset from:', new Error().stack); setRevealingCustomField(null); }}
                         className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
                       >
                         {revealing ? <IconEyeOff className="w-3 h-3" /> : <IconEye className="w-3 h-3" />}
@@ -2267,8 +2267,8 @@ export default function ClientManager() {
                             <button
                               type="button"
                               onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField({ clientId: c.id, key: f.key }); }}
-                              onMouseUp={() => setRevealingCustomField(null)}
-                              onMouseLeave={() => setRevealingCustomField(null)}
+                              onMouseUp={() => { console.log('reset from:', new Error().stack); setRevealingCustomField(null); }}
+                              onMouseLeave={() => { console.log('reset from:', new Error().stack); setRevealingCustomField(null); }}
                               aria-label="속성 임시 표시"
                               className="text-slate-400 hover:text-[#6C63FF] transition shrink-0 w-4 h-4 flex items-center justify-center"
                             >
