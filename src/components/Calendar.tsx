@@ -13,6 +13,12 @@ import { CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
 import { getEvents, addEvent, updateEvent, deleteEvent } from "@/lib/db/calendar";
 
+declare global {
+  interface Window {
+    kakao: any;
+  }
+}
+
 const DAY_LABELS  = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
@@ -166,83 +172,114 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
   );
 }
 
+interface KakaoPlace {
+  place_name:   string;
+  address_name: string;
+}
+
+let kakaoLoadPromise: Promise<void> | null = null;
+function loadKakaoMaps(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (window.kakao?.maps?.services) return Promise.resolve();
+  if (kakaoLoadPromise) return kakaoLoadPromise;
+  kakaoLoadPromise = new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`;
+    script.onload = () => { window.kakao.maps.load(() => resolve()); };
+    document.head.appendChild(script);
+  });
+  return kakaoLoadPromise;
+}
+
 function LocationInput({ value, onChange, urlValue, onUrlChange }: {
   value: string;
   onChange: (v: string) => void;
   urlValue?: string;
   onUrlChange: (v: string | undefined) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [results, setResults]     = useState<KakaoPlace[]>([]);
+  const [showResults, setShowResults] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!showResults) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setShowResults(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  }, [showResults]);
 
-  const trimmed = value.trim();
-  const hasUrl  = !!urlValue;
+  const search = (query: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!query.trim()) { setResults([]); setShowResults(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      await loadKakaoMaps();
+      if (!window.kakao?.maps?.services) return;
+      const places = new window.kakao.maps.services.Places();
+      places.keywordSearch(query, (data: KakaoPlace[], status: string) => {
+        if (status === window.kakao.maps.services.Status.OK) {
+          setResults(data.slice(0, 5));
+          setShowResults(true);
+        } else {
+          setResults([]);
+          setShowResults(false);
+        }
+      });
+    }, 300);
+  };
+
+  const handleChange = (v: string) => {
+    onChange(v);
+    search(v);
+  };
+
+  const handleSelect = (place: KakaoPlace) => {
+    onChange(place.place_name);
+    onUrlChange(`https://map.kakao.com/?q=${encodeURIComponent(place.place_name)}`);
+    setResults([]);
+    setShowResults(false);
+  };
+
+  const handleClear = () => {
+    onChange("");
+    onUrlChange(undefined);
+    setResults([]);
+    setShowResults(false);
+  };
+
+  const hasUrl = !!urlValue;
 
   return (
-    <div className="flex gap-2">
-      <div className="relative flex-1">
-        <input
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder="장소 (선택)"
-          className={[
-            "w-full px-3 py-2 rounded-xl border text-sm bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition",
-            hasUrl ? "border-[#6C63FF] pr-8" : "border-slate-200 dark:border-zinc-700",
-          ].join(" ")}
-        />
-        {hasUrl && (
-          <button type="button" onClick={() => onUrlChange(undefined)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[#6C63FF] hover:bg-[#6C63FF]/10 transition"
-            aria-label="장소 연결 해제">
-            <IconX className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-      <div className="relative" ref={ref}>
-        <button type="button" disabled={!trimmed} onClick={() => setOpen(v => !v)}
-          className={[
-            "p-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 transition",
-            trimmed ? "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-700" : "text-slate-300 dark:text-zinc-600 cursor-not-allowed",
-          ].join(" ")}
-          aria-label="지도 연결"
-        >
-          <IconMapPin className="w-4 h-4" />
+    <div className="relative" ref={ref}>
+      <input
+        value={value}
+        onChange={e => handleChange(e.target.value)}
+        placeholder="장소 (선택)"
+        className={[
+          "w-full px-3 py-2 pr-8 rounded-xl border text-sm bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition",
+          hasUrl ? "border-[#6C63FF]" : "border-slate-200 dark:border-zinc-700",
+        ].join(" ")}
+      />
+      {value && (
+        <button type="button" onClick={handleClear}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 dark:text-zinc-500 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
+          aria-label="장소 삭제">
+          <IconX className="w-3.5 h-3.5" />
         </button>
-        {open && trimmed && (
-          <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[180px]">
-            <button type="button"
-              onClick={() => { window.open(`https://maps.google.com/?q=${encodeURIComponent(trimmed)}`, "_blank"); setOpen(false); }}
-              className="w-full px-3 py-2 text-xs text-left text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-              구글맵에서 검색
+      )}
+      {showResults && results.length > 0 && (
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden overflow-y-auto max-h-56 w-full">
+          {results.map((p, i) => (
+            <button key={i} type="button" onClick={() => handleSelect(p)}
+              className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
+              <p className="text-xs font-medium text-slate-700 dark:text-zinc-200 truncate">{p.place_name}</p>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate">{p.address_name}</p>
             </button>
-            <button type="button"
-              onClick={() => { window.open(`https://map.kakao.com/?q=${encodeURIComponent(trimmed)}`, "_blank"); setOpen(false); }}
-              className="w-full px-3 py-2 text-xs text-left text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-              카카오맵에서 검색
-            </button>
-            <div className="border-t border-slate-100 dark:border-zinc-800" />
-            <button type="button"
-              onClick={() => { onUrlChange(`https://maps.google.com/?q=${encodeURIComponent(trimmed)}`); setOpen(false); }}
-              className="w-full px-3 py-2 text-xs text-left text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-              이 장소로 연결 (구글맵)
-            </button>
-            <button type="button"
-              onClick={() => { onUrlChange(`https://map.kakao.com/?q=${encodeURIComponent(trimmed)}`); setOpen(false); }}
-              className="w-full px-3 py-2 text-xs text-left text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-              이 장소로 연결 (카카오맵)
-            </button>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
