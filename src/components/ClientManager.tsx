@@ -2161,13 +2161,23 @@ export default function ClientManager() {
                   )
                 )}
 
+                {/* 링크 */}
+                {c.link && (
+                  <a href={c.link} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-[#6C63FF] hover:text-[#8B85FF] transition w-fit"
+                  >
+                    <IconExternalLink className="w-3.5 h-3.5" />
+                    <span className="truncate max-w-[160px]">{c.link.replace(/^https?:\/\//, "")}</span>
+                  </a>
+                )}
+
                 {/* 메모 */}
                 {c.memo && (
                   <div className="flex items-start gap-1.5 relative">
                     <IconNotes className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <p
                       ref={(el) => { if (el) memoBoxRefs.current.set(c.id, el); else memoBoxRefs.current.delete(c.id); }}
-                      className="text-xs text-slate-500 dark:text-zinc-400 truncate"
+                      className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2"
                       onMouseEnter={() => setHoveredMemoIdBox(c.id)}
                       onMouseLeave={() => setHoveredMemoIdBox(null)}
                     >
@@ -2193,7 +2203,7 @@ export default function ClientManager() {
                     <IconMessage className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <p
                       ref={(el) => { if (el) toneBoxRefs.current.set(c.id, el); else toneBoxRefs.current.delete(c.id); }}
-                      className="text-xs text-slate-500 dark:text-zinc-400 truncate"
+                      className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2"
                       onMouseEnter={() => setHoveredToneIdBox(c.id)}
                       onMouseLeave={() => setHoveredToneIdBox(null)}
                     >
@@ -2247,16 +2257,6 @@ export default function ClientManager() {
                   );
                 })()}
 
-                {/* 링크 */}
-                {c.link && (
-                  <a href={c.link} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-[#6C63FF] hover:text-[#8B85FF] transition w-fit"
-                  >
-                    <IconExternalLink className="w-3.5 h-3.5" />
-                    <span className="truncate max-w-[160px]">{c.link.replace(/^https?:\/\//, "")}</span>
-                  </a>
-                )}
-
                 {/* 커스텀 속성 */}
                 {c.customFields.length > 0 && (
                   <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-1 bg-slate-50 dark:bg-zinc-800/50 rounded-xl px-2 py-1.5">
@@ -2288,27 +2288,6 @@ export default function ClientManager() {
                         </div>
                       );
                     })}
-                  </div>
-                )}
-
-                {/* 히스토리 토글 */}
-                {c.statusHistory.length > 0 && (
-                  <div>
-                    <button onClick={() => toggleHistory(c.id)}
-                      className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition">
-                      {histOpen ? <IconChevronUp className="w-3.5 h-3.5" /> : <IconChevronDown className="w-3.5 h-3.5" />}
-                      히스토리 {c.statusHistory.length}건
-                    </button>
-                    {histOpen && (
-                      <div className="mt-1.5 space-y-1 max-h-28 overflow-y-auto pl-1">
-                        {[...c.statusHistory].reverse().map((h, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs">
-                            <span className={STATUS_CONFIG[h.status]?.textCls ?? "text-slate-400"}>{STATUS_CONFIG[h.status]?.label ?? h.status}</span>
-                            <span className="text-slate-400 dark:text-zinc-500">{formatDate(h.date)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )}
 
