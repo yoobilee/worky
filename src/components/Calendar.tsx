@@ -180,18 +180,18 @@ export default function CalendarComponent() {
                       autoFocus
                       className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
                       <input
                         value={editTime}
                         onChange={e => setEditTime(e.target.value)}
                         placeholder="시간 (선택)"
-                        className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                       />
                       <input
                         value={editLocation}
                         onChange={e => setEditLocation(e.target.value)}
                         placeholder="장소 (선택)"
-                        className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                       />
                     </div>
                     <div className="flex justify-end gap-2">
@@ -254,18 +254,18 @@ export default function CalendarComponent() {
           placeholder="일정 제목을 입력하세요"
           className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
           <input
             value={formTime}
             onChange={e => setFormTime(e.target.value)}
             placeholder="시간 (선택)"
-            className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
           />
           <input
             value={formLocation}
             onChange={e => setFormLocation(e.target.value)}
             placeholder="장소 (선택)"
-            className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
           />
         </div>
         <div className="flex justify-end">
@@ -324,7 +324,7 @@ export default function CalendarComponent() {
           {/* 날짜 그리드 — 모든 셀 동일 높이 */}
           <div className="grid grid-cols-7 gap-0.5">
             {cells.map((day, idx) => {
-              if (day === null) return <div key={idx} className="min-h-[72px]" />;
+              if (day === null) return <div key={idx} className="min-h-[88px]" />;
               const key      = toKey(year, month, day);
               const evts     = eventsOn(key);
               const isSel    = key === selected;
@@ -336,7 +336,7 @@ export default function CalendarComponent() {
               return (
                 <button key={idx} onClick={() => setSelected(prev => prev === key ? null : key)}
                   className={[
-                    "flex flex-col items-center justify-start pt-1.5 pb-1 px-0.5 rounded-xl transition-all min-h-[72px]",
+                    "flex flex-col items-center justify-start pt-1.5 pb-1 px-0.5 rounded-xl transition-all min-h-[88px]",
                     isSel
                       ? "bg-[#6C63FF] text-white shadow-sm"
                       : isToday
