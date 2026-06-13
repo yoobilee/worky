@@ -1320,7 +1320,7 @@ export default function ClientManager() {
                       </svg>
                     )}
                   </span>
-                  <span className="text-slate-500 dark:text-zinc-400">연락처 마스킹</span>
+                  <span className="text-slate-500 dark:text-zinc-400">연락처 숨김</span>
                 </button>
               </div>
               <input value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: e.target.value }))}
@@ -1381,7 +1381,7 @@ export default function ClientManager() {
                         </svg>
                       )}
                     </span>
-                    <span className="text-slate-500 dark:text-zinc-400">연락처 마스킹</span>
+                    <span className="text-slate-500 dark:text-zinc-400">연락처 숨김</span>
                   </button>
                 </div>
                 <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
@@ -1583,7 +1583,7 @@ export default function ClientManager() {
                           </svg>
                         )}
                       </span>
-                      <span className="text-slate-500 dark:text-zinc-400">마스킹</span>
+                      <span className="text-slate-500 dark:text-zinc-400">숨김</span>
                     </button>
                     <button
                       type="button"
