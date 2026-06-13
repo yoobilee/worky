@@ -12,7 +12,7 @@ import {
   IconChevronLeft, IconChevronRight,
   IconCircleCheck, IconCircleX, IconClock, IconPlayerPlay,
   IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight, IconCheck, IconSearch,
-  IconEye, IconEyeOff, IconTag,
+  IconEye, IconEyeOff, IconTag, IconLayoutColumns,
 } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -85,6 +85,21 @@ interface FormState {
 const RESET_DATE_KEY = "worky_clients_reset_date";
 const VIEW_MODE_KEY  = "worky_clients_view";
 const GRASS_PANEL_KEY = "worky_grass_panel";
+const COLUMN_SETTINGS_KEY = "worky_column_settings";
+
+const ALL_COLUMNS = [
+  { key: "contact", label: "담당자" },
+  { key: "phone", label: "담당자 연락처" },
+  { key: "companyPhone", label: "거래처 연락처" },
+  { key: "tags", label: "태그" },
+  { key: "contractStart", label: "계약 시작일" },
+  { key: "contractEnd", label: "계약 만료일" },
+  { key: "dday", label: "D-day" },
+  { key: "memo", label: "메모" },
+  { key: "reportTone", label: "보고 톤" },
+] as const;
+
+type ColumnKey = typeof ALL_COLUMNS[number]["key"];
 
 type ViewMode = "grid" | "list";
 
@@ -755,6 +770,11 @@ export default function ClientManager() {
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const [contractUnitDropdownOpen, setContractUnitDropdownOpen] = useState(false);
   const contractUnitDropdownRef = useRef<HTMLDivElement>(null);
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
+    new Set(ALL_COLUMNS.map(c => c.key))
+  );
+  const [columnSettingOpen, setColumnSettingOpen] = useState(false);
+  const columnSettingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -763,6 +783,9 @@ export default function ClientManager() {
       }
       if (contractUnitDropdownRef.current && !contractUnitDropdownRef.current.contains(e.target as Node)) {
         setContractUnitDropdownOpen(false);
+      }
+      if (columnSettingRef.current && !columnSettingRef.current.contains(e.target as Node)) {
+        setColumnSettingOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -849,6 +872,8 @@ export default function ClientManager() {
       if (savedView === "grid" || savedView === "list") setViewMode(savedView);
       const savedGrassPanel = localStorage.getItem(GRASS_PANEL_KEY);
       if (savedGrassPanel === "true") setShowGrassPanel(true);
+      const savedColumns = localStorage.getItem(COLUMN_SETTINGS_KEY);
+      if (savedColumns) setVisibleColumns(new Set(JSON.parse(savedColumns)));
       setHydrated(true);
     });
   }, []);
@@ -856,6 +881,15 @@ export default function ClientManager() {
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem(VIEW_MODE_KEY, mode);
+  };
+
+  const toggleColumn = (key: ColumnKey) => {
+    setVisibleColumns(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      localStorage.setItem(COLUMN_SETTINGS_KEY, JSON.stringify([...next]));
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -1726,6 +1760,38 @@ export default function ClientManager() {
             )
           )}
 
+          {/* 컬럼 표시 설정 */}
+          {viewMode === "list" && (
+            <div className="relative" ref={columnSettingRef}>
+              <button
+                onClick={() => setColumnSettingOpen(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+              >
+                <IconLayoutColumns className="w-3.5 h-3.5" />컬럼
+              </button>
+              {columnSettingOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg p-2 min-w-[160px]">
+                  {ALL_COLUMNS.map(col => (
+                    <button key={col.key} onClick={() => toggleColumn(col.key)}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                      <span className={[
+                        "w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
+                        visibleColumns.has(col.key) ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+                      ].join(" ")}>
+                        {visibleColumns.has(col.key) && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                          </svg>
+                        )}
+                      </span>
+                      {col.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 정렬 드롭다운 */}
           <div className="relative" ref={sortDropdownRef}>
             <button
@@ -1811,15 +1877,15 @@ export default function ClientManager() {
               <tr className="text-left text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
                 <th className="px-2 py-3 whitespace-nowrap"></th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">거래처명</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">담당자</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">담당자 연락처</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">거래처 연락처</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">태그</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">계약 시작일</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">계약 만료일</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">D-day</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">메모</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">보고 톤</th>
+                {visibleColumns.has("contact") && <th className="px-4 py-3 whitespace-nowrap text-center">담당자</th>}
+                {visibleColumns.has("phone") && <th className="px-4 py-3 whitespace-nowrap text-center">담당자 연락처</th>}
+                {visibleColumns.has("companyPhone") && <th className="px-4 py-3 whitespace-nowrap text-center">거래처 연락처</th>}
+                {visibleColumns.has("tags") && <th className="px-4 py-3 whitespace-nowrap text-center">태그</th>}
+                {visibleColumns.has("contractStart") && <th className="px-4 py-3 whitespace-nowrap text-center">계약 시작일</th>}
+                {visibleColumns.has("contractEnd") && <th className="px-4 py-3 whitespace-nowrap text-center">계약 만료일</th>}
+                {visibleColumns.has("dday") && <th className="px-4 py-3 whitespace-nowrap text-center">D-day</th>}
+                {visibleColumns.has("memo") && <th className="px-4 py-3 whitespace-nowrap text-center">메모</th>}
+                {visibleColumns.has("reportTone") && <th className="px-4 py-3 whitespace-nowrap text-center">보고 톤</th>}
                 <th className="px-4 py-3 whitespace-nowrap text-center">상태</th>
               </tr>
             </thead>
@@ -1894,8 +1960,8 @@ export default function ClientManager() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">
+                    {visibleColumns.has("contact") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>}
+                    {visibleColumns.has("phone") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">
                       {c.phone ? (
                         <div className="flex items-center justify-center gap-1.5">
                           <span>
@@ -1917,8 +1983,8 @@ export default function ClientManager() {
                           )}
                         </div>
                       ) : "-"}
-                    </td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">
+                    </td>}
+                    {visibleColumns.has("companyPhone") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">
                       {c.companyPhone ? (
                         <div className="flex items-center justify-center gap-1.5">
                           <span>
@@ -1940,8 +2006,8 @@ export default function ClientManager() {
                           )}
                         </div>
                       ) : "-"}
-                    </td>
-                    <td className="px-4 h-[52px] text-center">
+                    </td>}
+                    {visibleColumns.has("tags") && <td className="px-4 h-[52px] text-center">
                       {c.tags.length > 0 ? (
                         <div className="flex items-center justify-center gap-1">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 dark:bg-[#6C63FF]/25 text-[#6C63FF] dark:text-[#a99dff] whitespace-nowrap">{c.tags[0]}</span>
@@ -1972,13 +2038,13 @@ export default function ClientManager() {
                           )}
                         </div>
                       ) : "-"}
-                    </td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">{c.contractStart ? fmtShort(c.contractStart) : "-"}</td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">{contractEnd ? fmtShort(contractEnd) : "-"}</td>
-                    <td className="px-4 h-[52px] whitespace-nowrap text-center">
+                    </td>}
+                    {visibleColumns.has("contractStart") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">{c.contractStart ? fmtShort(c.contractStart) : "-"}</td>}
+                    {visibleColumns.has("contractEnd") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">{contractEnd ? fmtShort(contractEnd) : "-"}</td>}
+                    {visibleColumns.has("dday") && <td className="px-4 h-[52px] whitespace-nowrap text-center">
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
-                    </td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
+                    </td>}
+                    {visibleColumns.has("memo") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
                       {c.memo ? (
                         <span
                           ref={(el) => { if (el) memoRefs.current.set(c.id, el); else memoRefs.current.delete(c.id); }}
@@ -1994,8 +2060,8 @@ export default function ClientManager() {
                           {c.memo}
                         </span>
                       ) : "-"}
-                    </td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
+                    </td>}
+                    {visibleColumns.has("reportTone") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
                       {c.reportTone ? (
                         <span
                           ref={(el) => { if (el) toneRefs.current.set(c.id, el); else toneRefs.current.delete(c.id); }}
@@ -2011,7 +2077,7 @@ export default function ClientManager() {
                           {c.reportTone}
                         </span>
                       ) : "-"}
-                    </td>
+                    </td>}
                     <td className="px-4 h-[52px] whitespace-nowrap relative text-center">
                       <div className="relative w-fit mx-auto">
                         <button
