@@ -51,53 +51,104 @@ function formatKey(key: string): string {
   );
 }
 
-const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
-  const h = Math.floor(i / 2);
-  const m = i % 2 === 0 ? "00" : "30";
-  return `${String(h).padStart(2, "0")}:${m}`;
-});
+const HOUR_OPTIONS   = Array.from({ length: 12 }, (_, i) => i + 1);
+const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5);
+
+function parseTimeValue(v: string): { period: "오전" | "오후"; hour: number; minute: number } | null {
+  let m = v.match(/^(오전|오후)\s*(\d{1,2}):(\d{2})$/);
+  if (m) return { period: m[1] as "오전" | "오후", hour: Number(m[2]), minute: Number(m[3]) };
+  m = v.match(/^(\d{1,2}):(\d{2})$/);
+  if (m) {
+    const h24 = Number(m[1]);
+    const period: "오전" | "오후" = h24 < 12 ? "오전" : "오후";
+    let hour = h24 % 12;
+    if (hour === 0) hour = 12;
+    return { period, hour, minute: Number(m[2]) };
+  }
+  return null;
+}
 
 function TimePickerInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [hourOpen, setHourOpen] = useState(false);
+  const [minuteOpen, setMinuteOpen] = useState(false);
+  const hourRef = useRef<HTMLDivElement>(null);
+  const minuteRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!hourOpen && !minuteOpen) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (hourRef.current && !hourRef.current.contains(e.target as Node)) setHourOpen(false);
+      if (minuteRef.current && !minuteRef.current.contains(e.target as Node)) setMinuteOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  }, [hourOpen, minuteOpen]);
+
+  const parsed = parseTimeValue(value);
+  const period = parsed?.period ?? "오전";
+  const hour   = parsed?.hour ?? 9;
+  const minute = parsed?.minute ?? 0;
+
+  const commit = (p: "오전" | "오후", h: number, m: number) => {
+    onChange(`${p} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  };
 
   return (
-    <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen(v => !v)}
-        className={[
-          "w-full px-3 py-2 rounded-xl border text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 flex items-center justify-between gap-1.5",
-          "border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800",
-          value ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
-        ].join(" ")}
-      >
-        <span className="flex items-center gap-1.5 truncate"><IconClock className="w-3.5 h-3.5 shrink-0" />{value || "시간 선택"}</span>
-        {value && (
-          <span onClick={(e) => { e.stopPropagation(); onChange(""); }}
-            className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-zinc-700 shrink-0" aria-label="시간 초기화">
-            <IconX className="w-3.5 h-3.5" />
-          </span>
-        )}
+    <div className="flex items-center gap-1.5">
+      <button type="button" onClick={() => commit(period === "오전" ? "오후" : "오전", hour, minute)}
+        className="px-2.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 transition shrink-0">
+        {period}
       </button>
-      {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-48 overflow-y-auto w-full">
-          {TIME_OPTIONS.map(t => (
-            <button key={t} type="button" onClick={() => { onChange(t); setOpen(false); }}
-              className={[
-                "w-full px-3 py-1.5 text-xs text-left transition",
-                t === value ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
-              ].join(" ")}
-            >{t}</button>
-          ))}
-        </div>
+      <div className="relative flex-1" ref={hourRef}>
+        <button type="button" onClick={() => setHourOpen(v => !v)}
+          className={[
+            "w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-left transition",
+            parsed ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
+          ].join(" ")}
+        >
+          {String(hour).padStart(2, "0")}시
+        </button>
+        {hourOpen && (
+          <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-40 overflow-y-auto w-full">
+            {HOUR_OPTIONS.map(h => (
+              <button key={h} type="button" onClick={() => { commit(period, h, minute); setHourOpen(false); }}
+                className={[
+                  "w-full px-3 py-1.5 text-xs text-left transition",
+                  h === hour ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                ].join(" ")}
+              >{String(h).padStart(2, "0")}시</button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="relative flex-1" ref={minuteRef}>
+        <button type="button" onClick={() => setMinuteOpen(v => !v)}
+          className={[
+            "w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-left transition",
+            parsed ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
+          ].join(" ")}
+        >
+          {String(minute).padStart(2, "0")}분
+        </button>
+        {minuteOpen && (
+          <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-40 overflow-y-auto w-full">
+            {MINUTE_OPTIONS.map(m => (
+              <button key={m} type="button" onClick={() => { commit(period, hour, m); setMinuteOpen(false); }}
+                className={[
+                  "w-full px-3 py-1.5 text-xs text-left transition",
+                  m === minute ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                ].join(" ")}
+              >{String(m).padStart(2, "0")}분</button>
+            ))}
+          </div>
+        )}
+      </div>
+      {value && (
+        <button type="button" onClick={() => onChange("")}
+          className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-700 transition shrink-0"
+          aria-label="시간 초기화">
+          <IconX className="w-4 h-4" />
+        </button>
       )}
     </div>
   );
