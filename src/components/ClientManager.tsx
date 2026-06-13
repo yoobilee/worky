@@ -1570,7 +1570,8 @@ export default function ClientManager() {
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                       />
                       {focusedCustomKeyIdx === idx && savedCustomKeys.length > 0 && (
-                        <div className="absolute z-10 top-full left-0 mt-1 w-full max-h-40 overflow-y-auto rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg">
+                        <div className="absolute z-10 top-full left-0 mt-1 w-full rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg overflow-hidden">
+                          <div className="max-h-40 overflow-y-auto">
                           {savedCustomKeys
                             .filter((k) => k.includes(field.key.trim()))
                             .map((k) => (
@@ -1588,6 +1589,7 @@ export default function ClientManager() {
                                 {k}
                               </button>
                             ))}
+                          </div>
                         </div>
                       )}
                     </div>

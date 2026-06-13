@@ -120,15 +120,17 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
           {parsed ? `${hour}시` : "- 시 -"}
         </button>
         {hourOpen && (
-          <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-40 overflow-y-auto w-full">
-            {HOUR_OPTIONS.map(h => (
-              <button key={h} type="button" onClick={() => { commit(period, h, minute); setHourOpen(false); }}
-                className={[
-                  "w-full px-3 py-1.5 text-xs text-left transition",
-                  h === hour ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                ].join(" ")}
-              >{h}시</button>
-            ))}
+          <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
+            <div className="max-h-40 overflow-y-auto">
+              {HOUR_OPTIONS.map(h => (
+                <button key={h} type="button" onClick={() => { commit(period, h, minute); setHourOpen(false); }}
+                  className={[
+                    "w-full px-3 py-1.5 text-xs text-left transition",
+                    h === hour ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                  ].join(" ")}
+                >{h}시</button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -143,15 +145,17 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
           {parsed ? `${minute}분` : "- 분 -"}
         </button>
         {minuteOpen && (
-          <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-40 overflow-y-auto w-full">
-            {MINUTE_OPTIONS.map(m => (
-              <button key={m} type="button" onClick={() => { commit(period, hour, m); setMinuteOpen(false); }}
-                className={[
-                  "w-full px-3 py-1.5 text-xs text-left transition",
-                  m === minute ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                ].join(" ")}
-              >{m}분</button>
-            ))}
+          <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
+            <div className="max-h-40 overflow-y-auto">
+              {MINUTE_OPTIONS.map(m => (
+                <button key={m} type="button" onClick={() => { commit(period, hour, m); setMinuteOpen(false); }}
+                  className={[
+                    "w-full px-3 py-1.5 text-xs text-left transition",
+                    m === minute ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                  ].join(" ")}
+                >{m}분</button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -247,7 +251,8 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
         </button>
       )}
       {showResults && results.length > 0 && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden overflow-y-auto max-h-56 w-full">
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
+          <div className="max-h-56 overflow-y-auto">
           {results.map((p, i) => (
             <button key={i} type="button" onClick={() => handleSelect(p)}
               className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
@@ -255,6 +260,7 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
               <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate">{p.address_name}</p>
             </button>
           ))}
+          </div>
         </div>
       )}
     </div>
