@@ -2266,7 +2266,7 @@ export default function ClientManager() {
                           {f.masked && (
                             <button
                               type="button"
-                              onMouseDown={() => setRevealingCustomField({ clientId: c.id, key: f.key })}
+                              onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField({ clientId: c.id, key: f.key }); }}
                               onMouseUp={() => setRevealingCustomField(null)}
                               onMouseLeave={() => setRevealingCustomField(null)}
                               aria-label="속성 임시 표시"
