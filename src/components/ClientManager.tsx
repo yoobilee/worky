@@ -2177,7 +2177,7 @@ export default function ClientManager() {
                     <IconNotes className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <p
                       ref={(el) => { if (el) memoBoxRefs.current.set(c.id, el); else memoBoxRefs.current.delete(c.id); }}
-                      className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2"
+                      className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2 overflow-hidden"
                       onMouseEnter={() => setHoveredMemoIdBox(c.id)}
                       onMouseLeave={() => setHoveredMemoIdBox(null)}
                     >
@@ -2185,7 +2185,7 @@ export default function ClientManager() {
                     </p>
                     {hoveredMemoIdBox === c.id && (() => {
                       const el = memoBoxRefs.current.get(c.id);
-                      return el && el.scrollWidth > el.offsetWidth;
+                      return el && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.offsetWidth);
                     })() && (
                       <div className={[
                         "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-normal break-words max-w-[240px] pointer-events-none",
@@ -2203,7 +2203,7 @@ export default function ClientManager() {
                     <IconMessage className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <p
                       ref={(el) => { if (el) toneBoxRefs.current.set(c.id, el); else toneBoxRefs.current.delete(c.id); }}
-                      className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2"
+                      className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2 overflow-hidden"
                       onMouseEnter={() => setHoveredToneIdBox(c.id)}
                       onMouseLeave={() => setHoveredToneIdBox(null)}
                     >
@@ -2211,7 +2211,7 @@ export default function ClientManager() {
                     </p>
                     {hoveredToneIdBox === c.id && (() => {
                       const el = toneBoxRefs.current.get(c.id);
-                      return el && el.scrollWidth > el.offsetWidth;
+                      return el && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.offsetWidth);
                     })() && (
                       <div className={[
                         "absolute left-0 bottom-full mb-0 z-50 text-xs px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none",
