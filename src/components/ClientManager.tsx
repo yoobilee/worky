@@ -1177,8 +1177,8 @@ export default function ClientManager() {
                       <button
                         type="button"
                         onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField({ clientId: client.id, key: f.key }); }}
-                        onMouseUp={() => setRevealingCustomField(null)}
-                        onMouseLeave={() => setRevealingCustomField(null)}
+                        onMouseUp={(e) => { e.stopPropagation(); setRevealingCustomField(null); }}
+                        onMouseLeave={(e) => { e.stopPropagation(); setRevealingCustomField(null); }}
                         className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
                       >
                         {revealing ? <IconEyeOff className="w-3 h-3" /> : <IconEye className="w-3 h-3" />}
@@ -2257,7 +2257,6 @@ export default function ClientManager() {
                   <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-1">
                     {c.customFields.map((f) => {
                       const revealing = revealingCustomField?.clientId === c.id && revealingCustomField?.key === f.key;
-                      console.log('revealing check:', c.id, f.key, revealingCustomField, revealing);
                       return (
                         <div key={f.key} className="flex items-center gap-1.5 text-xs">
                           <span className="text-slate-400 dark:text-zinc-500 shrink-0">{f.key}</span>
@@ -2267,12 +2266,7 @@ export default function ClientManager() {
                           {f.masked && (
                             <button
                               type="button"
-                              onMouseDown={(e) => {
-                                e.stopPropagation();
-                                console.log('mousedown', c.id, f.key);
-                                setRevealingCustomField({ clientId: c.id, key: f.key });
-                                console.log('set revealing:', { clientId: c.id, key: f.key });
-                              }}
+                              onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField({ clientId: c.id, key: f.key }); }}
                               onMouseUp={() => setRevealingCustomField(null)}
                               onMouseLeave={() => setRevealingCustomField(null)}
                               aria-label="속성 임시 표시"
