@@ -7,7 +7,7 @@ import ConfirmModal from "./ConfirmModal";
 import {
   IconChevronLeft, IconChevronRight, IconPlus,
   IconTrash, IconCalendar, IconClock, IconMapPin,
-  IconPencil, IconCheck, IconX, IconChevronUp,
+  IconPencil, IconCheck, IconX,
 } from "@tabler/icons-react";
 import { CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
@@ -145,6 +145,141 @@ export default function CalendarComponent() {
 
   if (!hydrated) return null;
 
+  const sidePanelContent = (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+            {displayed ? formatKey(displayed) : ""}
+          </h2>
+        </div>
+        <button
+          onClick={() => setSelected(null)}
+          className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
+          aria-label="닫기"
+        >
+          <IconX className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* 일정 목록 */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {selectedEvents.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-zinc-500 mb-4">등록된 일정이 없습니다.</p>
+        ) : (
+          <div className="space-y-2 mb-4">
+            {selectedEvents.map(ev => (
+              <div key={ev.id} className="rounded-xl bg-slate-50 dark:bg-zinc-800 group overflow-hidden">
+                {editingId === ev.id ? (
+                  /* 인라인 편집 폼 */
+                  <div className="px-3 py-3 space-y-2">
+                    <input
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      autoFocus
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        value={editTime}
+                        onChange={e => setEditTime(e.target.value)}
+                        placeholder="시간 (선택)"
+                        className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                      />
+                      <input
+                        value={editLocation}
+                        onChange={e => setEditLocation(e.target.value)}
+                        placeholder="장소 (선택)"
+                        className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setEditingId(null)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 transition">
+                        <IconX className="w-3.5 h-3.5" />취소
+                      </button>
+                      <button onClick={() => saveEdit(ev.id)} disabled={!editTitle.trim()}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition disabled:opacity-40"
+                        style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+                        <IconCheck className="w-3.5 h-3.5" />저장
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* 일반 표시 */
+                  <div className="flex items-start gap-3 px-3 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 truncate">{ev.title}</p>
+                      {(ev.time || ev.location) && (
+                        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                          {ev.time && (
+                            <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                              <IconClock className="w-3 h-3" />{ev.time}
+                            </span>
+                          )}
+                          {ev.location && (
+                            <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                              <IconMapPin className="w-3 h-3" />{ev.location}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                      <button onClick={() => startEdit(ev)}
+                        className="p-1 rounded-lg hover:bg-[#6C63FF]/10 text-[#6C63FF] transition">
+                        <IconPencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDelete(ev.id)}
+                        className="p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-400 transition">
+                        <IconTrash className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 일정 추가 폼 */}
+      <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800 shrink-0">
+        <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">일정 추가</p>
+        <input
+          value={formTitle}
+          onChange={e => setFormTitle(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleAdd()}
+          placeholder="일정 제목을 입력하세요"
+          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+        />
+        <div className="flex gap-2">
+          <input
+            value={formTime}
+            onChange={e => setFormTime(e.target.value)}
+            placeholder="시간 (선택)"
+            className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          />
+          <input
+            value={formLocation}
+            onChange={e => setFormLocation(e.target.value)}
+            placeholder="장소 (선택)"
+            className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          />
+        </div>
+        <div className="flex justify-end">
+          <button onClick={handleAdd} disabled={!formTitle.trim()}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40"
+            style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+            <IconPlus className="w-4 h-4" />
+            추가
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
 
@@ -156,220 +291,108 @@ export default function CalendarComponent() {
         />
       )}
 
-      {/* 캘린더 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+      {/* 캘린더 + 사이드 패널 — sm 이상에서는 좌우 분할 */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start">
 
-        {/* 헤더 */}
-        <div className="flex items-center justify-between mb-5">
-          <button onClick={prevMonth}
-            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
-            <IconChevronLeft className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
-          </button>
-          <span className="text-base font-semibold text-slate-800 dark:text-zinc-100">
-            {year}년 {MONTH_NAMES[month]}
-          </span>
-          <button onClick={nextMonth}
-            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
-            <IconChevronRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
-          </button>
-        </div>
+        {/* 캘린더 카드 */}
+        <div className="flex-1 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
 
-        {/* 요일 헤더 */}
-        <div className="grid grid-cols-7 mb-1">
-          {DAY_LABELS.map((d, i) => (
-            <div key={d} className={`text-center text-xs font-medium py-1.5 ${
-              i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-slate-400 dark:text-zinc-500"
-            }`}>{d}</div>
-          ))}
-        </div>
-
-        {/* 날짜 그리드 — 모든 셀 동일 높이 */}
-        <div className="grid grid-cols-7 gap-0.5">
-          {cells.map((day, idx) => {
-            if (day === null) return <div key={idx} className="min-h-[64px]" />;
-            const key      = toKey(year, month, day);
-            const evts     = eventsOn(key);
-            const isSel    = key === selected;
-            const isToday  = key === todayKey;
-            const dow      = (firstDow + day - 1) % 7;
-            const holiday  = HOLIDAYS[key];
-            const isSun    = dow === 0;
-            const isSat    = dow === 6;
-            return (
-              <button key={idx} onClick={() => setSelected(prev => prev === key ? null : key)}
-                className={[
-                  "flex flex-col items-center justify-start pt-1.5 pb-1 px-0.5 rounded-xl transition-all min-h-[64px]",
-                  isSel
-                    ? "bg-[#6C63FF] text-white shadow-sm"
-                    : isToday
-                    ? "bg-[#6C63FF]/10"
-                    : "hover:bg-slate-100 dark:hover:bg-zinc-800",
-                  !isSel && (isSun || holiday)
-                    ? "text-red-400"
-                    : !isSel && isSat
-                    ? "text-blue-400"
-                    : !isSel && !isToday
-                    ? "text-slate-700 dark:text-zinc-300"
-                    : !isSel
-                    ? "text-[#6C63FF]"
-                    : "",
-                ].join(" ")}
-              >
-                <span className="text-sm font-medium leading-tight">{day}</span>
-                {holiday && (
-                  <span className={`text-[9px] leading-tight mt-0.5 font-medium w-full text-center truncate ${
-                    isSel ? "text-white/80" : "text-red-400"
-                  }`}>{holiday}</span>
-                )}
-                {evts.length > 0 && (
-                  <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                    {evts.slice(0, 3).map((_, i) => (
-                      <div key={i} className={`w-1.5 h-1.5 rounded-full ${isSel ? "bg-white/70" : "bg-[#6C63FF]"}`} />
-                    ))}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 선택 날짜 패널 — 날짜 미선택 시 숨김, 선택 시 사르르 펼침 */}
-      <div
-        className="overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out"
-        style={{ maxHeight: selected ? "1000px" : "0px", opacity: selected ? 1 : 0 }}
-      >
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
-                {displayed ? formatKey(displayed) : ""}
-              </h2>
-            </div>
-            <button
-              onClick={() => setSelected(null)}
-              className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
-              aria-label="접기"
-            >
-              <IconChevronUp className="w-4 h-4" />
+          {/* 헤더 */}
+          <div className="flex items-center justify-between mb-5">
+            <button onClick={prevMonth}
+              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
+              <IconChevronLeft className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+            </button>
+            <span className="text-base font-semibold text-slate-800 dark:text-zinc-100">
+              {year}년 {MONTH_NAMES[month]}
+            </span>
+            <button onClick={nextMonth}
+              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
+              <IconChevronRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
             </button>
           </div>
 
-          {/* 일정 목록 */}
-          {selectedEvents.length === 0 ? (
-            <p className="text-sm text-slate-400 dark:text-zinc-500 mb-4">등록된 일정이 없습니다.</p>
-          ) : (
-            <div className="space-y-2 mb-4">
-              {selectedEvents.map(ev => (
-                <div key={ev.id} className="rounded-xl bg-slate-50 dark:bg-zinc-800 group overflow-hidden">
-                  {editingId === ev.id ? (
-                    /* 인라인 편집 폼 */
-                    <div className="px-3 py-3 space-y-2">
-                      <input
-                        value={editTitle}
-                        onChange={e => setEditTitle(e.target.value)}
-                        autoFocus
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                      />
-                      <div className="flex gap-2">
-                        <input
-                          value={editTime}
-                          onChange={e => setEditTime(e.target.value)}
-                          placeholder="시간 (선택)"
-                          className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                        />
-                        <input
-                          value={editLocation}
-                          onChange={e => setEditLocation(e.target.value)}
-                          placeholder="장소 (선택)"
-                          className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => setEditingId(null)}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 transition">
-                          <IconX className="w-3.5 h-3.5" />취소
-                        </button>
-                        <button onClick={() => saveEdit(ev.id)} disabled={!editTitle.trim()}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition disabled:opacity-40"
-                          style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-                          <IconCheck className="w-3.5 h-3.5" />저장
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* 일반 표시 */
-                    <div className="flex items-start gap-3 px-3 py-2.5">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 truncate">{ev.title}</p>
-                        {(ev.time || ev.location) && (
-                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                            {ev.time && (
-                              <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
-                                <IconClock className="w-3 h-3" />{ev.time}
-                              </span>
-                            )}
-                            {ev.location && (
-                              <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
-                                <IconMapPin className="w-3 h-3" />{ev.location}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
-                        <button onClick={() => startEdit(ev)}
-                          className="p-1 rounded-lg hover:bg-[#6C63FF]/10 text-[#6C63FF] transition">
-                          <IconPencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => handleDelete(ev.id)}
-                          className="p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-400 transition">
-                          <IconTrash className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+          {/* 요일 헤더 */}
+          <div className="grid grid-cols-7 mb-1">
+            {DAY_LABELS.map((d, i) => (
+              <div key={d} className={`text-center text-xs font-medium py-1.5 ${
+                i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-slate-400 dark:text-zinc-500"
+              }`}>{d}</div>
+            ))}
+          </div>
+
+          {/* 날짜 그리드 — 모든 셀 동일 높이 */}
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((day, idx) => {
+              if (day === null) return <div key={idx} className="min-h-[72px]" />;
+              const key      = toKey(year, month, day);
+              const evts     = eventsOn(key);
+              const isSel    = key === selected;
+              const isToday  = key === todayKey;
+              const dow      = (firstDow + day - 1) % 7;
+              const holiday  = HOLIDAYS[key];
+              const isSun    = dow === 0;
+              const isSat    = dow === 6;
+              return (
+                <button key={idx} onClick={() => setSelected(prev => prev === key ? null : key)}
+                  className={[
+                    "flex flex-col items-center justify-start pt-1.5 pb-1 px-0.5 rounded-xl transition-all min-h-[72px]",
+                    isSel
+                      ? "bg-[#6C63FF] text-white shadow-sm"
+                      : isToday
+                      ? "bg-[#6C63FF]/10"
+                      : "hover:bg-slate-100 dark:hover:bg-zinc-800",
+                    !isSel && (isSun || holiday)
+                      ? "text-red-400"
+                      : !isSel && isSat
+                      ? "text-blue-400"
+                      : !isSel && !isToday
+                      ? "text-slate-700 dark:text-zinc-300"
+                      : !isSel
+                      ? "text-[#6C63FF]"
+                      : "",
+                  ].join(" ")}
+                >
+                  <span className="text-sm font-medium leading-tight">{day}</span>
+                  {holiday && (
+                    <span className={`text-[9px] leading-tight mt-0.5 font-medium w-full text-center truncate ${
+                      isSel ? "text-white/80" : "text-red-400"
+                    }`}>{holiday}</span>
+                  )}
+                  {evts.length > 0 && (
+                    <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
+                      {evts.slice(0, 3).map((_, i) => (
+                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${isSel ? "bg-white/70" : "bg-[#6C63FF]"}`} />
+                      ))}
                     </div>
                   )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 일정 추가 폼 */}
-          <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
-            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">일정 추가</p>
-            <input
-              value={formTitle}
-              onChange={e => setFormTitle(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleAdd()}
-              placeholder="일정 제목을 입력하세요"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-            />
-            <div className="flex gap-2">
-              <input
-                value={formTime}
-                onChange={e => setFormTime(e.target.value)}
-                placeholder="시간 (선택)"
-                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-              />
-              <input
-                value={formLocation}
-                onChange={e => setFormLocation(e.target.value)}
-                placeholder="장소 (선택)"
-                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-              />
-            </div>
-            <div className="flex justify-end">
-              <button onClick={handleAdd} disabled={!formTitle.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-                <IconPlus className="w-4 h-4" />
-                추가
-              </button>
-            </div>
+                </button>
+              );
+            })}
           </div>
         </div>
+
+        {/* 사이드 패널 (sm 이상) — 슬라이드 인/아웃 */}
+        <div
+          className={[
+            "hidden sm:flex flex-col self-stretch bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm transition-[width,opacity] duration-300 ease-in-out",
+            selected ? "w-[320px] opacity-100 p-5" : "w-0 opacity-0 overflow-hidden p-0 border-0",
+          ].join(" ")}
+        >
+          {selected && sidePanelContent}
+        </div>
       </div>
+
+      {/* 선택 날짜 패널 (모바일) — 날짜 미선택 시 숨김, 선택 시 사르르 펼침 */}
+      <div
+        className="sm:hidden overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out"
+        style={{ maxHeight: selected ? "1000px" : "0px", opacity: selected ? 1 : 0 }}
+      >
+        <div className="flex flex-col bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+          {sidePanelContent}
+        </div>
+      </div>
+
       <HelpButton
         title="일정 관리 사용법"
         steps={[
