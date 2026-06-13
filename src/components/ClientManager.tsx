@@ -2256,12 +2256,11 @@ export default function ClientManager() {
                 {c.customFields.length > 0 && (
                   <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-1">
                     {c.customFields.map((f) => {
-                      const revealing = revealingCustomField?.clientId === c.id && revealingCustomField?.key === f.key;
                       return (
                         <div key={f.key} className="flex items-center gap-1.5 text-xs">
                           <span className="text-slate-400 dark:text-zinc-500 shrink-0">{f.key}</span>
                           <span className="text-slate-600 dark:text-zinc-300 truncate">
-                            {f.masked && !revealing ? "****" : f.value}
+                            {f.masked && !(revealingCustomField?.clientId === c.id && revealingCustomField?.key === f.key) ? "****" : f.value}
                           </span>
                           {f.masked && (
                             <button
@@ -2272,7 +2271,7 @@ export default function ClientManager() {
                               aria-label="속성 임시 표시"
                               className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
                             >
-                              {revealing
+                              {revealingCustomField?.clientId === c.id && revealingCustomField?.key === f.key
                                 ? <IconEyeOff className="w-3 h-3" />
                                 : <IconEye className="w-3 h-3" />}
                             </button>
