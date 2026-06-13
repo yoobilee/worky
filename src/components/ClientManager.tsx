@@ -2044,11 +2044,11 @@ export default function ClientManager() {
                     {visibleColumns.has("dday") && <td className="px-4 h-[52px] whitespace-nowrap text-center">
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
                     </td>}
-                    {visibleColumns.has("memo") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative text-center">
+                    {visibleColumns.has("memo") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
                       {c.memo ? (
                         <span
                           ref={(el) => { if (el) memoRefs.current.set(c.id, el); else memoRefs.current.delete(c.id); }}
-                          className="max-w-[150px] block truncate mx-auto"
+                          className="max-w-[150px] block truncate"
                           onMouseEnter={(e) => {
                             const el = e.currentTarget;
                             if (el.scrollWidth <= el.offsetWidth) return;
@@ -2061,11 +2061,11 @@ export default function ClientManager() {
                         </span>
                       ) : "-"}
                     </td>}
-                    {visibleColumns.has("reportTone") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative text-center">
+                    {visibleColumns.has("reportTone") && <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
                       {c.reportTone ? (
                         <span
                           ref={(el) => { if (el) toneRefs.current.set(c.id, el); else toneRefs.current.delete(c.id); }}
-                          className="max-w-[120px] block truncate mx-auto"
+                          className="max-w-[120px] block truncate"
                           onMouseEnter={(e) => {
                             const el = e.currentTarget;
                             if (el.scrollWidth <= el.offsetWidth) return;
