@@ -2077,7 +2077,7 @@ export default function ClientManager() {
                     {c.contact && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <IconUser className="w-3 h-3 text-slate-400 shrink-0" />
-                        <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{c.contact}</p>
+                        <p className="text-xs text-slate-700 dark:text-zinc-200 font-medium truncate">{c.contact}</p>
                       </div>
                     )}
                     {c.phone && (
@@ -2312,7 +2312,6 @@ export default function ClientManager() {
                   </div>
                 )}
 
-                {/* 수정/삭제 임시 숨김
                 <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                   <button onClick={() => startEdit(c)}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
@@ -2323,7 +2322,6 @@ export default function ClientManager() {
                     <IconTrash className="w-3.5 h-3.5" />삭제
                   </button>
                 </div>
-                */}
               </div>
             );
           })}
