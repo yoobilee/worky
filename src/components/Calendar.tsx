@@ -106,7 +106,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
             parsed ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
           ].join(" ")}
         >
-          {String(hour).padStart(2, "0")}시
+          {hour}시
         </button>
         {hourOpen && (
           <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-40 overflow-y-auto w-full">
@@ -116,7 +116,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                   "w-full px-3 py-1.5 text-xs text-left transition",
                   h === hour ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
                 ].join(" ")}
-              >{String(h).padStart(2, "0")}시</button>
+              >{h}시</button>
             ))}
           </div>
         )}
@@ -128,7 +128,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
             parsed ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
           ].join(" ")}
         >
-          {String(minute).padStart(2, "0")}분
+          {minute}분
         </button>
         {minuteOpen && (
           <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg max-h-40 overflow-y-auto w-full">
@@ -138,14 +138,14 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                   "w-full px-3 py-1.5 text-xs text-left transition",
                   m === minute ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
                 ].join(" ")}
-              >{String(m).padStart(2, "0")}분</button>
+              >{m}분</button>
             ))}
           </div>
         )}
       </div>
       {value && (
         <button type="button" onClick={() => onChange("")}
-          className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-700 transition shrink-0"
+          className="p-2 rounded-xl border border-red-200 dark:border-red-800 bg-slate-50 dark:bg-zinc-800 text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition shrink-0"
           aria-label="시간 초기화">
           <IconX className="w-4 h-4" />
         </button>
@@ -439,7 +439,7 @@ export default function CalendarComponent() {
 
       {/* 일정 추가 폼 */}
       <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800 shrink-0">
-        <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">일정 추가 <span className="text-red-400">*</span></p>
+        <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">일정 추가</p>
         <input
           value={formTitle}
           onChange={e => setFormTitle(e.target.value)}
