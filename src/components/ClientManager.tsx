@@ -1859,21 +1859,6 @@ export default function ClientManager() {
           style={{ overflowX: "auto", overflowY: "visible", paddingBottom: "4px" }}
           className="client-list-scroll"
         >
-          <style jsx>{`
-            .client-list-scroll::-webkit-scrollbar {
-              height: 4px;
-            }
-            .client-list-scroll::-webkit-scrollbar-track {
-              background-color: transparent;
-            }
-            .client-list-scroll::-webkit-scrollbar-thumb {
-              background-color: rgba(108, 99, 255, 0.25);
-              border-radius: 9999px;
-            }
-            .client-list-scroll::-webkit-scrollbar-thumb:hover {
-              background-color: rgba(108, 99, 255, 0.5);
-            }
-          `}</style>
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="text-left text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
