@@ -1299,6 +1299,36 @@ export default function ClientManager() {
               <IconLayoutSidebarRight className="w-4 h-4" />
             </button>
           )}
+          {viewMode === "list" && (
+            <div className="relative" ref={columnSettingRef}>
+              <button
+                onClick={() => setColumnSettingOpen(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+              >
+                <IconLayoutColumns className="w-3.5 h-3.5" />컬럼
+              </button>
+              {columnSettingOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg p-2 min-w-[160px]">
+                  {ALL_COLUMNS.map(col => (
+                    <button key={col.key} onClick={() => toggleColumn(col.key)}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                      <span className={[
+                        "w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
+                        visibleColumns.has(col.key) ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+                      ].join(" ")}>
+                        {visibleColumns.has(col.key) && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                          </svg>
+                        )}
+                      </span>
+                      {col.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <button
             onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
@@ -1758,38 +1788,6 @@ export default function ClientManager() {
                 </button>
               </>
             )
-          )}
-
-          {/* 컬럼 표시 설정 */}
-          {viewMode === "list" && (
-            <div className="relative" ref={columnSettingRef}>
-              <button
-                onClick={() => setColumnSettingOpen(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-              >
-                <IconLayoutColumns className="w-3.5 h-3.5" />컬럼
-              </button>
-              {columnSettingOpen && (
-                <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg p-2 min-w-[160px]">
-                  {ALL_COLUMNS.map(col => (
-                    <button key={col.key} onClick={() => toggleColumn(col.key)}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-                      <span className={[
-                        "w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
-                        visibleColumns.has(col.key) ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
-                      ].join(" ")}>
-                        {visibleColumns.has(col.key) && (
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
-                          </svg>
-                        )}
-                      </span>
-                      {col.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           )}
 
           {/* 정렬 드롭다운 */}
