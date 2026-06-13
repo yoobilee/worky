@@ -2266,15 +2266,9 @@ export default function ClientManager() {
                           {f.masked && (
                             <button
                               type="button"
-                              onMouseDown={(e) => {
-                                e.stopPropagation();
-                                setRevealingCustomField({ clientId: c.id, key: f.key });
-                                const clear = () => {
-                                  setRevealingCustomField(null);
-                                  window.removeEventListener("mouseup", clear);
-                                };
-                                window.addEventListener("mouseup", clear);
-                              }}
+                              onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField({ clientId: c.id, key: f.key }); }}
+                              onMouseUp={() => setRevealingCustomField(null)}
+                              onMouseLeave={() => setRevealingCustomField(null)}
                               aria-label="속성 임시 표시"
                               className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
                             >
