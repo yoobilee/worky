@@ -56,28 +56,59 @@ body {
   background-color: #22222E;
 }
 
-/* 스크롤바 스타일 */
+/* 전역 스크롤바 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+  background: rgba(108, 99, 255, 0.3);
+  border-radius: 9999px;
+  transition: all 0.2s ease;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: rgba(108, 99, 255, 0.6);
+  width: 8px;
 }
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: #374151;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #4b5563;
-  }
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 박스 내부 스크롤 (overflow-auto/scroll 요소) — 둥근 박스에서 튀어나가지 않도록 */
+.overflow-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: rgba(108, 99, 255, 0.25);
+  border-radius: 9999px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(108, 99, 255, 0.5);
+}
+
+/* 다크모드 */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(108, 99, 255, 0.35);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(108, 99, 255, 0.65);
 }
 
 /* 알림 벨 흔들림 애니메이션 */
