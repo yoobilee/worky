@@ -2177,7 +2177,8 @@ export default function ClientManager() {
                     <IconNotes className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <p
                       ref={(el) => { if (el) memoBoxRefs.current.set(c.id, el); else memoBoxRefs.current.delete(c.id); }}
-                      className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2 overflow-hidden"
+                      className="text-xs text-slate-500 dark:text-zinc-400"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
                       onMouseEnter={() => setHoveredMemoIdBox(c.id)}
                       onMouseLeave={() => setHoveredMemoIdBox(null)}
                     >
@@ -2203,7 +2204,8 @@ export default function ClientManager() {
                     <IconMessage className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <p
                       ref={(el) => { if (el) toneBoxRefs.current.set(c.id, el); else toneBoxRefs.current.delete(c.id); }}
-                      className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2 overflow-hidden"
+                      className="text-xs text-slate-500 dark:text-zinc-400"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
                       onMouseEnter={() => setHoveredToneIdBox(c.id)}
                       onMouseLeave={() => setHoveredToneIdBox(null)}
                     >
