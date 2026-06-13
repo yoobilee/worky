@@ -2270,9 +2270,11 @@ export default function ClientManager() {
                               onMouseUp={() => setRevealingCustomField(null)}
                               onMouseLeave={() => setRevealingCustomField(null)}
                               aria-label="속성 임시 표시"
-                              className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
+                              className="text-slate-400 hover:text-[#6C63FF] transition shrink-0 w-4 h-4 flex items-center justify-center"
                             >
-                              <IconEye className="w-3 h-3" />
+                              {revealing
+                                ? <IconEyeOff className="w-3 h-3" />
+                                : <IconEye className="w-3 h-3" />}
                             </button>
                           )}
                         </div>
