@@ -88,6 +88,10 @@ const GRASS_PANEL_KEY = "worky_grass_panel";
 
 type ViewMode = "grid" | "list";
 
+const CONTRACT_UNIT_LABELS: Record<FormState["contractDaysUnit"], string> = {
+  days: "일", weeks: "주", months: "월", years: "년",
+};
+
 const EMPTY_FORM: FormState = {
   name: "", status: "pending", contact: "", phone: "",
   link: "", tagInput: "", tags: [], contractStart: "",
@@ -749,11 +753,16 @@ export default function ClientManager() {
   const [searchQuery,      setSearchQuery]        = useState("");
   const [sortDropdownOpen, setSortDropdownOpen]   = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const [contractUnitDropdownOpen, setContractUnitDropdownOpen] = useState(false);
+  const contractUnitDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
         setSortDropdownOpen(false);
+      }
+      if (contractUnitDropdownRef.current && !contractUnitDropdownRef.current.contains(e.target as Node)) {
+        setContractUnitDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -928,9 +937,7 @@ export default function ClientManager() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !userId) return;
-    const unitMultiplier: Record<FormState["contractDaysUnit"], number> = {
-      days: 1, weeks: 5, months: 22, years: 265,
-    };
+    const unitMultiplier = contractDaysUnitMultiplier;
     const base = {
       name:          form.name.trim(),
       status:        form.status,
@@ -1071,9 +1078,13 @@ export default function ClientManager() {
   const cStopped    = clients.filter((c) => c.status === "stopped").length;
   const cPending    = total - cComplete - cInprogress - cStopped;
 
+  const contractDaysUnitMultiplier: Record<FormState["contractDaysUnit"], number> = {
+    days: 1, weeks: 5, months: 22, years: 265,
+  };
+
   const contractEndPreview =
     form.contractStart && form.contractDays
-      ? addBusinessDays(form.contractStart, Number(form.contractDays))
+      ? addBusinessDays(form.contractStart, Number(form.contractDays) * contractDaysUnitMultiplier[form.contractDaysUnit])
       : null;
 
   if (!hydrated) return null;
@@ -1450,15 +1461,36 @@ export default function ClientManager() {
                     placeholder="계약 기간 (영업일, 예: 30)"
                     className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                   />
-                  <select value={form.contractDaysUnit}
-                    onChange={(e) => setForm((f) => ({ ...f, contractDaysUnit: e.target.value as FormState["contractDaysUnit"] }))}
-                    className="px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                  >
-                    <option value="days">일</option>
-                    <option value="weeks">주</option>
-                    <option value="months">월</option>
-                    <option value="years">년</option>
-                  </select>
+                  <div className="relative" ref={contractUnitDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setContractUnitDropdownOpen((v) => !v)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                    >
+                      {CONTRACT_UNIT_LABELS[form.contractDaysUnit]}
+                      {contractUnitDropdownOpen ? <IconChevronUp className="w-3.5 h-3.5" /> : <IconChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+                    {contractUnitDropdownOpen && (
+                      <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[80px]">
+                        {(Object.keys(CONTRACT_UNIT_LABELS) as FormState["contractDaysUnit"][]).map((key) => (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => { setForm((f) => ({ ...f, contractDaysUnit: key })); setContractUnitDropdownOpen(false); }}
+                            className={[
+                              "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors",
+                              form.contractDaysUnit === key
+                                ? "bg-[#6C63FF]/10 text-[#6C63FF]"
+                                : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                            ].join(" ")}
+                          >
+                            {form.contractDaysUnit === key ? <IconCheck className="w-3 h-3" /> : <span className="w-3 h-3" />}
+                            {CONTRACT_UNIT_LABELS[key]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               {contractEndPreview && (
