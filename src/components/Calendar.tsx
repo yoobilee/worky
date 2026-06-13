@@ -69,6 +69,7 @@ function parseTimeValue(v: string): { period: "오전" | "오후"; hour: number;
 }
 
 function TimePickerInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [showPicker, setShowPicker] = useState(false);
   const [hourOpen, setHourOpen] = useState(false);
   const [minuteOpen, setMinuteOpen] = useState(false);
   const hourRef = useRef<HTMLDivElement>(null);
@@ -92,6 +93,15 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
   const commit = (p: "오전" | "오후", h: number, m: number) => {
     onChange(`${p} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
   };
+
+  if (!parsed && !showPicker) {
+    return (
+      <button type="button" onClick={() => setShowPicker(true)}
+        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-left text-slate-400 dark:text-zinc-500 flex items-center gap-1.5 transition">
+        <IconClock className="w-3.5 h-3.5" />시간 선택
+      </button>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1.5">
@@ -146,7 +156,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
         )}
       </div>
       {value && (
-        <button type="button" onClick={() => onChange("")}
+        <button type="button" onClick={() => { onChange(""); setShowPicker(false); }}
           className="p-2 rounded-xl border border-red-200 dark:border-red-800 bg-slate-50 dark:bg-zinc-800 text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition shrink-0"
           aria-label="시간 초기화">
           <IconX className="w-4 h-4" />
