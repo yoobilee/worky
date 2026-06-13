@@ -735,7 +735,7 @@ export default function ClientManager() {
   const [revealingPhoneId, setRevealingPhoneId] = useState<string | null>(null);
   const [revealingCompanyPhoneId, setRevealingCompanyPhoneId] = useState<string | null>(null);
   const [savedCustomKeys, setSavedCustomKeys] = useState<string[]>([]);
-  const [revealingCustomField, setRevealingCustomField] = useState<string | null>(null);
+  const [revealedCustomFields, setRevealedCustomFields] = useState<Set<string>>(new Set());
   const [customPopover, setCustomPopover] = useState<{ id: string; x: number; y: number } | null>(null);
   const [focusedCustomKeyIdx, setFocusedCustomKeyIdx] = useState<number | null>(null);
   const nameRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
@@ -1166,21 +1166,25 @@ export default function ClientManager() {
             <p className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">커스텀 속성</p>
             <div className="space-y-1.5">
               {client.customFields.map((f) => {
+                const fieldKey = `${client.id}:${f.key}`;
+                const isRevealed = revealedCustomFields.has(fieldKey);
                 return (
                   <div key={f.key} className="flex items-center gap-2 text-xs">
                     <span className="text-slate-400 dark:text-zinc-500 shrink-0 font-medium">{f.key}</span>
                     <span className="text-slate-700 dark:text-zinc-200 flex-1">
-                      {f.masked && revealingCustomField !== `${client.id}:${f.key}` ? "****" : f.value}
+                      {f.masked && !isRevealed ? "****" : f.value}
                     </span>
                     {f.masked && (
                       <button
                         type="button"
-                        onMouseDown={(e) => { e.stopPropagation(); setRevealingCustomField(`${client.id}:${f.key}`); }}
-                        onMouseUp={(e) => { e.stopPropagation(); setRevealingCustomField(null); }}
-                        onMouseLeave={(e) => { e.stopPropagation(); setRevealingCustomField(null); }}
+                        onClick={() => setRevealedCustomFields(prev => {
+                          const next = new Set(prev);
+                          next.has(fieldKey) ? next.delete(fieldKey) : next.add(fieldKey);
+                          return next;
+                        })}
                         className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
                       >
-                        {revealingCustomField === `${client.id}:${f.key}` ? <IconEyeOff className="w-3 h-3" /> : <IconEye className="w-3 h-3" />}
+                        {isRevealed ? <IconEyeOff className="w-3 h-3" /> : <IconEye className="w-3 h-3" />}
                       </button>
                     )}
                   </div>
@@ -2255,22 +2259,26 @@ export default function ClientManager() {
                 {c.customFields.length > 0 && (
                   <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-1">
                     {c.customFields.map((f) => {
+                      const fieldKey = `${c.id}:${f.key}`;
+                      const isRevealed = revealedCustomFields.has(fieldKey);
                       return (
                         <div key={f.key} className="flex items-center gap-1.5 text-xs">
                           <span className="text-slate-400 dark:text-zinc-500 shrink-0">{f.key}</span>
                           <span className="text-slate-600 dark:text-zinc-300 truncate">
-                            {f.masked && revealingCustomField !== `${c.id}:${f.key}` ? "****" : f.value}
+                            {f.masked && !isRevealed ? "****" : f.value}
                           </span>
                           {f.masked && (
                             <button
                               type="button"
-                              onMouseDown={() => setRevealingCustomField(`${c.id}:${f.key}`)}
-                              onMouseUp={() => setRevealingCustomField(null)}
-                              onMouseLeave={() => setRevealingCustomField(null)}
-                              aria-label="속성 임시 표시"
+                              onClick={() => setRevealedCustomFields(prev => {
+                                const next = new Set(prev);
+                                next.has(fieldKey) ? next.delete(fieldKey) : next.add(fieldKey);
+                                return next;
+                              })}
+                              aria-label="속성 표시 전환"
                               className="text-slate-400 hover:text-[#6C63FF] transition shrink-0"
                             >
-                              {revealingCustomField === `${c.id}:${f.key}`
+                              {isRevealed
                                 ? <IconEyeOff className="w-3 h-3" />
                                 : <IconEye className="w-3 h-3" />}
                             </button>
