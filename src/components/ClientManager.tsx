@@ -1305,7 +1305,7 @@ export default function ClientManager() {
                 onClick={() => setColumnSettingOpen(v => !v)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
               >
-                <IconLayoutColumns className="w-3.5 h-3.5" />컬럼
+                <IconLayoutColumns className="w-3.5 h-3.5" />표시 항목
               </button>
               {columnSettingOpen && (
                 <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg p-2 min-w-[160px]">
@@ -1726,7 +1726,7 @@ export default function ClientManager() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="거래처명, 담당자, 연락처, 태그 등 검색..."
+            placeholder="전체 검색..."
             className="w-full pl-9 pr-9 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40"
           />
           {searchQuery && (
@@ -2423,10 +2423,12 @@ export default function ClientManager() {
         title="거래처 관리 사용법"
         steps={[
           { step: "거래처 추가", desc: "우측 상단 버튼으로 거래처를 추가합니다. 계약 기간 입력 시 진행 현황 잔디밭이 활성화됩니다." },
-          { step: "뷰 모드", desc: "박스형/목록형 두 가지 뷰를 지원합니다. 목록형에서는 진행현황 패널을 별도로 볼 수 있습니다." },
-          { step: "검색 및 정렬", desc: "검색창으로 거래처명·담당자·태그 등을 검색하고, 드롭다운으로 정렬 기준을 선택합니다." },
+          { step: "뷰 모드", desc: "박스형/목록형 두 가지 뷰를 지원합니다. 목록형에서는 진행현황 패널과 표시 항목 설정을 사용할 수 있습니다." },
+          { step: "검색 및 정렬", desc: "검색창으로 거래처명·담당자·연락처·태그·메모·커스텀 속성 등 전체 항목을 검색하고, 드롭다운으로 정렬 기준을 선택합니다." },
           { step: "상태 변경", desc: "상태 배지를 클릭하면 진행 중·완료·대기 중·중단으로 변경할 수 있습니다." },
           { step: "편집 모드", desc: "편집 버튼으로 수정/삭제 모드를 활성화합니다. 삭제 모드에서는 체크박스로 여러 항목을 한 번에 삭제할 수 있습니다." },
+          { step: "표시 항목", desc: "목록형에서 표시 항목 버튼으로 원하는 컬럼만 켜고 끌 수 있습니다. 설정은 자동 저장됩니다." },
+          { step: "연락처/속성 숨김", desc: "연락처와 커스텀 속성에 숨김을 설정하면 **** 로 표시됩니다. 눈 아이콘을 클릭해 임시로 확인할 수 있습니다." },
           { step: "진행 현황", desc: "잔디밭 그리드를 클릭해 일별 보고 활동을 기록합니다. 완료→실패→미확인 순으로 토글됩니다." },
         ]}
       />
