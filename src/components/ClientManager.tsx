@@ -71,6 +71,7 @@ interface FormState {
   tags:          string[];
   contractStart: string;
   contractDays:  string;
+  contractDaysUnit: "days" | "weeks" | "months" | "years";
   reportTone:    string;
   memo:          string;
   showGrassGrid: boolean;
@@ -90,7 +91,7 @@ type ViewMode = "grid" | "list";
 const EMPTY_FORM: FormState = {
   name: "", status: "pending", contact: "", phone: "",
   link: "", tagInput: "", tags: [], contractStart: "",
-  contractDays: "", reportTone: "", memo: "", showGrassGrid: false, maskPhone: false,
+  contractDays: "", contractDaysUnit: "days", reportTone: "", memo: "", showGrassGrid: false, maskPhone: false,
   companyPhone: "", maskCompanyPhone: false,
   customFields: [],
 };
@@ -927,6 +928,9 @@ export default function ClientManager() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !userId) return;
+    const unitMultiplier: Record<FormState["contractDaysUnit"], number> = {
+      days: 1, weeks: 5, months: 22, years: 265,
+    };
     const base = {
       name:          form.name.trim(),
       status:        form.status,
@@ -935,7 +939,7 @@ export default function ClientManager() {
       link:          form.link.trim(),
       tags:          form.tags,
       contractStart: form.contractStart,
-      contractDays:  form.contractDays ? Number(form.contractDays) : null,
+      contractDays:  form.contractDays ? Number(form.contractDays) * unitMultiplier[form.contractDaysUnit] : null,
       reportTone:    form.reportTone.trim(),
       memo:          form.memo.trim(),
       showGrassGrid: form.showGrassGrid,
@@ -962,6 +966,7 @@ export default function ClientManager() {
       const updated = { ...existing, ...base };
       await updateDbClient(editingId, clientToDb(updated));
       setClients((prev) => prev.map((c) => c.id !== editingId ? c : updated));
+      setListEditMode("none");
     } else {
       const dbRow = await addDbClient(userId, {
         ...clientToDb({ ...base, statusHistory: [], dailyLog: {} }),
@@ -977,6 +982,7 @@ export default function ClientManager() {
       name: c.name, status: c.status, contact: c.contact, phone: c.phone,
       link: c.link, tagInput: "", tags: [...c.tags],
       contractStart: c.contractStart, contractDays: c.contractDays != null ? String(c.contractDays) : "",
+      contractDaysUnit: "days",
       reportTone: c.reportTone, memo: c.memo,
       showGrassGrid: c.showGrassGrid ?? (!!c.contractStart && !!c.contractDays),
       maskPhone: c.maskPhone,
@@ -1051,7 +1057,9 @@ export default function ClientManager() {
     if (!q) return sorted;
     return sorted.filter((c) => {
       const fields = [
-        c.name, c.contact, c.phone, c.tags.join(" "), c.memo, c.reportTone, c.link,
+        c.name, c.contact, c.phone, c.companyPhone,
+        c.tags.join(" "), c.memo, c.reportTone, c.link,
+        c.customFields.map(f => `${f.key} ${f.value}`).join(" "),
       ];
       return fields.some((f) => (f ?? "").toLowerCase().includes(q));
     });
@@ -1436,12 +1444,21 @@ export default function ClientManager() {
                     onChange={(v) => handleContractChange("contractStart", v)}
                   />
                 </div>
-                <div>
+                <div className="flex gap-1.5">
                   <input type="number" min="1" value={form.contractDays}
                     onChange={(e) => handleContractChange("contractDays", e.target.value)}
                     placeholder="계약 기간 (영업일, 예: 30)"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                   />
+                  <select value={form.contractDaysUnit}
+                    onChange={(e) => setForm((f) => ({ ...f, contractDaysUnit: e.target.value as FormState["contractDaysUnit"] }))}
+                    className="px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                  >
+                    <option value="days">일</option>
+                    <option value="weeks">주</option>
+                    <option value="months">월</option>
+                    <option value="years">년</option>
+                  </select>
                 </div>
               </div>
               {contractEndPreview && (
