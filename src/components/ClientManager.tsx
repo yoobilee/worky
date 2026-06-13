@@ -1810,16 +1810,16 @@ export default function ClientManager() {
             <thead>
               <tr className="text-left text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
                 <th className="px-2 py-3 whitespace-nowrap"></th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">거래처명</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">담당자</th>
+                <th className="px-4 py-3 whitespace-nowrap text-left">거래처명</th>
+                <th className="px-4 py-3 whitespace-nowrap text-left">담당자</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">담당자 연락처</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">거래처 연락처</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">태그</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">계약 시작일</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">계약 만료일</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">D-day</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">메모</th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">보고 톤</th>
+                <th className="px-4 py-3 whitespace-nowrap text-left">메모</th>
+                <th className="px-4 py-3 whitespace-nowrap text-left">보고 톤</th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">상태</th>
               </tr>
             </thead>
@@ -1895,9 +1895,9 @@ export default function ClientManager() {
                       </div>
                     </td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contact || "-"}</td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">
                       {c.phone ? (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
                           <span>
                             {c.maskPhone && revealingPhoneId !== c.id ? maskPhoneNum(c.phone) : formatPhone(c.phone)}
                           </span>
@@ -1918,9 +1918,9 @@ export default function ClientManager() {
                         </div>
                       ) : "-"}
                     </td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">
                       {c.companyPhone ? (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
                           <span>
                             {c.maskCompanyPhone && revealingCompanyPhoneId !== c.id ? maskPhoneNum(c.companyPhone) : formatPhone(c.companyPhone)}
                           </span>
@@ -1941,9 +1941,9 @@ export default function ClientManager() {
                         </div>
                       ) : "-"}
                     </td>
-                    <td className="px-4 h-[52px]">
+                    <td className="px-4 h-[52px] text-center">
                       {c.tags.length > 0 ? (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-center gap-1">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6C63FF]/10 dark:bg-[#6C63FF]/25 text-[#6C63FF] dark:text-[#a99dff] whitespace-nowrap">{c.tags[0]}</span>
                           {c.tags.length > 1 && (
                             <div
@@ -1973,9 +1973,9 @@ export default function ClientManager() {
                         </div>
                       ) : "-"}
                     </td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{c.contractStart ? fmtShort(c.contractStart) : "-"}</td>
-                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap">{contractEnd ? fmtShort(contractEnd) : "-"}</td>
-                    <td className="px-4 h-[52px] whitespace-nowrap">
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">{c.contractStart ? fmtShort(c.contractStart) : "-"}</td>
+                    <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 whitespace-nowrap text-center">{contractEnd ? fmtShort(contractEnd) : "-"}</td>
+                    <td className="px-4 h-[52px] whitespace-nowrap text-center">
                       {ddayFmt ? <span className={`text-xs font-medium ${ddayFmt.cls}`}>{ddayFmt.text}</span> : "-"}
                     </td>
                     <td className="px-4 h-[52px] text-slate-500 dark:text-zinc-400 relative">
@@ -2012,8 +2012,8 @@ export default function ClientManager() {
                         </span>
                       ) : "-"}
                     </td>
-                    <td className="px-4 h-[52px] whitespace-nowrap relative">
-                      <div className="relative w-fit">
+                    <td className="px-4 h-[52px] whitespace-nowrap relative text-center">
+                      <div className="relative w-fit mx-auto">
                         <button
                           onClick={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();
