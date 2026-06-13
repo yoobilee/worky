@@ -2052,6 +2052,28 @@ export default function ClientManager() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100 truncate">{c.name}</p>
+                    {c.companyPhone && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <IconBuilding className="w-3 h-3 text-slate-400 shrink-0" />
+                        <p className="text-xs text-slate-500 dark:text-zinc-400">
+                          {c.maskCompanyPhone && revealingCompanyPhoneId !== c.id ? maskPhoneNum(c.companyPhone) : formatPhone(c.companyPhone)}
+                        </p>
+                        {c.maskCompanyPhone && (
+                          <button
+                            type="button"
+                            onMouseDown={() => setRevealingCompanyPhoneId(c.id)}
+                            onMouseUp={() => setRevealingCompanyPhoneId(null)}
+                            onMouseLeave={() => setRevealingCompanyPhoneId(null)}
+                            aria-label="거래처 연락처 임시 표시"
+                            className="text-slate-400 hover:text-[#6C63FF] transition"
+                          >
+                            {revealingCompanyPhoneId === c.id
+                              ? <IconEyeOff className="w-3 h-3" />
+                              : <IconEye className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {c.contact && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <IconUser className="w-3 h-3 text-slate-400 shrink-0" />
@@ -2074,28 +2096,6 @@ export default function ClientManager() {
                             className="text-slate-400 hover:text-[#6C63FF] transition"
                           >
                             {revealingPhoneId === c.id
-                              ? <IconEyeOff className="w-3 h-3" />
-                              : <IconEye className="w-3 h-3" />}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {c.companyPhone && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <IconBuilding className="w-3 h-3 text-slate-400 shrink-0" />
-                        <p className="text-xs text-slate-500 dark:text-zinc-400">
-                          {c.maskCompanyPhone && revealingCompanyPhoneId !== c.id ? maskPhoneNum(c.companyPhone) : formatPhone(c.companyPhone)}
-                        </p>
-                        {c.maskCompanyPhone && (
-                          <button
-                            type="button"
-                            onMouseDown={() => setRevealingCompanyPhoneId(c.id)}
-                            onMouseUp={() => setRevealingCompanyPhoneId(null)}
-                            onMouseLeave={() => setRevealingCompanyPhoneId(null)}
-                            aria-label="거래처 연락처 임시 표시"
-                            className="text-slate-400 hover:text-[#6C63FF] transition"
-                          >
-                            {revealingCompanyPhoneId === c.id
                               ? <IconEyeOff className="w-3 h-3" />
                               : <IconEye className="w-3 h-3" />}
                           </button>
@@ -2142,21 +2142,23 @@ export default function ClientManager() {
                   </div>
                 )}
 
-                {/* 계약 시작일 */}
+                {/* 계약 시작일 / 만료일 / D-day */}
                 {c.contractStart && (
-                  <div className="flex items-center gap-1.5">
-                    <IconCalendarPlus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">{formatDate(c.contractStart)}</p>
-                  </div>
-                )}
-
-                {/* 계약 D-day */}
-                {contractEnd && ddayFmt && (
-                  <div className="flex items-center gap-1.5">
-                    <IconCalendarX className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">{formatDate(contractEnd)}</p>
-                    <span className={`text-xs font-medium ml-auto ${ddayFmt.cls}`}>{ddayFmt.text}</span>
-                  </div>
+                  contractEnd && ddayFmt ? (
+                    <div className="flex items-center gap-1.5">
+                      <IconCalendarPlus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="text-xs text-slate-500 dark:text-zinc-400">{fmtShort(c.contractStart)}</span>
+                      <span className="text-xs text-slate-400">→</span>
+                      <IconCalendarX className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="text-xs text-slate-500 dark:text-zinc-400">{fmtShort(contractEnd)}</span>
+                      <span className={`text-xs font-medium ml-auto ${ddayFmt.cls}`}>{ddayFmt.text}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <IconCalendarPlus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <p className="text-xs text-slate-500 dark:text-zinc-400">{formatDate(c.contractStart)}</p>
+                    </div>
+                  )
                 )}
 
                 {/* 메모 */}
@@ -2257,7 +2259,7 @@ export default function ClientManager() {
 
                 {/* 커스텀 속성 */}
                 {c.customFields.length > 0 && (
-                  <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-1">
+                  <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-1 bg-slate-50 dark:bg-zinc-800/50 rounded-xl px-2 py-1.5">
                     {c.customFields.map((f) => {
                       const fieldKey = `${c.id}:${f.key}`;
                       const isRevealed = revealedCustomFields.has(fieldKey);
