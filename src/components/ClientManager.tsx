@@ -880,12 +880,12 @@ export default function ClientManager() {
 
   useEffect(() => {
     if (!customPopover) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (customPopoverRef.current && !customPopoverRef.current.contains(e.target as Node))
         setCustomPopover(null);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
   }, [customPopover]);
 
   const setStatus = (id: string, newStatus: ReportStatus) => {
@@ -1159,6 +1159,7 @@ export default function ClientManager() {
         return (
           <div
             ref={customPopoverRef}
+            onPointerDown={(e) => e.stopPropagation()}
             style={{ position: "fixed", left: customPopover.x, top: customPopover.y }}
             className="z-[9999] bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-xl p-3 min-w-[180px] max-w-[280px]"
           >
