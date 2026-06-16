@@ -333,7 +333,7 @@ export default function HomePage() {
               borderColor: "#6C63FF28",
             }}
           >
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-start justify-between gap-4">
               {/* 왼쪽: 날짜·인사 */}
               <div className="space-y-0.5 min-w-0">
                 <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
@@ -385,15 +385,26 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 연차 배지 */}
-            {leaveRemaining !== null && leaveData && (
-              <div className="mt-2">
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/60 dark:bg-zinc-800/60 border border-[#6C63FF20] text-slate-600 dark:text-zinc-300 w-fit">
-                  <IconCalendarEvent className="w-3.5 h-3.5 text-[#6C63FF]" />
-                  연차 {leaveRemaining}일 남음 · 총 {leaveData.total}일 중 {leaveData.used}일 사용
-                </span>
-              </div>
-            )}
+            {/* 연차 미니 카드 */}
+            {leaveRemaining !== null && leaveData && (() => {
+              const usedPct = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
+              return (
+                <div className="mt-2 flex items-center gap-3 px-3 py-2 rounded-xl bg-white/50 dark:bg-zinc-800/50 border border-[#6C63FF20] w-fit">
+                  <IconCalendarEvent className="w-4 h-4 text-[#6C63FF] shrink-0" />
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 dark:text-zinc-400">잔여 연차</span>
+                      <span className="text-sm font-bold text-[#6C63FF]">{leaveRemaining}일</span>
+                      <span className="text-xs text-slate-400 dark:text-zinc-500">/ {leaveData.total}일</span>
+                    </div>
+                    <div className="w-32 h-1.5 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }} />
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-400 dark:text-zinc-500">{leaveData.used}일 사용</span>
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
