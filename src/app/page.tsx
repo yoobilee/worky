@@ -322,67 +322,94 @@ export default function HomePage() {
     <div className="max-w-5xl mx-auto flex flex-col gap-2 flex-1 min-h-0 h-full w-full">
 
       {/* ── 환영 카드 ── */}
-      <div
-        className="rounded-2xl border shadow-sm px-5 py-3 shrink-0"
-        style={{
-          background: "linear-gradient(135deg, #6C63FF18, #8B85FF08)",
-          borderColor: "#6C63FF28",
-        }}
-      >
-        <div className="flex items-center justify-between gap-4">
-          {/* 왼쪽: 날짜·인사·현황 */}
-          <div className="space-y-0.5 min-w-0">
-            <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
-              {greeting}
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-zinc-400">
-              {total === 0
-                ? "오늘의 할 일을 추가해보세요."
-                : `할 일 ${total}개 중 ${completed}개 완료${completed === total ? " — 모두 완료!" : ""}`}
-            </p>
-          </div>
+      {(() => {
+        const FEATURES_FOR_BADGE = ["data","email","template","translate","summary","schedule","insight","qa"] as FeatureKey[];
+        const totalUsed = FEATURES_FOR_BADGE.reduce((a, k) => a + (weekStats[k] ?? 0), 0);
+        const leaveRemaining = leaveData ? Math.max(0, leaveData.total - leaveData.used) : null;
+        const WeatherIcon = weather?.Icon ?? null;
+        return (
+          <div
+            className="rounded-2xl border shadow-sm px-5 py-3 shrink-0"
+            style={{
+              background: "linear-gradient(135deg, #6C63FF18, #8B85FF08)",
+              borderColor: "#6C63FF28",
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              {/* 왼쪽: 날짜·인사 */}
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
+                  {greeting}
+                </h2>
+              </div>
 
-          {/* 오른쪽: 날씨 + 시계 */}
-          <div className="flex items-center gap-3 shrink-0">
-            {/* 날씨 */}
-            <div className="flex flex-col items-center gap-1 min-w-[60px]">
-              {geoStatus === "waiting" && (
-                <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
-                  <IconMapPin className="w-3 h-3" /> 확인 중
-                </span>
-              )}
-              {geoStatus === "denied" && (
-                <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
-                  <IconMapPin className="w-3 h-3" /> 없음
-                </span>
-              )}
-              {geoStatus === "ok" && weather && (
-                <>
-                  <weather.Icon className="w-10 h-10 text-[#6C63FF]" />
-                  <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200 leading-none">{weather.label}</span>
-                  <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-0.5">
-                    <IconTemperature className="w-3 h-3" />{weather.temp}°C
+              {/* 오른쪽: 날씨 + 시계 */}
+              <div className="flex items-center gap-3 shrink-0">
+                {/* 날씨 */}
+                <div className="flex flex-col items-center gap-1 min-w-[60px]">
+                  {geoStatus === "waiting" && (
+                    <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                      <IconMapPin className="w-3 h-3" /> 확인 중
+                    </span>
+                  )}
+                  {geoStatus === "denied" && (
+                    <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                      <IconMapPin className="w-3 h-3" /> 없음
+                    </span>
+                  )}
+                  {geoStatus === "ok" && weather && WeatherIcon && (
+                    <>
+                      <WeatherIcon className="w-10 h-10 text-[#6C63FF]" />
+                      <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200 leading-none">{weather.label}</span>
+                      <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-0.5">
+                        <IconTemperature className="w-3 h-3" />{weather.temp}°C
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* 구분선 */}
+                {geoStatus === "ok" && weather && (
+                  <div className="w-px h-10 bg-slate-200 dark:bg-zinc-700 shrink-0" />
+                )}
+
+                {/* 실시간 시계 */}
+                <div className="flex flex-col items-center gap-1 min-w-[56px]">
+                  <IconClock className="w-4 h-4 text-[#6C63FF]" />
+                  <span className="text-lg font-semibold text-slate-800 dark:text-slate-100 tracking-wide tabular-nums leading-none">
+                    {time}
                   </span>
-                </>
-              )}
+                </div>
+              </div>
             </div>
 
-            {/* 구분선 */}
-            {geoStatus === "ok" && weather && (
-              <div className="w-px h-10 bg-slate-200 dark:bg-zinc-700 shrink-0" />
+            {/* 핵심 지표 배지 */}
+            {(total > 0 || leaveRemaining !== null || totalUsed > 0) && (
+              <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-[#6C63FF20]">
+                {total > 0 && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/60 dark:bg-zinc-800/60 border border-[#6C63FF20] text-slate-600 dark:text-zinc-300">
+                    <IconListCheck className="w-3.5 h-3.5 text-[#6C63FF]" />
+                    {completed}/{total}개 완료
+                  </span>
+                )}
+                {leaveRemaining !== null && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/60 dark:bg-zinc-800/60 border border-[#6C63FF20] text-slate-600 dark:text-zinc-300">
+                    <IconCalendarEvent className="w-3.5 h-3.5 text-[#6C63FF]" />
+                    연차 {leaveRemaining}일 남음
+                  </span>
+                )}
+                {totalUsed > 0 && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/60 dark:bg-zinc-800/60 border border-[#6C63FF20] text-slate-600 dark:text-zinc-300">
+                    <IconSparkles className="w-3.5 h-3.5 text-[#6C63FF]" />
+                    이번 주 {totalUsed}회 사용
+                  </span>
+                )}
+              </div>
             )}
-
-            {/* 실시간 시계 */}
-            <div className="flex flex-col items-center gap-1 min-w-[56px]">
-              <IconClock className="w-4 h-4 text-[#6C63FF]" />
-              <span className="text-lg font-semibold text-slate-800 dark:text-slate-100 tracking-wide tabular-nums leading-none">
-                {time}
-              </span>
-            </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ── 메인 그리드 ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0">
@@ -526,8 +553,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── 하단 그리드 (flex-1로 나머지 공간 채움) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 flex-1 min-h-0 items-stretch">
+      {/* ── 하단 그리드 ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 items-stretch flex-1 min-h-0">
 
         {/* 이번 주 활동 */}
         {(() => {
@@ -630,66 +657,29 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 오른쪽 열: 내 연차 + 오늘의 팁 */}
-        <div className="flex flex-col gap-2 h-full min-h-0">
-
-          {/* 내 연차 */}
-          {leaveData && (() => {
-            const remaining = Math.max(0, leaveData.total - leaveData.used);
-            const usedPct   = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
-            return (
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 flex-1 min-h-0 overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
-                    <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">내 연차</span>
-                  </div>
-                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                    총 {leaveData.total}일
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500 dark:text-zinc-400">사용 <span className="font-semibold text-slate-700 dark:text-zinc-200">{leaveData.used}일</span></span>
-                    <span className="text-slate-500 dark:text-zinc-400">남은 <span className="font-semibold text-[#6C63FF]">{remaining}일</span></span>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-zinc-700 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-400 dark:text-zinc-500">{leaveData.breakdown}</p>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* 오늘의 팁 */}
-          <div
-            className="rounded-2xl p-4 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden"
-            style={{ background: "linear-gradient(135deg, #6C63FF18, #8B85FF10)", border: "1px solid #6C63FF30" }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <IconBulb className="w-4 h-4 text-[#6C63FF]" />
-              <span className="text-sm font-semibold text-[#6C63FF]">오늘의 팁</span>
-            </div>
-            <p className="text-sm leading-6 text-slate-700 dark:text-zinc-300 flex-1 min-h-0 overflow-hidden line-clamp-3">
-              {tip || "오늘 하루도 차근차근 해나가면 됩니다."}
-            </p>
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#6C63FF20]">
-              {tipCategory && (
-                <span
-                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                  style={{ background: "#6C63FF22", color: "#6C63FF" }}
-                >
-                  {tipCategory}
-                </span>
-              )}
-              <p className="text-xs text-slate-400 dark:text-zinc-500 ml-auto">매일 새로운 팁</p>
-            </div>
+        {/* 오늘의 팁 */}
+        <div
+          className="rounded-2xl p-4 shadow-sm flex flex-col overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #6C63FF18, #8B85FF10)", border: "1px solid #6C63FF30" }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <IconBulb className="w-4 h-4 text-[#6C63FF]" />
+            <span className="text-sm font-semibold text-[#6C63FF]">오늘의 팁</span>
           </div>
-
+          <p className="text-sm leading-6 text-slate-700 dark:text-zinc-300 flex-1 line-clamp-3">
+            {tip || "오늘 하루도 차근차근 해나가면 됩니다."}
+          </p>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#6C63FF20]">
+            {tipCategory && (
+              <span
+                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                style={{ background: "#6C63FF22", color: "#6C63FF" }}
+              >
+                {tipCategory}
+              </span>
+            )}
+            <p className="text-xs text-slate-400 dark:text-zinc-500 ml-auto">매일 새로운 팁</p>
+          </div>
         </div>
 
       </div>
