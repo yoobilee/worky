@@ -886,8 +886,9 @@ export default function SettingsPage() {
                   {usedLeaves}일
                 </span>
                 <button
-                  onClick={() => { setUsedLeaves((v) => Math.round((v + 0.5) * 2) / 2); setLeaveSaved(false); }}
-                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
+                  onClick={() => { setUsedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                  disabled={usedLeaves >= 25}
+                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   +
                 </button>
