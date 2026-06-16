@@ -24,6 +24,7 @@ import { getStats } from "@/lib/db/usage_stats";
 import { getEvents } from "@/lib/db/calendar";
 import { getTodos } from "@/lib/db/todos";
 import { getSettings, type CustomGreeting } from "@/lib/db/settings";
+import { calcAnnualLeave, type LeaveStandard, type LeaveResult } from "@/lib/leave";
 
 /* ───────── 상수 ───────── */
 
@@ -176,6 +177,7 @@ export default function HomePage() {
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [menuSettings,   setMenuSettings]   = useState<MenuSettings>({});
   const [showMore,       setShowMore]       = useState(false);
+  const [leaveData,      setLeaveData]      = useState<(LeaveResult & { used: number }) | null>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const customGreetingRef = useRef<CustomGreeting | null>(null);
@@ -230,6 +232,11 @@ export default function HomePage() {
       ]);
       customGreetingRef.current = dbSettings?.custom_greeting ?? null;
       setGreeting(getGreetingText(new Date(), customGreetingRef.current));
+      if (dbSettings?.join_date) {
+        const standard = (dbSettings.leave_standard ?? 'fiscal_year') as LeaveStandard;
+        const result = calcAnnualLeave(dbSettings.join_date, standard);
+        setLeaveData({ ...result, used: dbSettings.used_leaves ?? 0 });
+      }
       setWeekStats(dbStats as Partial<Record<FeatureKey, number>>);
       const upcoming = dbEvents
         .filter(e => e.date >= todayStr)
@@ -585,6 +592,38 @@ export default function HomePage() {
                   })}
                 </div>
               )}
+            </div>
+          );
+        })()}
+
+        {/* 내 연차 */}
+        {leaveData && (() => {
+          const remaining = Math.max(0, leaveData.total - leaveData.used);
+          const usedPct   = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
+          return (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
+                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">내 연차</span>
+                </div>
+                <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                  총 {leaveData.total}일
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500 dark:text-zinc-400">사용 <span className="font-semibold text-slate-700 dark:text-zinc-200">{leaveData.used}일</span></span>
+                  <span className="text-slate-500 dark:text-zinc-400">남은 <span className="font-semibold text-[#6C63FF]">{remaining}일</span></span>
+                </div>
+                <div className="h-2 rounded-full bg-slate-100 dark:bg-zinc-700 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }}
+                  />
+                </div>
+                <p className="text-xs text-slate-400 dark:text-zinc-500">{leaveData.breakdown}</p>
+              </div>
             </div>
           );
         })()}

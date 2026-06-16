@@ -16,13 +16,16 @@ export interface UserSettings {
   sidebar_collapsed?: boolean;
   custom_greeting?:  CustomGreeting | null;
   custom_field_keys?: string[];
+  join_date?:        string | null;
+  leave_standard?:   string;
+  used_leaves?:      number;
 }
 
 export async function getSettings(userId: string): Promise<UserSettings | null> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("user_settings")
-    .select("sender_info, menu_settings, menu_order, help_button, job_preset, theme, sidebar_collapsed, custom_greeting, custom_field_keys")
+    .select("sender_info, menu_settings, menu_order, help_button, job_preset, theme, sidebar_collapsed, custom_greeting, custom_field_keys, join_date, leave_standard, used_leaves")
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) return null;

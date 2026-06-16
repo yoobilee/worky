@@ -5,7 +5,7 @@ import HelpButton from "@/components/HelpButton";
 import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
-  IconGripVertical, IconHelp, IconMessageCircle,
+  IconGripVertical, IconHelp, IconMessageCircle, IconCalendarEvent,
 } from "@tabler/icons-react";
 import {
   OPTIONAL_MENU_ITEMS, ALWAYS_VISIBLE_ITEMS,
@@ -124,6 +124,11 @@ export default function SettingsPage() {
   const [greetingValues,   setGreetingValues]   = useState<Record<string, string>>({});
   const [greetingSaved,    setGreetingSaved]    = useState(false);
   const [greetingCollapsed, setGreetingCollapsed] = useState(false);
+  const [joinDate,         setJoinDate]         = useState("");
+  const [leaveStandard,    setLeaveStandard]    = useState<"join_date" | "fiscal_year">("fiscal_year");
+  const [usedLeaves,       setUsedLeaves]       = useState(0);
+  const [leaveSaved,       setLeaveSaved]       = useState(false);
+  const [leaveCollapsed,   setLeaveCollapsed]   = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -160,6 +165,9 @@ export default function SettingsPage() {
             setGreetingMode(cg.mode ?? "basic");
             setGreetingValues(cg.values ?? {});
           }
+          if (dbSettings.join_date) setJoinDate(dbSettings.join_date);
+          if (dbSettings.leave_standard) setLeaveStandard(dbSettings.leave_standard as "join_date" | "fiscal_year");
+          if (dbSettings.used_leaves !== undefined) setUsedLeaves(dbSettings.used_leaves);
         }
       } else {
         // localStorage fallback
@@ -240,6 +248,16 @@ export default function SettingsPage() {
   const handleGreetingValueChange = (key: string, value: string) => {
     setGreetingValues((prev) => ({ ...prev, [key]: value }));
     setGreetingSaved(false);
+  };
+
+  const handleLeaveSave = () => {
+    if (userId) upsertSettings(userId, {
+      join_date: joinDate || null,
+      leave_standard: leaveStandard,
+      used_leaves: usedLeaves,
+    }).catch(() => {});
+    setLeaveSaved(true);
+    setTimeout(() => setLeaveSaved(false), 2500);
   };
 
   const handleGreetingSave = () => {
@@ -778,6 +796,106 @@ export default function SettingsPage() {
 
             <button
               onClick={handleGreetingSave}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+            >
+              <IconDeviceFloppy className="w-3.5 h-3.5" />
+              저장
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 연차 설정 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <button
+          onClick={() => setLeaveCollapsed((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+              <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">연차 설정</p>
+                {leaveSaved && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                    <IconCheck className="w-3.5 h-3.5" />저장됨
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                {joinDate ? `입사일: ${joinDate}` : "입사일을 설정하면 연차를 자동 계산합니다"}
+              </p>
+            </div>
+          </div>
+          {leaveCollapsed
+            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+        </button>
+
+        {!leaveCollapsed && (
+          <div className="px-5 pb-5 space-y-4">
+            {/* 입사일 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사일</label>
+              <input
+                type="date"
+                value={joinDate}
+                onChange={(e) => { setJoinDate(e.target.value); setLeaveSaved(false); }}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              />
+            </div>
+
+            {/* 연차 기준 토글 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">연차 기준</label>
+              <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
+                {([
+                  { id: "join_date",   label: "입사일 기준" },
+                  { id: "fiscal_year", label: "회계연도 기준" },
+                ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => { setLeaveStandard(id); setLeaveSaved(false); }}
+                    className={[
+                      "py-1.5 rounded-lg text-xs font-medium transition-colors",
+                      leaveStandard === id
+                        ? "bg-[#6C63FF] text-white shadow-sm"
+                        : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                    ].join(" ")}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 사용한 연차 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">사용한 연차 (일)</label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setUsedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
+                >
+                  −
+                </button>
+                <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
+                  {usedLeaves}일
+                </span>
+                <button
+                  onClick={() => { setUsedLeaves((v) => Math.round((v + 0.5) * 2) / 2); setLeaveSaved(false); }}
+                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleLeaveSave}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
             >
