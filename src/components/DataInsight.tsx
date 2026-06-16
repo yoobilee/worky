@@ -279,7 +279,7 @@ export default function DataInsight() {
   };
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
+    <div className="flex flex-col gap-3 max-w-5xl mx-auto w-full flex-1 min-h-0">
 
       {/* 입력 탭 */}
       <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">

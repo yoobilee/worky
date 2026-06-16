@@ -183,7 +183,7 @@ export default function DataCleaner() {
   };
 
   return (
-    <div className="space-y-3 max-w-4xl mx-auto w-full">
+    <div className="space-y-3 max-w-5xl mx-auto w-full">
       {/* Bento 통계 카드 */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">

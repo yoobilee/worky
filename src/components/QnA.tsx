@@ -255,7 +255,7 @@ export default function QnA() {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto w-full">
+    <div className="flex flex-col h-full max-w-5xl mx-auto w-full">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div />

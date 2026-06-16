@@ -129,7 +129,7 @@ export default function DocumentWriter() {
   const requiredEmpty = doc.fields.filter((f) => !f.optional).some((f) => !fields[f.key]?.trim());
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto w-full self-start">
+    <div className="space-y-4 max-w-5xl mx-auto w-full self-start">
 
       {/* 문서 유형 선택 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -180,7 +180,7 @@ export default function ScheduleExtractor() {
   };
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-3 max-w-5xl mx-auto w-full">
       {/* 토스트 */}
       {toast && (
         <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${

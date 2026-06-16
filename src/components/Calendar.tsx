@@ -501,7 +501,7 @@ export default function CalendarComponent() {
   );
 
   return (
-    <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
 
       {confirmDeleteId && (
         <ConfirmModal

@@ -209,7 +209,7 @@ export default function Glossary() {
   if (!hydrated) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-3 w-full">
+    <div className="max-w-5xl mx-auto space-y-3 w-full">
 
       {confirmDeleteId && (
         <ConfirmModal

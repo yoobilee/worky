@@ -116,7 +116,7 @@ export default function FeedbackOrganizer() {
   };
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto w-full self-start">
+    <div className="space-y-4 max-w-5xl mx-auto w-full self-start">
 
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">

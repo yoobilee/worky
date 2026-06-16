@@ -312,7 +312,7 @@ export default function TodoMemo() {
   if (!hydrated) return null;
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto w-full h-full flex flex-col">
+    <div className="space-y-4 max-w-5xl mx-auto w-full h-full flex flex-col">
 
       {confirmAction === "completed" && (
         <ConfirmModal

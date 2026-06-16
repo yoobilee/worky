@@ -288,7 +288,7 @@ export default function EmailReply() {
   const hasSender = sender.org || sender.name || sender.title;
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full flex-1 min-h-0">
+    <div className="flex flex-col gap-3 max-w-5xl mx-auto w-full flex-1 min-h-0">
 
       {/* 토스트 */}
       {toast && (

@@ -1137,7 +1137,7 @@ export default function ClientManager() {
   const confirmDeleteName = clients.find((c) => c.id === confirmDeleteId)?.name ?? "";
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto w-full">
+    <div className="space-y-4 max-w-5xl mx-auto w-full">
 
       {confirmDeleteId && (
         <ConfirmModal

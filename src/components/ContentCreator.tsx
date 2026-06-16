@@ -231,7 +231,7 @@ export default function ContentCreator() {
   const selectedClientName = instaClients.find((c) => c.id === instaClientId)?.name;
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto w-full self-start">
+    <div className="space-y-4 max-w-5xl mx-auto w-full self-start">
 
       {/* 탭 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">

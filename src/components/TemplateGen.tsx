@@ -209,7 +209,7 @@ export default function TemplateGen() {
   };
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto w-full self-start">
+    <div className="space-y-4 max-w-5xl mx-auto w-full self-start">
 
       {/* 탭 이동 확인 모달 */}
       {pendingTab && (
