@@ -344,11 +344,14 @@ export default function HomePage() {
                   const usedPct = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
                   return (
                     <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs font-medium text-slate-400 dark:text-zinc-500 shrink-0">연차</span>
                       <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden max-w-[160px]">
                         <div style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }} className="h-full rounded-full" />
                       </div>
-                      <span className="text-xs text-slate-500 dark:text-zinc-400">
-                        <span className="font-semibold text-[#6C63FF]">{leaveRemaining}일</span> 남음 · {leaveData.used}/{leaveData.total}일
+                      <span className="text-xs text-slate-500 dark:text-zinc-400 shrink-0">
+                        <span className="font-semibold text-[#6C63FF]">{leaveRemaining}일</span> 남음
+                        <span className="text-slate-300 dark:text-zinc-600 mx-1">·</span>
+                        총 {leaveData.total}일 중 {leaveData.used}일 사용
                       </span>
                     </div>
                   );
