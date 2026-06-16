@@ -287,9 +287,7 @@ export default function HomePage() {
         const { latitude: lat, longitude: lon } = pos.coords;
         try {
           const [weatherRes, geoRes] = await Promise.all([
-            fetch(
-              `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
-            ),
+            fetch(`/api/weather?lat=${lat}&lon=${lon}`),
             fetch(
               `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
               { headers: { "Accept-Language": "ko", "User-Agent": "Worky-App/1.0" } }
