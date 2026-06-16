@@ -319,24 +319,24 @@ export default function HomePage() {
   const preview   = todos.filter((t) => !t.completed).slice(0, 3);
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-2 flex-1 min-h-0 w-full">
+    <div className="max-w-5xl mx-auto flex flex-col gap-2 flex-1 min-h-0 h-full w-full">
 
       {/* ── 환영 카드 ── */}
       <div
-        className="rounded-2xl border shadow-sm px-5 py-3"
+        className="rounded-2xl border shadow-sm px-5 py-3 shrink-0"
         style={{
           background: "linear-gradient(135deg, #6C63FF18, #8B85FF08)",
           borderColor: "#6C63FF28",
         }}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           {/* 왼쪽: 날짜·인사·현황 */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-snug">
+          <div className="space-y-0.5 min-w-0">
+            <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
               {greeting}
             </h2>
-            <p className="text-base text-slate-500 dark:text-zinc-400">
+            <p className="text-sm text-slate-500 dark:text-zinc-400">
               {total === 0
                 ? "오늘의 할 일을 추가해보세요."
                 : `할 일 ${total}개 중 ${completed}개 완료${completed === total ? " — 모두 완료!" : ""}`}
@@ -344,28 +344,25 @@ export default function HomePage() {
           </div>
 
           {/* 오른쪽: 날씨 + 시계 */}
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             {/* 날씨 */}
-            <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
+            <div className="flex flex-col items-center gap-1 min-w-[60px]">
               {geoStatus === "waiting" && (
                 <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
-                  <IconMapPin className="w-3.5 h-3.5" /> 위치 확인 중...
+                  <IconMapPin className="w-3 h-3" /> 확인 중
                 </span>
               )}
               {geoStatus === "denied" && (
                 <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
-                  <IconMapPin className="w-3.5 h-3.5" /> 위치 정보 없음
+                  <IconMapPin className="w-3 h-3" /> 없음
                 </span>
               )}
               {geoStatus === "ok" && weather && (
                 <>
-                  <weather.Icon className="w-14 h-14 text-[#6C63FF]" />
-                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-200 leading-none">{weather.label}</span>
-                  <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                    {locationName && <><span>{locationName}</span><span className="opacity-40">·</span></>}
-                    <span className="flex items-center gap-0.5">
-                      <IconTemperature className="w-3.5 h-3.5" />{weather.temp}°C
-                    </span>
+                  <weather.Icon className="w-10 h-10 text-[#6C63FF]" />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200 leading-none">{weather.label}</span>
+                  <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-0.5">
+                    <IconTemperature className="w-3 h-3" />{weather.temp}°C
                   </span>
                 </>
               )}
@@ -373,13 +370,13 @@ export default function HomePage() {
 
             {/* 구분선 */}
             {geoStatus === "ok" && weather && (
-              <div className="w-px h-14 bg-slate-200 dark:bg-zinc-700 shrink-0" />
+              <div className="w-px h-10 bg-slate-200 dark:bg-zinc-700 shrink-0" />
             )}
 
             {/* 실시간 시계 */}
-            <div className="flex flex-col items-center gap-1.5 min-w-[64px]">
-              <IconClock className="w-5 h-5 text-[#6C63FF]" />
-              <span className="text-xl font-semibold text-slate-800 dark:text-slate-100 tracking-wide tabular-nums leading-none">
+            <div className="flex flex-col items-center gap-1 min-w-[56px]">
+              <IconClock className="w-4 h-4 text-[#6C63FF]" />
+              <span className="text-lg font-semibold text-slate-800 dark:text-slate-100 tracking-wide tabular-nums leading-none">
                 {time}
               </span>
             </div>
@@ -388,10 +385,10 @@ export default function HomePage() {
       </div>
 
       {/* ── 메인 그리드 ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0">
 
         {/* 할 일 진행률 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 overflow-hidden min-h-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <IconListCheck className="w-4 h-4 text-[#6C63FF]" />
@@ -455,7 +452,7 @@ export default function HomePage() {
         </div>
 
         {/* 빠른 접근 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm lg:col-span-2">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm lg:col-span-2 overflow-hidden min-h-0">
           <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">빠른 접근</p>
           {(() => {
             const active = QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href));
@@ -549,7 +546,7 @@ export default function HomePage() {
           const totalUsed = counts.reduce((a, b) => a + b, 0);
 
           return (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 min-h-0">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 min-h-0 overflow-hidden">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <IconChartBar className="w-4 h-4 text-[#6C63FF]" />
@@ -597,7 +594,7 @@ export default function HomePage() {
         })()}
 
         {/* 다가오는 일정 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 min-h-0">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 min-h-0 overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
@@ -641,7 +638,7 @@ export default function HomePage() {
             const remaining = Math.max(0, leaveData.total - leaveData.used);
             const usedPct   = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
             return (
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 flex-1 min-h-0">
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 flex-1 min-h-0 overflow-hidden">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
@@ -670,14 +667,14 @@ export default function HomePage() {
 
           {/* 오늘의 팁 */}
           <div
-            className="rounded-2xl p-4 shadow-sm flex flex-col flex-1 min-h-0"
+            className="rounded-2xl p-4 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden"
             style={{ background: "linear-gradient(135deg, #6C63FF18, #8B85FF10)", border: "1px solid #6C63FF30" }}
           >
             <div className="flex items-center gap-2 mb-3">
               <IconBulb className="w-4 h-4 text-[#6C63FF]" />
               <span className="text-sm font-semibold text-[#6C63FF]">오늘의 팁</span>
             </div>
-            <p className="text-sm leading-6 text-slate-700 dark:text-zinc-300 flex-1">
+            <p className="text-sm leading-6 text-slate-700 dark:text-zinc-300 flex-1 min-h-0 overflow-hidden line-clamp-3">
               {tip || "오늘 하루도 차근차근 해나가면 됩니다."}
             </p>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#6C63FF20]">
