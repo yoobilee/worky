@@ -306,7 +306,7 @@ export default function HomePage() {
           const addr = geoData.address ?? {};
           const city = addr.city || addr.town || addr.county || addr.state || "";
           setLocationName(city);
-        } catch {}
+        } catch (e) { console.error("[날씨] fetch 실패:", e); }
       },
       () => setGeoStatus("denied")
     );
@@ -358,6 +358,9 @@ export default function HomePage() {
                       <IconMapPin className="w-3 h-3" /> 없음
                     </span>
                   )}
+                  {geoStatus === "ok" && !weather && (
+                    <span className="text-xs text-slate-400">날씨 로딩 중</span>
+                  )}
                   {geoStatus === "ok" && weather && WeatherIcon && (
                     <>
                       <WeatherIcon className="w-10 h-10 text-[#6C63FF]" />
@@ -384,27 +387,13 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 핵심 지표 배지 */}
-            {(total > 0 || leaveRemaining !== null || totalUsed > 0) && (
-              <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-[#6C63FF20]">
-                {total > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/60 dark:bg-zinc-800/60 border border-[#6C63FF20] text-slate-600 dark:text-zinc-300">
-                    <IconListCheck className="w-3.5 h-3.5 text-[#6C63FF]" />
-                    {completed}/{total}개 완료
-                  </span>
-                )}
-                {leaveRemaining !== null && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/60 dark:bg-zinc-800/60 border border-[#6C63FF20] text-slate-600 dark:text-zinc-300">
-                    <IconCalendarEvent className="w-3.5 h-3.5 text-[#6C63FF]" />
-                    연차 {leaveRemaining}일 남음
-                  </span>
-                )}
-                {totalUsed > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/60 dark:bg-zinc-800/60 border border-[#6C63FF20] text-slate-600 dark:text-zinc-300">
-                    <IconSparkles className="w-3.5 h-3.5 text-[#6C63FF]" />
-                    이번 주 {totalUsed}회 사용
-                  </span>
-                )}
+            {/* 연차 배지 */}
+            {leaveRemaining !== null && leaveData && (
+              <div className="mt-2">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/60 dark:bg-zinc-800/60 border border-[#6C63FF20] text-slate-600 dark:text-zinc-300 w-fit">
+                  <IconCalendarEvent className="w-3.5 h-3.5 text-[#6C63FF]" />
+                  연차 {leaveRemaining}일 남음 · 총 {leaveData.total}일 중 {leaveData.used}일 사용
+                </span>
               </div>
             )}
           </div>
