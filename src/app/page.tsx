@@ -333,13 +333,19 @@ export default function HomePage() {
               borderColor: "#6C63FF28",
             }}
           >
-            <div className="flex items-start justify-between gap-4">
-              {/* 왼쪽: 날짜·인사 */}
+            <div className="flex items-center justify-between gap-4">
+              {/* 왼쪽: 날짜·인사·연차 */}
               <div className="space-y-0.5 min-w-0">
                 <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
                   {greeting}
                 </h2>
+                {leaveRemaining !== null && leaveData && (
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    잔여 연차 <span className="font-semibold text-[#6C63FF]">{leaveRemaining}일</span>
+                    {" "}· 총 {leaveData.total}일 중 {leaveData.used}일 사용
+                  </p>
+                )}
               </div>
 
               {/* 오른쪽: 날씨 + 시계 */}
@@ -370,11 +376,6 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {/* 구분선 */}
-                {geoStatus === "ok" && weather && (
-                  <div className="w-px h-10 bg-slate-200 dark:bg-zinc-700 shrink-0" />
-                )}
-
                 {/* 실시간 시계 */}
                 <div className="flex flex-col items-center gap-1 min-w-[56px]">
                   <IconClock className="w-4 h-4 text-[#6C63FF]" />
@@ -384,27 +385,6 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-
-            {/* 연차 미니 카드 */}
-            {leaveRemaining !== null && leaveData && (() => {
-              const usedPct = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
-              return (
-                <div className="mt-2 flex items-center gap-3 px-3 py-2 rounded-xl bg-white/50 dark:bg-zinc-800/50 border border-[#6C63FF20] w-fit">
-                  <IconCalendarEvent className="w-4 h-4 text-[#6C63FF] shrink-0" />
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 dark:text-zinc-400">잔여 연차</span>
-                      <span className="text-sm font-bold text-[#6C63FF]">{leaveRemaining}일</span>
-                      <span className="text-xs text-slate-400 dark:text-zinc-500">/ {leaveData.total}일</span>
-                    </div>
-                    <div className="w-32 h-1.5 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }} />
-                    </div>
-                  </div>
-                  <span className="text-xs text-slate-400 dark:text-zinc-500">{leaveData.used}일 사용</span>
-                </div>
-              );
-            })()}
           </div>
         );
       })()}
