@@ -388,10 +388,10 @@ export default function HomePage() {
       </div>
 
       {/* ── 메인 그리드 ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
         {/* 할 일 진행률 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3 lg:col-span-1">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <IconListCheck className="w-4 h-4 text-[#6C63FF]" />
@@ -454,40 +454,8 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 내 연차 (메인 그리드) */}
-        {leaveData && (() => {
-          const remaining = Math.max(0, leaveData.total - leaveData.used);
-          const usedPct   = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
-          return (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3 lg:col-span-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
-                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">내 연차</span>
-                </div>
-                <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                  총 {leaveData.total}일
-                </span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 dark:text-zinc-400">사용 <span className="font-semibold text-slate-700 dark:text-zinc-200">{leaveData.used}일</span></span>
-                  <span className="text-slate-500 dark:text-zinc-400">남은 <span className="font-semibold text-[#6C63FF]">{remaining}일</span></span>
-                </div>
-                <div className="h-2 rounded-full bg-slate-100 dark:bg-zinc-700 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }}
-                  />
-                </div>
-                <p className="text-xs text-slate-400 dark:text-zinc-500">{leaveData.breakdown}</p>
-              </div>
-            </div>
-          );
-        })()}
-
         {/* 빠른 접근 */}
-        <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm ${leaveData ? "lg:col-span-2" : "lg:col-span-3"}`}>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm lg:col-span-2">
           <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">빠른 접근</p>
           {(() => {
             const active = QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href));
@@ -562,7 +530,7 @@ export default function HomePage() {
       </div>
 
       {/* ── 하단 그리드 (flex-1로 나머지 공간 채움) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 flex-1 min-h-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 flex-1 min-h-0 items-stretch">
 
         {/* 이번 주 활동 */}
         {(() => {
@@ -665,29 +633,66 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 오늘의 팁 */}
-        <div
-          className="rounded-2xl p-5 shadow-sm flex flex-col"
-          style={{ background: "linear-gradient(135deg, #6C63FF18, #8B85FF10)", border: "1px solid #6C63FF30" }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <IconBulb className="w-4 h-4 text-[#6C63FF]" />
-            <span className="text-sm font-semibold text-[#6C63FF]">오늘의 팁</span>
+        {/* 오른쪽 열: 내 연차 + 오늘의 팁 */}
+        <div className="flex flex-col gap-3 h-full">
+
+          {/* 내 연차 */}
+          {leaveData && (() => {
+            const remaining = Math.max(0, leaveData.total - leaveData.used);
+            const usedPct   = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
+            return (
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3 flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
+                    <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">내 연차</span>
+                  </div>
+                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                    총 {leaveData.total}일
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500 dark:text-zinc-400">사용 <span className="font-semibold text-slate-700 dark:text-zinc-200">{leaveData.used}일</span></span>
+                    <span className="text-slate-500 dark:text-zinc-400">남은 <span className="font-semibold text-[#6C63FF]">{remaining}일</span></span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-zinc-700 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-zinc-500">{leaveData.breakdown}</p>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 오늘의 팁 */}
+          <div
+            className="rounded-2xl p-5 shadow-sm flex flex-col flex-1"
+            style={{ background: "linear-gradient(135deg, #6C63FF18, #8B85FF10)", border: "1px solid #6C63FF30" }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <IconBulb className="w-4 h-4 text-[#6C63FF]" />
+              <span className="text-sm font-semibold text-[#6C63FF]">오늘의 팁</span>
+            </div>
+            <p className="text-base leading-7 text-slate-700 dark:text-zinc-300 flex-1">
+              {tip || "오늘 하루도 차근차근 해나가면 됩니다."}
+            </p>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#6C63FF20]">
+              {tipCategory && (
+                <span
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                  style={{ background: "#6C63FF22", color: "#6C63FF" }}
+                >
+                  {tipCategory}
+                </span>
+              )}
+              <p className="text-xs text-slate-400 dark:text-zinc-500 ml-auto">매일 새로운 팁</p>
+            </div>
           </div>
-          <p className="text-base leading-7 text-slate-700 dark:text-zinc-300 flex-1">
-            {tip || "오늘 하루도 차근차근 해나가면 됩니다."}
-          </p>
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#6C63FF20]">
-            {tipCategory && (
-              <span
-                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{ background: "#6C63FF22", color: "#6C63FF" }}
-              >
-                {tipCategory}
-              </span>
-            )}
-            <p className="text-xs text-slate-400 dark:text-zinc-500 ml-auto">매일 새로운 팁</p>
-          </div>
+
         </div>
 
       </div>
