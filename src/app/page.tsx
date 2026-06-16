@@ -388,10 +388,10 @@ export default function HomePage() {
       </div>
 
       {/* ── 메인 그리드 ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
 
         {/* 할 일 진행률 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <IconListCheck className="w-4 h-4 text-[#6C63FF]" />
@@ -454,8 +454,40 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* 내 연차 (메인 그리드) */}
+        {leaveData && (() => {
+          const remaining = Math.max(0, leaveData.total - leaveData.used);
+          const usedPct   = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
+          return (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3 lg:col-span-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
+                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">내 연차</span>
+                </div>
+                <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                  총 {leaveData.total}일
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500 dark:text-zinc-400">사용 <span className="font-semibold text-slate-700 dark:text-zinc-200">{leaveData.used}일</span></span>
+                  <span className="text-slate-500 dark:text-zinc-400">남은 <span className="font-semibold text-[#6C63FF]">{remaining}일</span></span>
+                </div>
+                <div className="h-2 rounded-full bg-slate-100 dark:bg-zinc-700 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }}
+                  />
+                </div>
+                <p className="text-xs text-slate-400 dark:text-zinc-500">{leaveData.breakdown}</p>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 빠른 접근 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm lg:col-span-2">
+        <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm ${leaveData ? "lg:col-span-2" : "lg:col-span-3"}`}>
           <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">빠른 접근</p>
           {(() => {
             const active = QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href));
@@ -592,38 +624,6 @@ export default function HomePage() {
                   })}
                 </div>
               )}
-            </div>
-          );
-        })()}
-
-        {/* 내 연차 */}
-        {leaveData && (() => {
-          const remaining = Math.max(0, leaveData.total - leaveData.used);
-          const usedPct   = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
-          return (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
-                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">내 연차</span>
-                </div>
-                <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                  총 {leaveData.total}일
-                </span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 dark:text-zinc-400">사용 <span className="font-semibold text-slate-700 dark:text-zinc-200">{leaveData.used}일</span></span>
-                  <span className="text-slate-500 dark:text-zinc-400">남은 <span className="font-semibold text-[#6C63FF]">{remaining}일</span></span>
-                </div>
-                <div className="h-2 rounded-full bg-slate-100 dark:bg-zinc-700 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }}
-                  />
-                </div>
-                <p className="text-xs text-slate-400 dark:text-zinc-500">{leaveData.breakdown}</p>
-              </div>
             </div>
           );
         })()}
