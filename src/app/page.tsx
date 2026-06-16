@@ -334,21 +334,28 @@ export default function HomePage() {
             }}
           >
             <div className="flex items-center justify-between gap-4">
-              {/* 왼쪽: 날짜·인사·연차 */}
-              <div className="space-y-0.5 min-w-0">
+              {/* 왼쪽: 날짜·인사·연차 프로그레스바 */}
+              <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
                 <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
                   {greeting}
                 </h2>
-                {leaveRemaining !== null && leaveData && (
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                    잔여 연차 <span className="font-semibold text-[#6C63FF]">{leaveRemaining}일</span>
-                    {" "}· 총 {leaveData.total}일 중 {leaveData.used}일 사용
-                  </p>
-                )}
+                {leaveRemaining !== null && leaveData && (() => {
+                  const usedPct = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
+                  return (
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden max-w-[160px]">
+                        <div style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }} className="h-full rounded-full" />
+                      </div>
+                      <span className="text-xs text-slate-500 dark:text-zinc-400">
+                        <span className="font-semibold text-[#6C63FF]">{leaveRemaining}일</span> 남음 · {leaveData.used}/{leaveData.total}일
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* 오른쪽: 날씨 + 시계 */}
+              {/* 오른쪽: 날씨 + 구분선 + 시계 */}
               <div className="flex items-center gap-3 shrink-0">
                 {/* 날씨 */}
                 <div className="flex flex-col items-center gap-1 min-w-[60px]">
@@ -375,6 +382,9 @@ export default function HomePage() {
                     </>
                   )}
                 </div>
+
+                {/* 구분선 */}
+                <div className="w-px h-10 bg-slate-200 dark:bg-zinc-700 shrink-0" />
 
                 {/* 실시간 시계 */}
                 <div className="flex flex-col items-center gap-1 min-w-[56px]">
