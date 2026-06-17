@@ -3,6 +3,7 @@
 
 import HelpButton from "./HelpButton";
 import DatePickerInput from "./DatePickerInput";
+import { GrassGrid, MiniGrassGrid } from "./GrassGrid";
 import { Fragment, useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
 import {
@@ -10,10 +11,9 @@ import {
   IconUser, IconNotes, IconCalendar, IconCalendarPlus, IconCalendarX, IconArrowsSort,
   IconX, IconExternalLink, IconPhone,
   IconMessage, IconChevronDown, IconChevronUp,
-  IconChevronLeft, IconChevronRight,
-  IconCircleCheck, IconCircleX, IconClock, IconPlayerPlay,
   IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight, IconCheck, IconSearch,
   IconEye, IconEyeOff, IconTag, IconLayoutColumns,
+  IconClock, IconPlayerPlay, IconCircleCheck, IconCircleX,
 } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -23,148 +23,31 @@ import {
   type DbClient,
 } from "@/lib/db/clients";
 import { getSettings, upsertSettings } from "@/lib/db/settings";
-
-/* ── 타입 ── */
-type ReportStatus = "pending" | "inprogress" | "complete" | "stopped";
-type DayStatus    = "done" | "failed";
-type SortOrder    = "status" | "expiry" | "contractStart_asc" | "contractStart_desc" | "name_asc" | "name_desc" | "contact_asc" | "contact_desc";
-
-interface HistoryEntry {
-  date:   string;
-  status: ReportStatus;
-}
-
-interface CustomField {
-  key:    string;
-  value:  string;
-  masked: boolean;
-}
-
-interface Client {
-  id:             string;
-  name:           string;
-  status:         ReportStatus;
-  contact:        string;
-  phone:          string;
-  link:           string;
-  tags:           string[];
-  contractStart:  string;
-  contractDays:   number | null;
-  reportTone:     string;
-  memo:           string;
-  statusHistory:  HistoryEntry[];
-  dailyLog:       Record<string, DayStatus>;
-  showGrassGrid:  boolean;
-  maskPhone:      boolean;
-  companyPhone:     string;
-  maskCompanyPhone: boolean;
-  customFields:   CustomField[];
-  createdAt:      number;
-}
-
-interface FormState {
-  name:          string;
-  status:        ReportStatus;
-  contact:       string;
-  phone:         string;
-  link:          string;
-  tagInput:      string;
-  tags:          string[];
-  contractStart: string;
-  contractDays:  string;
-  contractDaysUnit: "days" | "weeks" | "months" | "years";
-  reportTone:    string;
-  memo:          string;
-  showGrassGrid: boolean;
-  maskPhone:     boolean;
-  companyPhone:     string;
-  maskCompanyPhone: boolean;
-  customFields:   CustomField[];
-}
-
-/* ── 상수 ── */
-const RESET_DATE_KEY = "worky_clients_reset_date";
-const VIEW_MODE_KEY  = "worky_clients_view";
-const GRASS_PANEL_KEY = "worky_grass_panel";
-const COLUMN_SETTINGS_KEY = "worky_column_settings";
-
-const ALL_COLUMNS = [
-  { key: "contact", label: "담당자" },
-  { key: "phone", label: "담당자 연락처" },
-  { key: "companyPhone", label: "거래처 연락처" },
-  { key: "tags", label: "태그" },
-  { key: "contractStart", label: "계약 시작일" },
-  { key: "contractEnd", label: "계약 만료일" },
-  { key: "dday", label: "D-day" },
-  { key: "memo", label: "메모" },
-  { key: "reportTone", label: "보고 톤" },
-] as const;
-
-type ColumnKey = typeof ALL_COLUMNS[number]["key"];
-
-type ViewMode = "grid" | "list";
-
-const CONTRACT_UNIT_LABELS: Record<FormState["contractDaysUnit"], string> = {
-  days: "일", weeks: "주", months: "월", years: "년",
-};
-
-const EMPTY_FORM: FormState = {
-  name: "", status: "pending", contact: "", phone: "",
-  link: "", tagInput: "", tags: [], contractStart: "",
-  contractDays: "", contractDaysUnit: "days", reportTone: "", memo: "", showGrassGrid: false, maskPhone: false,
-  companyPhone: "", maskCompanyPhone: false,
-  customFields: [],
-};
-
-const STATUS_CONFIG: Record<ReportStatus, {
-  label: string; textCls: string; bgCls: string; borderCls: string; hoverCls: string; barCls: string;
-}> = {
-  pending: {
-    label:     "대기 중",
-    textCls:   "text-slate-500 dark:text-slate-400",
-    bgCls:     "bg-slate-100 dark:bg-zinc-800",
-    borderCls: "border-slate-200 dark:border-zinc-700",
-    hoverCls:  "hover:bg-slate-200 dark:hover:bg-zinc-700",
-    barCls:    "bg-slate-300 dark:bg-zinc-600",
-  },
-  inprogress: {
-    label:     "진행 중",
-    textCls:   "text-blue-600 dark:text-blue-400",
-    bgCls:     "bg-blue-100 dark:bg-blue-950/40",
-    borderCls: "border-blue-200 dark:border-blue-800",
-    hoverCls:  "hover:bg-blue-200 dark:hover:bg-blue-900/60",
-    barCls:    "bg-blue-500",
-  },
-  complete: {
-    label:     "완료",
-    textCls:   "text-emerald-600 dark:text-emerald-400",
-    bgCls:     "bg-emerald-100 dark:bg-emerald-950/40",
-    borderCls: "border-emerald-200 dark:border-emerald-800",
-    hoverCls:  "hover:bg-emerald-200 dark:hover:bg-emerald-900/60",
-    barCls:    "bg-emerald-500",
-  },
-  stopped: {
-    label:     "중단",
-    textCls:   "text-red-500 dark:text-red-400",
-    bgCls:     "bg-red-100 dark:bg-red-950/40",
-    borderCls: "border-red-200 dark:border-red-800",
-    hoverCls:  "hover:bg-red-200 dark:hover:bg-red-900/60",
-    barCls:    "bg-red-400",
-  },
-};
+import {
+  type ReportStatus, type DayStatus, type SortOrder,
+  type HistoryEntry, type CustomField, type Client, type FormState,
+  type ColumnKey, type ViewMode,
+  ALL_COLUMNS, CONTRACT_UNIT_LABELS, EMPTY_FORM, STATUS_CONFIG,
+} from "@/types/client";
 
 const STATUS_ICONS: Record<ReportStatus, React.ReactNode> = {
-  pending:    <IconClock        className="w-3.5 h-3.5 shrink-0" />,
-  inprogress: <IconPlayerPlay   className="w-3.5 h-3.5 shrink-0" />,
-  complete:   <IconCircleCheck  className="w-3.5 h-3.5 shrink-0" />,
-  stopped:    <IconCircleX      className="w-3.5 h-3.5 shrink-0" />,
+  pending:    <IconClock       className="w-3.5 h-3.5 shrink-0" />,
+  inprogress: <IconPlayerPlay  className="w-3.5 h-3.5 shrink-0" />,
+  complete:   <IconCircleCheck className="w-3.5 h-3.5 shrink-0" />,
+  stopped:    <IconCircleX     className="w-3.5 h-3.5 shrink-0" />,
 };
+
+/* ── 상수 ── */
+const RESET_DATE_KEY      = "worky_clients_reset_date";
+const VIEW_MODE_KEY       = "worky_clients_view";
+const GRASS_PANEL_KEY     = "worky_grass_panel";
+const COLUMN_SETTINGS_KEY = "worky_column_settings";
 
 /* ── 헬퍼 ── */
 function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-function todayKey(): string { return toDateKey(new Date()); }
+export function todayKey(): string { return toDateKey(new Date()); }
 
 function addBusinessDays(start: string, days: number): string {
   const d = new Date(start + "T00:00:00");
@@ -311,335 +194,6 @@ function clientToDb(c: Omit<Client, "id" | "createdAt">): Omit<DbClient, "id" | 
   };
 }
 
-/* ── 한국 공휴일 (2026) ── */
-const GRASS_HOLIDAYS: Record<string, string> = {
-  "2026-01-01": "신정",
-  "2026-02-16": "설날 연휴",
-  "2026-02-17": "설날",
-  "2026-02-18": "설날 연휴",
-  "2026-03-01": "삼일절",
-  "2026-03-02": "대체공휴일",
-  "2026-05-05": "어린이날",
-  "2026-05-24": "부처님오신날",
-  "2026-05-25": "대체공휴일",
-  "2026-06-06": "현충일",
-  "2026-08-15": "광복절",
-  "2026-08-17": "대체공휴일",
-  "2026-09-24": "추석 연휴",
-  "2026-09-25": "추석",
-  "2026-09-26": "추석 연휴",
-  "2026-10-03": "개천절",
-  "2026-10-05": "대체공휴일",
-  "2026-10-09": "한글날",
-  "2026-12-25": "크리스마스",
-};
-
-function isOffDay(dateKey: string): boolean {
-  if (GRASS_HOLIDAYS[dateKey]) return true;
-  const [y, m, d] = dateKey.split("-").map(Number);
-  const dow = new Date(y, m - 1, d).getDay();
-  return dow === 0 || dow === 6;
-}
-
-/* ── 미니 잔디밭 (목록형 뷰: 이번 주만 표시) ── */
-function MiniGrassGrid({
-  contractStart,
-  contractEnd,
-  dailyLog,
-  onToggle,
-}: {
-  contractStart: string;
-  contractEnd:   string;
-  dailyLog:      Record<string, DayStatus>;
-  onToggle?:     (date: string) => void;
-}) {
-  const today = todayKey();
-
-  function addDays(dateKey: string, n: number): string {
-    const d = new Date(dateKey + "T00:00:00");
-    d.setDate(d.getDate() + n);
-    return toDateKey(d);
-  }
-  function getWeekStartOf(dateKey: string): string {
-    const d = new Date(dateKey + "T00:00:00");
-    const offset = d.getDay();
-    d.setDate(d.getDate() - offset);
-    return toDateKey(d);
-  }
-
-  const startWeek = getWeekStartOf(contractStart);
-  const endWeek   = getWeekStartOf(contractEnd);
-  const initWeek  = today >= contractStart && today <= contractEnd
-    ? getWeekStartOf(today)
-    : startWeek;
-
-  const [weekStart, setWeekStart] = useState(initWeek);
-  const canPrev = weekStart > startWeek;
-  const canNext = weekStart < endWeek;
-
-  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const todayDate = todayKey();
-
-  const allDates: string[] = [];
-  {
-    const cur = new Date(contractStart + "T00:00:00");
-    const end = new Date(contractEnd   + "T00:00:00");
-    while (cur <= end) { allDates.push(toDateKey(cur)); cur.setDate(cur.getDate() + 1); }
-  }
-  let cumDone = 0;
-  const cumMap: Record<string, number> = {};
-  for (const d of allDates) { if (dailyLog[d] === "done") cumDone++; cumMap[d] = cumDone; }
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      {/* 날짜 레이블 행 */}
-      <div className="flex items-center gap-0.5">
-        <div className="w-4 h-4 shrink-0" />
-        {weekDates.map((date) => {
-          const [, m, d] = date.split("-").map(Number);
-          const isToday = date === todayDate;
-          return (
-            <span
-              key={date}
-              className={[
-                "w-5 text-center text-[9px] leading-none",
-                isToday ? "text-[#6C63FF] dark:text-[#a99dff] font-bold" : "text-slate-400 dark:text-zinc-300",
-              ].join(" ")}
-            >
-              {m}/{d}
-            </span>
-          );
-        })}
-        <div className="w-4 h-4 shrink-0" />
-      </div>
-
-      {/* 네비 + 셀 행 */}
-      <div className="flex items-center gap-0.5">
-        <button
-          type="button"
-          disabled={!canPrev}
-          onClick={() => setWeekStart((w) => addDays(w, -7))}
-          className="w-4 h-4 p-0.5 shrink-0 text-slate-400 dark:text-zinc-300 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
-        >
-          <IconChevronLeft className="w-full h-full" />
-        </button>
-        {weekDates.map((date) => {
-          if (date < contractStart || date > contractEnd) {
-            return <div key={date} className="w-5 h-5 rounded-sm" />;
-          }
-          const ds  = dailyLog[date];
-          const off = isOffDay(date);
-          const [, m, d] = date.split("-").map(Number);
-          const cls = off
-            ? "bg-slate-200 dark:bg-zinc-700 opacity-40"
-            : ds === "done"   ? "bg-emerald-500"
-            : ds === "failed" ? "bg-red-400"
-            :                   "bg-slate-200 dark:bg-zinc-700";
-          const disabled = off || date > todayDate;
-          return (
-            <button
-              key={date}
-              type="button"
-              title={`${m}/${d}`}
-              disabled={disabled}
-              onClick={() => onToggle?.(date)}
-              className={`w-5 h-5 rounded-sm flex items-center justify-center transition-opacity ${cls} ${disabled ? "cursor-not-allowed" : "cursor-pointer hover:opacity-75"}`}
-            >
-              {ds === "done" && (
-                <span className="text-[8px] font-bold text-white leading-none">{cumMap[date]}</span>
-              )}
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          disabled={!canNext}
-          onClick={() => setWeekStart((w) => addDays(w, 7))}
-          className="w-4 h-4 p-0.5 shrink-0 text-slate-400 dark:text-zinc-300 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
-        >
-          <IconChevronRight className="w-full h-full" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ── 잔디밭 그리드 (주 단위 네비게이션) ── */
-function GrassGrid({
-  contractStart,
-  contractEnd,
-  dailyLog,
-  onToggle,
-}: {
-  contractStart: string;
-  contractEnd:   string;
-  dailyLog:      Record<string, DayStatus>;
-  onToggle:      (date: string) => void;
-}) {
-  const today = todayKey();
-
-  function addDays(dateKey: string, n: number): string {
-    const d = new Date(dateKey + "T00:00:00");
-    d.setDate(d.getDate() + n);
-    return toDateKey(d);
-  }
-
-  // 주의 시작일 계산 (일요일 기준)
-  function getWeekStartOf(dateKey: string): string {
-    const d = new Date(dateKey + "T00:00:00");
-    const offset = d.getDay();
-    d.setDate(d.getDate() - offset);
-    return toDateKey(d);
-  }
-
-  const startWeek = getWeekStartOf(contractStart);
-  const endWeek   = getWeekStartOf(contractEnd);
-
-  // 초기 주: 오늘이 계약 기간 내면 오늘의 주, 아니면 시작 주
-  const initWeek = today >= contractStart && today <= contractEnd
-    ? getWeekStartOf(today)
-    : startWeek;
-
-  const [weekStart, setWeekStart] = useState(initWeek);
-
-  const canPrev = weekStart > startWeek;
-  const canNext = weekStart < endWeek;
-
-  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
-  // 전체 날짜 (누적 회차 + 통계 계산용)
-  const allDates: string[] = [];
-  {
-    const cur = new Date(contractStart + "T00:00:00");
-    const end = new Date(contractEnd   + "T00:00:00");
-    while (cur <= end) { allDates.push(toDateKey(cur)); cur.setDate(cur.getDate() + 1); }
-  }
-
-  let cumDone = 0;
-  const cumMap: Record<string, number> = {};
-  for (const d of allDates) { if (dailyLog[d] === "done") cumDone++; cumMap[d] = cumDone; }
-
-  const workdays   = allDates.filter((d) => !isOffDay(d));
-  const statDone   = workdays.filter((d) => dailyLog[d] === "done").length;
-  const statFailed = workdays.filter((d) => dailyLog[d] === "failed").length;
-  const statNone   = workdays.filter((d) => !dailyLog[d] && d <= today).length;
-
-  // 네비게이션 헤더 날짜 범위 레이블
-  const [, ws_m, ws_d] = weekStart.split("-").map(Number);
-  const weekEndDate = addDays(weekStart, 6);
-  const [, we_m, we_d] = weekEndDate.split("-").map(Number);
-
-  return (
-    <div className="w-full flex flex-col gap-2">
-      {/* 네비게이션 */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          disabled={!canPrev}
-          onClick={() => setWeekStart((w) => addDays(w, -7))}
-          className="p-1 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-slate-400 dark:text-zinc-300"
-        >
-          <IconChevronLeft className="w-3.5 h-3.5" />
-        </button>
-        <span className="text-[10px] font-medium text-slate-400 dark:text-zinc-300">
-          {ws_m}/{ws_d} – {we_m}/{we_d}
-        </span>
-        <button
-          type="button"
-          disabled={!canNext}
-          onClick={() => setWeekStart((w) => addDays(w, 7))}
-          className="p-1 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-slate-400 dark:text-zinc-300"
-        >
-          <IconChevronRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* 7일 셀 */}
-      <div className="flex gap-1.5 justify-between">
-        {weekDates.map((date) => {
-          // 계약 범위 밖 — 빈 자리 유지
-          if (date < contractStart || date > contractEnd) {
-            return (
-              <div key={date} className="flex flex-col items-center gap-1 flex-1">
-                <span className="text-[9px] leading-none text-transparent select-none">·</span>
-                <div className="w-full h-[30px] rounded-md" />
-              </div>
-            );
-          }
-
-          const ds          = dailyLog[date];
-          const isFuture    = date > today;
-          const isToday     = date === today;
-          const off         = isOffDay(date);
-          const holidayName = GRASS_HOLIDAYS[date];
-          const [, m, d]    = date.split("-").map(Number);
-          const dateLabel   = `${m}/${d}`;
-
-          const tooltip = off
-            ? (holidayName ? `${dateLabel} · ${holidayName}` : dateLabel)
-            : ds === "done"   ? `${dateLabel} · ${cumMap[date]}회차`
-            : ds === "failed" ? `${dateLabel} · 실패`
-            : dateLabel;
-
-          const labelCls = [
-            "text-[9px] leading-none font-medium",
-            isToday ? "text-[#6C63FF] dark:text-[#a99dff] font-bold"
-            : off   ? "text-slate-400 dark:text-zinc-600"
-            :         "text-slate-400 dark:text-zinc-300",
-          ].join(" ");
-
-          if (off) {
-            return (
-              <div key={date} className="flex flex-col items-center gap-1 flex-1" title={tooltip}>
-                <span className={labelCls}>{dateLabel}</span>
-                <div className="w-full h-[30px] rounded-md bg-slate-200 dark:bg-zinc-700 opacity-40" />
-              </div>
-            );
-          }
-
-          return (
-            <div key={date} className="flex flex-col items-center gap-1 flex-1">
-              <span className={labelCls}>{dateLabel}</span>
-              <button
-                type="button"
-                onClick={() => { if (!isFuture) onToggle(date); }}
-                title={tooltip}
-                className={[
-                  "w-full h-[30px] rounded-md transition-all flex items-center justify-center",
-                  isToday  ? "ring-2 ring-[#6C63FF] ring-offset-1 dark:ring-offset-zinc-900" : "",
-                  isFuture ? "opacity-20 cursor-not-allowed" : "cursor-pointer hover:opacity-75 active:scale-95",
-                  ds === "done"     ? "bg-emerald-500"
-                  : ds === "failed" ? "bg-red-400"
-                  :                   "bg-slate-200 dark:bg-zinc-700",
-                ].join(" ")}
-              >
-                {ds === "done" && (
-                  <span className="text-[11px] font-bold text-white leading-none">{cumMap[date]}</span>
-                )}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 하단 범례 + 전체 통계 */}
-      <div className="flex items-center gap-3 flex-wrap pt-0.5">
-        {[
-          { cls: "bg-emerald-500",                              label: "완료",   count: statDone,   showCount: true  },
-          { cls: "bg-red-400",                                  label: "실패",   count: statFailed, showCount: true  },
-          { cls: "bg-slate-200 dark:bg-zinc-700",               label: "미확인", count: statNone,   showCount: true  },
-          { cls: "bg-slate-200 dark:bg-zinc-700 opacity-40",    label: "휴일",   count: 0,          showCount: false },
-        ].map(({ cls, label, count, showCount }) => (
-          <div key={label} className="flex items-center gap-1">
-            <div className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cls}`} />
-            <span className="text-[9px] text-slate-500 dark:text-zinc-300">{label}</span>
-            {showCount && <span className="text-[9px] font-semibold text-slate-700 dark:text-zinc-200">{count}건</span>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /* ── 커스텀 날짜 피커 ── */
 /* ── 메인 컴포넌트 ── */
