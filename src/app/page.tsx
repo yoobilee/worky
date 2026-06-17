@@ -356,13 +356,7 @@ export default function HomePage() {
         const leaveRemaining = leaveData ? Math.max(0, leaveData.total - leaveData.used) : null;
         const WeatherIcon = weather?.Icon ?? null;
         return (
-          <div
-            className="rounded-2xl border shadow-sm px-5 py-3 shrink-0"
-            style={{
-              background: "linear-gradient(135deg, #6C63FF18, #8B85FF08)",
-              borderColor: "#6C63FF28",
-            }}
-          >
+          <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm px-5 py-3 shrink-0 bg-white dark:bg-zinc-900">
             <div className="flex items-center justify-between gap-4">
               {/* 왼쪽: 날짜·인사·연차 프로그레스바 */}
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
@@ -527,10 +521,7 @@ export default function HomePage() {
                     href={href}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all group"
                   >
-                    <span
-                      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white"
-                      style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-                    >
+                    <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#6C63FF]">
                       <Icon className="w-4 h-4" />
                     </span>
                     <div className="min-w-0">
@@ -564,10 +555,7 @@ export default function HomePage() {
                             onClick={() => setShowMore(false)}
                             className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-0"
                           >
-                            <span
-                              className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-white"
-                              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-                            >
+                            <span className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#6C63FF]">
                               <Icon className="w-3.5 h-3.5" />
                             </span>
                             <div className="min-w-0">
@@ -662,8 +650,8 @@ export default function HomePage() {
           );
         })()}
 
-        {/* 다가오는 일정 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm flex flex-col gap-2 min-h-0 overflow-hidden">
+        {/* 다가오는 일정 — 3티어 */}
+        <div className="bg-slate-50 dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 min-h-0 overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
@@ -677,7 +665,7 @@ export default function HomePage() {
           {!dataLoaded ? (
             <div className="space-y-2">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800 space-y-1.5">
+                <div key={i} className="px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 space-y-1.5">
                   <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-3/4" />
                   <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2 w-1/3" />
                 </div>
@@ -694,7 +682,7 @@ export default function HomePage() {
           ) : (
             <div className="space-y-2">
               {upcomingEvents.map(ev => (
-                <div key={ev.id} className="flex items-start gap-2.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                <div key={ev.id} className="flex items-start gap-2.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{ev.title}</p>
                     <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
