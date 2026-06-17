@@ -1,11 +1,22 @@
 export type LeaveStandard = 'join_date' | 'fiscal_year';
+export type EmploymentType = 'new' | 'career';
 
 export interface LeaveResult {
   total: number;
   breakdown: string;
 }
 
-export function calcAnnualLeave(joinDateStr: string, standard: LeaveStandard): LeaveResult {
+export function calcAnnualLeave(
+  joinDateStr: string,
+  standard: LeaveStandard,
+  employmentType: EmploymentType = 'new',
+  grantedLeaves?: number,
+): LeaveResult {
+  if (employmentType === 'career') {
+    const total = grantedLeaves ?? 0;
+    return { total, breakdown: '부여 연차' };
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const join = new Date(joinDateStr);

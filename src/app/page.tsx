@@ -24,7 +24,7 @@ import { getStats } from "@/lib/db/usage_stats";
 import { getEvents } from "@/lib/db/calendar";
 import { getTodos } from "@/lib/db/todos";
 import { getSettings, type CustomGreeting } from "@/lib/db/settings";
-import { calcAnnualLeave, type LeaveStandard, type LeaveResult } from "@/lib/leave";
+import { calcAnnualLeave, type LeaveStandard, type EmploymentType, type LeaveResult } from "@/lib/leave";
 
 /* ───────── 상수 ───────── */
 
@@ -232,10 +232,16 @@ export default function HomePage() {
       ]);
       customGreetingRef.current = dbSettings?.custom_greeting ?? null;
       setGreeting(getGreetingText(new Date(), customGreetingRef.current));
-      if (dbSettings?.join_date) {
-        const standard = (dbSettings.leave_standard ?? 'fiscal_year') as LeaveStandard;
-        const result = calcAnnualLeave(dbSettings.join_date, standard);
-        setLeaveData({ ...result, used: dbSettings.used_leaves ?? 0 });
+      const empType = (dbSettings?.employment_type ?? 'new') as EmploymentType;
+      if (empType === 'career' || dbSettings?.join_date) {
+        const standard = (dbSettings?.leave_standard ?? 'fiscal_year') as LeaveStandard;
+        const result = calcAnnualLeave(
+          dbSettings?.join_date ?? '',
+          standard,
+          empType,
+          dbSettings?.granted_leaves,
+        );
+        setLeaveData({ ...result, used: dbSettings?.used_leaves ?? 0 });
       }
       setWeekStats(dbStats as Partial<Record<FeatureKey, number>>);
       const upcoming = dbEvents

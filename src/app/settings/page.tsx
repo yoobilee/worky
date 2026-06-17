@@ -130,6 +130,8 @@ export default function SettingsPage() {
   const [usedLeaves,       setUsedLeaves]       = useState(0);
   const [leaveSaved,       setLeaveSaved]       = useState(false);
   const [leaveCollapsed,   setLeaveCollapsed]   = useState(false);
+  const [employmentType,   setEmploymentType]   = useState<"new" | "career">("new");
+  const [grantedLeaves,    setGrantedLeaves]    = useState(15);
 
   useEffect(() => {
     const supabase = createClient();
@@ -169,6 +171,8 @@ export default function SettingsPage() {
           if (dbSettings.join_date) setJoinDate(dbSettings.join_date);
           if (dbSettings.leave_standard) setLeaveStandard(dbSettings.leave_standard as "join_date" | "fiscal_year");
           if (dbSettings.used_leaves !== undefined) setUsedLeaves(dbSettings.used_leaves);
+          if (dbSettings.employment_type) setEmploymentType(dbSettings.employment_type as "new" | "career");
+          if (dbSettings.granted_leaves !== undefined) setGrantedLeaves(dbSettings.granted_leaves);
         }
       } else {
         // localStorage fallback
@@ -256,6 +260,8 @@ export default function SettingsPage() {
       join_date: joinDate || null,
       leave_standard: leaveStandard,
       used_leaves: usedLeaves,
+      employment_type: employmentType,
+      granted_leaves: grantedLeaves,
     }).catch(() => {});
     setLeaveSaved(true);
     setTimeout(() => setLeaveSaved(false), 2500);
@@ -422,26 +428,20 @@ export default function SettingsPage() {
 
         {!leaveCollapsed && (
           <div className="px-5 pb-5 space-y-4">
-            {/* 입사일 */}
+            {/* 입사 유형 토글 */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사일</label>
-              <DatePickerInput value={joinDate} onChange={(v) => { setJoinDate(v); setLeaveSaved(false); }} />
-            </div>
-
-            {/* 연차 기준 토글 */}
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">연차 기준</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사 유형</label>
               <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
                 {([
-                  { id: "join_date",   label: "입사일 기준" },
-                  { id: "fiscal_year", label: "회계연도 기준" },
-                ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
+                  { id: "new",    label: "신입" },
+                  { id: "career", label: "경력" },
+                ] as { id: "new" | "career"; label: string }[]).map(({ id, label }) => (
                   <button
                     key={id}
-                    onClick={() => { setLeaveStandard(id); setLeaveSaved(false); }}
+                    onClick={() => { setEmploymentType(id); setLeaveSaved(false); }}
                     className={[
                       "py-1.5 rounded-lg text-xs font-medium transition-colors",
-                      leaveStandard === id
+                      employmentType === id
                         ? "bg-[#6C63FF] text-white shadow-sm"
                         : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
                     ].join(" ")}
@@ -451,6 +451,64 @@ export default function SettingsPage() {
                 ))}
               </div>
             </div>
+
+            {/* 신입: 입사일 + 연차 기준 */}
+            {employmentType === "new" && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사일</label>
+                  <DatePickerInput value={joinDate} onChange={(v) => { setJoinDate(v); setLeaveSaved(false); }} />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">연차 기준</label>
+                  <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
+                    {([
+                      { id: "join_date",   label: "입사일 기준" },
+                      { id: "fiscal_year", label: "회계연도 기준" },
+                    ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
+                      <button
+                        key={id}
+                        onClick={() => { setLeaveStandard(id); setLeaveSaved(false); }}
+                        className={[
+                          "py-1.5 rounded-lg text-xs font-medium transition-colors",
+                          leaveStandard === id
+                            ? "bg-[#6C63FF] text-white shadow-sm"
+                            : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                        ].join(" ")}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* 경력: 부여 연차 stepper */}
+            {employmentType === "career" && (
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">부여 연차 (일)</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setGrantedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
+                  >
+                    −
+                  </button>
+                  <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
+                    {grantedLeaves}일
+                  </span>
+                  <button
+                    onClick={() => { setGrantedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                    disabled={grantedLeaves >= 25}
+                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* 사용한 연차 */}
             <div>
