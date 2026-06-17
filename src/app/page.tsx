@@ -18,7 +18,7 @@ import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
 } from "@/lib/menuSettings";
 import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
-import { loadCalendarEvents, type CalendarEvent } from "@/lib/calendarStorage";
+import { type CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
 import { getStats } from "@/lib/db/usage_stats";
 import { getEvents } from "@/lib/db/calendar";
@@ -212,14 +212,8 @@ export default function HomePage() {
     setTip(todayTip.text);
     setTipCategory(todayTip.category);
 
-    // localStorage fallback (즉각 표시)
     setWeekStats(getThisWeekStats());
     const todayStr = new Date().toISOString().slice(0, 10);
-    const localUpcoming = loadCalendarEvents()
-      .filter(e => e.date >= todayStr)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 3);
-    setUpcomingEvents(localUpcoming);
 
     // Supabase에서 최신 데이터 비동기 로드
     const supabase = createClient();
