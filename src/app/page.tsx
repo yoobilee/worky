@@ -27,6 +27,7 @@ import { getSettings, type CustomGreeting } from "@/lib/db/settings";
 import { calcAnnualLeave, type LeaveStandard, type EmploymentType, type LeaveResult } from "@/lib/leave";
 import { runDailyNotificationChecks } from "@/lib/notifications";
 import { getClients } from "@/lib/db/clients";
+import OnboardingModal from "@/components/OnboardingModal";
 
 /* ───────── 상수 ───────── */
 
@@ -181,6 +182,8 @@ export default function HomePage() {
   const [showMore,       setShowMore]       = useState(false);
   const [leaveData,      setLeaveData]      = useState<(LeaveResult & { used: number }) | null>(null);
   const [dataLoaded,     setDataLoaded]     = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingUid,  setOnboardingUid]  = useState<string | null>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const customGreetingRef = useRef<CustomGreeting | null>(null);
@@ -256,6 +259,13 @@ export default function HomePage() {
       );
 
       setDataLoaded(true);
+
+      // 온보딩: 전부 비어있는 신규 사용자에게만 표시
+      const isNew = !dbSettings?.sender_info && !dbSettings?.job_preset && !dbSettings?.join_date;
+      if (isNew && localStorage.getItem("worky_onboarding_dismissed") !== "true") {
+        setOnboardingUid(uid);
+        setShowOnboarding(true);
+      }
     });
 
     // 메뉴 설정
@@ -330,6 +340,13 @@ export default function HomePage() {
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-2 flex-1 min-h-0 h-full w-full">
+
+      {showOnboarding && onboardingUid && (
+        <OnboardingModal
+          userId={onboardingUid}
+          onClose={() => setShowOnboarding(false)}
+        />
+      )}
 
       {/* ── 환영 카드 ── */}
       {(() => {
