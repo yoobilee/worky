@@ -356,7 +356,7 @@ export default function HomePage() {
         const leaveRemaining = leaveData ? Math.max(0, leaveData.total - leaveData.used) : null;
         const WeatherIcon = weather?.Icon ?? null;
         return (
-          <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm px-5 py-3 shrink-0 bg-white dark:bg-zinc-900">
+          <div className="px-1 py-2 shrink-0">
             <div className="flex items-center justify-between gap-4">
               {/* 왼쪽: 날짜·인사·연차 프로그레스바 */}
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
