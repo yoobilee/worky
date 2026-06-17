@@ -1044,10 +1044,15 @@ export default function SettingsPage() {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                  <IconCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">알림이 허용됐습니다</p>
-                </div>
+                <>
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                    <IconCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">알림이 허용됐습니다</p>
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-zinc-500 px-1">
+                    알림을 끄려면 브라우저 사이트 설정에서 직접 변경해 주세요.
+                  </p>
+                </>
               )}
 
               {/* 일정 알림 토글 */}
@@ -1059,8 +1064,10 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleNotifToggle("eventNotif")}
                   disabled={notifPermission !== "granted"}
+                  role="switch"
+                  aria-checked={notifSettings.eventNotif}
                   className={[
-                    "relative w-10 h-6 rounded-full transition-colors duration-200 shrink-0",
+                    "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
                     notifPermission !== "granted" ? "opacity-40 cursor-not-allowed" : "",
                     notifSettings.eventNotif ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
                   ].join(" ")}
@@ -1081,8 +1088,10 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleNotifToggle("ddayNotif")}
                   disabled={notifPermission !== "granted"}
+                  role="switch"
+                  aria-checked={notifSettings.ddayNotif}
                   className={[
-                    "relative w-10 h-6 rounded-full transition-colors duration-200 shrink-0",
+                    "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
                     notifPermission !== "granted" ? "opacity-40 cursor-not-allowed" : "",
                     notifSettings.ddayNotif ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
                   ].join(" ")}
