@@ -7,7 +7,13 @@ import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
   IconGripVertical, IconHelp, IconMessageCircle, IconCalendarEvent,
+  IconBell, IconBellOff,
 } from "@tabler/icons-react";
+import {
+  loadNotificationSettings, saveNotificationSettings,
+  getPermissionStatus, requestPermission,
+  type NotificationSettings,
+} from "@/lib/notifications";
 import {
   OPTIONAL_MENU_ITEMS, ALWAYS_VISIBLE_ITEMS,
   loadMenuSettings, saveMenuSettings, isRouteEnabled,
@@ -134,6 +140,9 @@ export default function SettingsPage() {
   const [leaveCollapsed,   setLeaveCollapsed]   = useState(false);
   const [employmentType,   setEmploymentType]   = useState<"new" | "career">("new");
   const [grantedLeaves,    setGrantedLeaves]    = useState(15);
+  const [notifPermission,  setNotifPermission]  = useState<NotificationPermission | "unsupported">("default");
+  const [notifSettings,    setNotifSettings]    = useState<NotificationSettings>({ eventNotif: true, ddayNotif: true });
+  const [notifCollapsed,   setNotifCollapsed]   = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -191,6 +200,8 @@ export default function SettingsPage() {
       setMenuSettings(loadMenuSettings());
       setMenuOrder(loadMenuOrder());
       setHelpOn(loadHelpButtonEnabled());
+      setNotifPermission(getPermissionStatus());
+      setNotifSettings(loadNotificationSettings());
       setHydrated(true);
     });
   }, []);
@@ -304,6 +315,19 @@ export default function SettingsPage() {
     setPendingPreset(null);
     setJobSaved(true);
     setTimeout(() => setJobSaved(false), 2500);
+  };
+
+  const handleNotifToggle = (key: keyof NotificationSettings) => {
+    const next = { ...notifSettings, [key]: !notifSettings[key] };
+    setNotifSettings(next);
+    saveNotificationSettings(next);
+  };
+
+  const handleRequestPermission = async () => {
+    const granted = await requestPermission();
+    setNotifPermission(granted ? "granted" : "denied");
+    if (granted) toast.success("알림이 허용됐습니다.");
+    else toast.error("알림 권한이 거부됐습니다. 브라우저 설정에서 직접 허용해 주세요.");
   };
 
   if (!hydrated) return null;
@@ -967,6 +991,112 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* 알림 설정 카드 */}
+      {notifPermission !== "unsupported" && (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+          <button
+            onClick={() => setNotifCollapsed((v) => !v)}
+            className="w-full flex items-center justify-between px-5 py-4 text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                <IconBell className="w-4 h-4 text-[#6C63FF]" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">알림 설정</p>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                  {notifPermission === "granted" ? "알림 허용됨" : "브라우저 알림 권한 설정"}
+                </p>
+              </div>
+            </div>
+            {notifCollapsed
+              ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+              : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+          </button>
+
+          {!notifCollapsed && (
+            <div className="px-5 pb-5 space-y-3">
+              {/* 권한 상태 */}
+              {notifPermission !== "granted" ? (
+                <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">알림 권한</p>
+                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                      {notifPermission === "denied"
+                        ? "브라우저 설정에서 직접 허용해 주세요"
+                        : "일정·계약 만료 알림을 받으려면 허용하세요"}
+                    </p>
+                  </div>
+                  {notifPermission === "default" && (
+                    <button
+                      onClick={handleRequestPermission}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shrink-0"
+                      style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                    >
+                      <IconBell className="w-3.5 h-3.5" />알림 허용
+                    </button>
+                  )}
+                  {notifPermission === "denied" && (
+                    <span className="flex items-center gap-1 text-xs text-red-400 shrink-0">
+                      <IconBellOff className="w-3.5 h-3.5" />거부됨
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                  <IconCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">알림이 허용됐습니다</p>
+                </div>
+              )}
+
+              {/* 일정 알림 토글 */}
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">일정 알림</p>
+                  <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">오늘 일정이 있으면 앱 열 때 알림</p>
+                </div>
+                <button
+                  onClick={() => handleNotifToggle("eventNotif")}
+                  disabled={notifPermission !== "granted"}
+                  className={[
+                    "relative w-10 h-6 rounded-full transition-colors duration-200 shrink-0",
+                    notifPermission !== "granted" ? "opacity-40 cursor-not-allowed" : "",
+                    notifSettings.eventNotif ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                  ].join(" ")}
+                >
+                  <span className={[
+                    "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                    notifSettings.eventNotif ? "translate-x-5" : "translate-x-1",
+                  ].join(" ")} />
+                </button>
+              </div>
+
+              {/* 거래처 D-day 알림 토글 */}
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">거래처 D-day 알림</p>
+                  <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">계약 만료 7일 이내 거래처 알림</p>
+                </div>
+                <button
+                  onClick={() => handleNotifToggle("ddayNotif")}
+                  disabled={notifPermission !== "granted"}
+                  className={[
+                    "relative w-10 h-6 rounded-full transition-colors duration-200 shrink-0",
+                    notifPermission !== "granted" ? "opacity-40 cursor-not-allowed" : "",
+                    notifSettings.ddayNotif ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                  ].join(" ")}
+                >
+                  <span className={[
+                    "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                    notifSettings.ddayNotif ? "translate-x-5" : "translate-x-1",
+                  ].join(" ")} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <HelpButton
         title="설정 사용법"

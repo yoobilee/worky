@@ -25,6 +25,8 @@ import { getEvents } from "@/lib/db/calendar";
 import { getTodos } from "@/lib/db/todos";
 import { getSettings, type CustomGreeting } from "@/lib/db/settings";
 import { calcAnnualLeave, type LeaveStandard, type EmploymentType, type LeaveResult } from "@/lib/leave";
+import { runDailyNotificationChecks } from "@/lib/notifications";
+import { getClients } from "@/lib/db/clients";
 
 /* ───────── 상수 ───────── */
 
@@ -224,11 +226,12 @@ export default function HomePage() {
     supabase.auth.getUser().then(async ({ data }) => {
       const uid = data.user?.id;
       if (!uid) return;
-      const [dbStats, dbEvents, todayTodos, dbSettings] = await Promise.all([
+      const [dbStats, dbEvents, todayTodos, dbSettings, dbClients] = await Promise.all([
         getStats(uid),
         getEvents(uid),
         getTodos(uid, todayStr),
         getSettings(uid),
+        getClients(uid),
       ]);
       customGreetingRef.current = dbSettings?.custom_greeting ?? null;
       setGreeting(getGreetingText(new Date(), customGreetingRef.current));
@@ -250,6 +253,12 @@ export default function HomePage() {
         .map(e => ({ id: e.id, date: e.date, title: e.title, time: e.time, location: e.location } as CalendarEvent));
       setUpcomingEvents(upcoming);
       if (todayTodos.length > 0) setTodos(todayTodos.map(t => ({ id: t.id, text: t.text, completed: t.completed })));
+
+      // 하루 한 번 브라우저 알림 (일정 + 거래처 D-day)
+      runDailyNotificationChecks(
+        dbEvents.map(e => ({ date: e.date, title: e.title })),
+        dbClients.map(c => ({ name: c.name, contract_start: c.contract_start, contract_days: c.contract_days }))
+      );
     });
 
     // 메뉴 설정
