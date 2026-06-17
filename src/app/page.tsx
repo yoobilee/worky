@@ -267,11 +267,6 @@ export default function HomePage() {
         setShowOnboarding(true);
       }
 
-      // 디버그: ?preview_onboarding=1 로 강제 표시
-      if (new URLSearchParams(window.location.search).get("preview_onboarding") === "1") {
-        setOnboardingUid(uid);
-        setShowOnboarding(true);
-      }
     });
 
     // 메뉴 설정
