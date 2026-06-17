@@ -1,48 +1,43 @@
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/types/supabase";
 
-export interface DbClient {
-  id:               string;
-  name:             string;
-  status:           string;
-  contact_person:   string;
-  phone:            string;
-  link:             string;
-  tags:             string[];
-  contract_start:   string | null;
-  contract_days:    number | null;
-  report_tone:      string;
-  memo:             string;
-  history:          unknown[];
-  progress:         Record<string, string>;
-  show_grass_grid:  boolean;
-  mask_phone:       boolean;
-  company_phone:    string;
-  mask_company_phone: boolean;
-  custom_fields:    { key: string; value: string; masked: boolean }[] | null;
-  created_at:       string;
-}
+type DbClientRow    = Database["public"]["Tables"]["clients"]["Row"];
+type DbClientInsert = Database["public"]["Tables"]["clients"]["Insert"];
+type DbClientUpdate = Database["public"]["Tables"]["clients"]["Update"];
+
+export type DbClient = Pick<DbClientRow,
+  "id" | "name" | "status" | "contact_person" | "phone" | "link" | "tags" |
+  "contract_start" | "contract_days" | "report_tone" | "memo" | "history" |
+  "progress" | "show_grass_grid" | "mask_phone" | "company_phone" |
+  "mask_company_phone" | "custom_fields" | "created_at"
+>;
+
+const SELECT_COLS = "id, name, status, contact_person, phone, link, tags, contract_start, contract_days, report_tone, memo, history, progress, show_grass_grid, mask_phone, company_phone, mask_company_phone, custom_fields, created_at";
 
 export async function getClients(userId: string): Promise<DbClient[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("clients")
-    .select("id, name, status, contact_person, phone, link, tags, contract_start, contract_days, report_tone, memo, history, progress, show_grass_grid, mask_phone, company_phone, mask_company_phone, custom_fields, created_at")
+    .select(SELECT_COLS)
     .eq("user_id", userId)
     .order("created_at");
-  return (data as DbClient[]) ?? [];
+  return (data ?? []) as DbClient[];
 }
 
-export async function addClient(userId: string, client: Omit<DbClient, "id" | "created_at">): Promise<DbClient | null> {
+export async function addClient(
+  userId: string,
+  client: Omit<DbClientInsert, "id" | "created_at" | "updated_at" | "user_id">
+): Promise<DbClient | null> {
   const supabase = createClient();
   const { data } = await supabase
     .from("clients")
     .insert({ user_id: userId, ...client })
-    .select("id, name, status, contact_person, phone, link, tags, contract_start, contract_days, report_tone, memo, history, progress, show_grass_grid, mask_phone, company_phone, mask_company_phone, custom_fields, created_at")
+    .select(SELECT_COLS)
     .single();
-  return data as DbClient | null;
+  return (data ?? null) as DbClient | null;
 }
 
-export async function updateClient(id: string, patch: Partial<Omit<DbClient, "id" | "created_at">>): Promise<void> {
+export async function updateClient(id: string, patch: DbClientUpdate): Promise<void> {
   const supabase = createClient();
   await supabase.from("clients").update(patch).eq("id", id);
 }

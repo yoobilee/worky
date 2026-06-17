@@ -1,13 +1,17 @@
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/types/supabase";
+import type { Json } from "@/types/supabase";
+
+type DbTodosRow = Database["public"]["Tables"]["todos"]["Row"];
 
 export interface TodoItem {
-  id: string;
-  text: string;
-  completed: boolean;
-  createdAt: number;
+  id:           string;
+  text:         string;
+  completed:    boolean;
+  createdAt:    number;
   carriedOver?: boolean;
   originalDate?: string;
-  originalId?: string;
+  originalId?:  string;
 }
 
 export async function getTodos(userId: string, date: string): Promise<TodoItem[]> {
@@ -38,5 +42,8 @@ export async function upsertTodos(userId: string, date: string, todos: TodoItem[
   const supabase = createClient();
   await supabase
     .from("todos")
-    .upsert({ user_id: userId, date, todos }, { onConflict: "user_id,date" });
+    .upsert(
+      { user_id: userId, date, todos: todos as unknown as Json },
+      { onConflict: "user_id,date" }
+    );
 }

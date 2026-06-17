@@ -184,13 +184,13 @@ function clientToDb(c: Omit<Client, "id" | "createdAt">): Omit<DbClient, "id" | 
     contract_days:   c.contractDays,
     report_tone:     c.reportTone,
     memo:            c.memo,
-    history:         c.statusHistory as unknown[],
-    progress:        c.dailyLog as Record<string, string>,
+    history:         c.statusHistory as unknown as import("@/types/supabase").Json,
+    progress:        c.dailyLog as unknown as import("@/types/supabase").Json,
     show_grass_grid: c.showGrassGrid,
     mask_phone:      c.maskPhone,
     company_phone:      c.companyPhone,
     mask_company_phone: c.maskCompanyPhone,
-    custom_fields:      c.customFields,
+    custom_fields:      c.customFields as unknown as import("@/types/supabase").Json,
   };
 }
 
@@ -406,7 +406,7 @@ export default function ClientManager() {
         }
       );
       const c = updated.find((x) => x.id === id);
-      if (c) updateDbClient(id, { status: newStatus, history: c.statusHistory as unknown[] }).catch(() => {});
+      if (c) updateDbClient(id, { status: newStatus, history: c.statusHistory as unknown as import("@/types/supabase").Json }).catch(() => {});
       return updated;
     });
     setOpenStatusId(null);

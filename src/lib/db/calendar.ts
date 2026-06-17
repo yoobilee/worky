@@ -1,39 +1,40 @@
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/types/supabase";
 
-export interface DbEvent {
-  id:          string;
-  date:        string;
-  title:       string;
-  time?:       string;
-  location?:   string;
-  location_url?: string;
-  description?: string;
-}
+type DbEventRow = Database["public"]["Tables"]["calendar_events"]["Row"];
+type DbEventInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
+type DbEventUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
+
+export type DbEvent = Pick<DbEventRow,
+  "id" | "date" | "title" | "time" | "location" | "location_url" | "description"
+>;
+
+const SELECT_COLS = "id, date, title, time, location, location_url, description";
 
 export async function getEvents(userId: string): Promise<DbEvent[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("calendar_events")
-    .select("id, date, title, time, location, location_url, description")
+    .select(SELECT_COLS)
     .eq("user_id", userId)
     .order("date");
-  return (data as DbEvent[]) ?? [];
+  return (data ?? []) as DbEvent[];
 }
 
 export async function addEvent(
   userId: string,
-  event: Omit<DbEvent, "id">
+  event: Omit<DbEventInsert, "id" | "created_at" | "updated_at" | "user_id">
 ): Promise<DbEvent | null> {
   const supabase = createClient();
   const { data } = await supabase
     .from("calendar_events")
     .insert({ user_id: userId, ...event })
-    .select("id, date, title, time, location, location_url, description")
+    .select(SELECT_COLS)
     .single();
-  return data as DbEvent | null;
+  return (data ?? null) as DbEvent | null;
 }
 
-export async function updateEvent(id: string, patch: Partial<Omit<DbEvent, "id">>): Promise<void> {
+export async function updateEvent(id: string, patch: DbEventUpdate): Promise<void> {
   const supabase = createClient();
   await supabase.from("calendar_events").update(patch).eq("id", id);
 }

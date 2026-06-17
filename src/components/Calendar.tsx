@@ -273,7 +273,7 @@ export default function CalendarComponent() {
       setUserId(uid);
       if (uid) {
         const rows = await getEvents(uid);
-        setEvents(rows.map((r) => ({ id: r.id, date: r.date, title: r.title, time: r.time, location: r.location, location_url: r.location_url })));
+        setEvents(rows.map((r) => ({ id: r.id, date: r.date, title: r.title, time: r.time ?? undefined, location: r.location ?? undefined, location_url: r.location_url ?? undefined })));
       }
       setHydrated(true);
     });
@@ -307,7 +307,7 @@ export default function CalendarComponent() {
       location: formLocation.trim() || undefined,
       location_url: formLocation.trim() ? formLocationUrl : undefined,
     });
-    if (row) setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time, location: row.location, location_url: row.location_url }]);
+    if (row) setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time ?? undefined, location: row.location ?? undefined, location_url: row.location_url ?? undefined }]);
     setFormTitle(""); setFormTime(""); setFormLocation(""); setFormLocationUrl(undefined);
   };
 

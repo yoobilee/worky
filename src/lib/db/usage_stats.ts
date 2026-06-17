@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import type { Json } from "@/types/supabase";
 
 export type FeatureKey =
   | "data" | "email" | "template" | "translate"
@@ -38,7 +39,10 @@ export async function upsertStats(
   const week = weekStart ?? getWeekStart();
   await supabase
     .from("usage_stats")
-    .upsert({ user_id: userId, week_start: week, stats }, { onConflict: "user_id,week_start" });
+    .upsert(
+      { user_id: userId, week_start: week, stats: stats as unknown as Json },
+      { onConflict: "user_id,week_start" }
+    );
 }
 
 export async function trackFeature(userId: string, feature: FeatureKey): Promise<void> {

@@ -111,15 +111,15 @@ export default function Glossary() {
         const rows = await getGlossary(uid);
         if (rows.length > 0) {
           setTerms(rows.map((r) => ({
-            id: r.id, term: r.term, description: r.definition,
-            category: r.category as Category, createdAt: new Date(r.created_at).getTime(),
+            id: r.id, term: r.term, description: r.definition ?? "",
+            category: (r.category ?? "기타") as Category, createdAt: new Date(r.created_at ?? Date.now()).getTime(),
           })));
         } else {
           // 기본 예시 일괄 삽입
           const inserted: Term[] = [];
           for (const d of DEFAULT_TERMS) {
             const row = await addTerm(uid, { term: d.term, definition: d.description, category: d.category });
-            if (row) inserted.push({ id: row.id, term: row.term, description: row.definition, category: row.category as Category, createdAt: new Date(row.created_at).getTime() });
+            if (row) inserted.push({ id: row.id, term: row.term, description: row.definition ?? "", category: (row.category ?? "기타") as Category, createdAt: new Date(row.created_at ?? Date.now()).getTime() });
           }
           setTerms(inserted.length > 0 ? inserted : DEFAULT_TERMS);
         }
