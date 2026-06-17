@@ -40,6 +40,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko" className={`h-full ${dmMono.variable} ${nunito.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#6C63FF" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Worky" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body className="h-full text-slate-900 dark:text-slate-100">
         <ThemeProvider>
