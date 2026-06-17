@@ -16,6 +16,7 @@ import {
   IconClock, IconPlayerPlay, IconCircleCheck, IconCircleX,
 } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
+import { useToast } from "@/contexts/ToastContext";
 import { createClient } from "@/lib/supabase/client";
 import {
   getClients as getDbClients, addClient as addDbClient,
@@ -198,6 +199,7 @@ function clientToDb(c: Omit<Client, "id" | "createdAt">): Omit<DbClient, "id" | 
 /* ── 커스텀 날짜 피커 ── */
 /* ── 메인 컴포넌트 ── */
 export default function ClientManager() {
+  const toast = useToast();
   const [clients,           setClients]           = useState<Client[]>([]);
   const [hydrated,          setHydrated]          = useState(false);
   const [userId,            setUserId]            = useState<string | null>(null);
@@ -406,7 +408,7 @@ export default function ClientManager() {
         }
       );
       const c = updated.find((x) => x.id === id);
-      if (c) updateDbClient(id, { status: newStatus, history: c.statusHistory as unknown as import("@/types/supabase").Json }).catch(() => {});
+      if (c) updateDbClient(id, { status: newStatus, history: c.statusHistory as unknown as import("@/types/supabase").Json }).catch(() => { toast.error("상태 저장에 실패했습니다."); });
       return updated;
     });
     setOpenStatusId(null);
@@ -420,7 +422,7 @@ export default function ClientManager() {
         if (!log[date])                log[date] = "done";
         else if (log[date] === "done") log[date] = "failed";
         else                           delete log[date];
-        updateDbClient(clientId, { progress: log as Record<string, string> }).catch(() => {});
+        updateDbClient(clientId, { progress: log as Record<string, string> }).catch(() => { toast.error("진행 현황 저장에 실패했습니다."); });
         return { ...c, dailyLog: log };
       });
       return updated;
@@ -462,7 +464,7 @@ export default function ClientManager() {
     if (newKeys.length > 0) {
       const updatedKeys = [...savedCustomKeys, ...newKeys];
       setSavedCustomKeys(updatedKeys);
-      upsertSettings(userId, { custom_field_keys: updatedKeys }).catch(() => {});
+      upsertSettings(userId, { custom_field_keys: updatedKeys }).catch(() => { toast.error("설정 저장에 실패했습니다."); });
     }
 
     if (editingId) {
@@ -472,11 +474,15 @@ export default function ClientManager() {
       await updateDbClient(editingId, clientToDb(updated));
       setClients((prev) => prev.map((c) => c.id !== editingId ? c : updated));
       setListEditMode("none");
+      toast.success("거래처가 수정됐습니다.");
     } else {
       const dbRow = await addDbClient(userId, {
         ...clientToDb({ ...base, statusHistory: [], dailyLog: {} }),
       });
-      if (dbRow) setClients((prev) => [...prev, dbToClient(dbRow)]);
+      if (dbRow) {
+        setClients((prev) => [...prev, dbToClient(dbRow)]);
+        toast.success("거래처가 추가됐습니다.");
+      }
     }
     closeForm();
   };
@@ -504,6 +510,7 @@ export default function ClientManager() {
     await deleteDbClient(confirmDeleteId);
     setClients((prev) => prev.filter((c) => c.id !== confirmDeleteId));
     setConfirmDeleteId(null);
+    toast.success("거래처가 삭제됐습니다.");
   };
 
   const closeForm = () => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); };

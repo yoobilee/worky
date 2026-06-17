@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import HelpButton from "@/components/HelpButton";
+import { useToast } from "@/contexts/ToastContext";
 import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
@@ -101,6 +102,7 @@ const JOB_PRESETS: JobPreset[] = [
 ];
 
 export default function SettingsPage() {
+  const toast = useToast();
   const [info,          setInfo]          = useState<SenderInfo>({ org: "", name: "", title: "" });
   const [collapsed,     setCollapsed]     = useState(false);
   const [saved,         setSaved]         = useState(false);
@@ -200,7 +202,10 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     localStorage.setItem(SENDER_KEY, JSON.stringify(info));
-    if (userId) upsertSettings(userId, { sender_info: info as unknown as Record<string, string> }).catch(() => {});
+    if (userId) upsertSettings(userId, { sender_info: info as unknown as Record<string, string> })
+      .then(() => toast.success("내 정보가 저장됐습니다."))
+      .catch(() => toast.error("저장에 실패했습니다."));
+    else toast.success("내 정보가 저장됐습니다.");
     setSaved(true);
     if (info.org || info.name || info.title) setCollapsed(true);
     setTimeout(() => setSaved(false), 2000);
@@ -210,7 +215,7 @@ export default function SettingsPage() {
     const next = { ...menuSettings, [href]: !isRouteEnabled(menuSettings, href) };
     setMenuSettings(next);
     saveMenuSettings(next);
-    if (userId) upsertSettings(userId, { menu_settings: next }).catch(() => {});
+    if (userId) upsertSettings(userId, { menu_settings: next }).catch(() => { toast.error("저장에 실패했습니다."); });
     setMenuSaved(true);
     setTimeout(() => setMenuSaved(false), 2500);
   };
@@ -227,7 +232,7 @@ export default function SettingsPage() {
     next.splice(i, 0, moved);
     setMenuOrder(next);
     saveMenuOrder(next);
-    if (userId) upsertSettings(userId, { menu_order: next }).catch(() => {});
+    if (userId) upsertSettings(userId, { menu_order: next }).catch(() => { toast.error("저장에 실패했습니다."); });
     setOrderSaved(true);
     setTimeout(() => setOrderSaved(false), 2500);
     setDragIdx(null);
@@ -239,7 +244,7 @@ export default function SettingsPage() {
     const next = !helpOn;
     setHelpOn(next);
     saveHelpButtonEnabled(next);
-    if (userId) upsertSettings(userId, { help_button: next }).catch(() => {});
+    if (userId) upsertSettings(userId, { help_button: next }).catch(() => { toast.error("저장에 실패했습니다."); });
     setHelpSaved(true);
     setTimeout(() => setHelpSaved(false), 2500);
   };
@@ -262,7 +267,7 @@ export default function SettingsPage() {
       used_leaves: usedLeaves,
       employment_type: employmentType,
       granted_leaves: grantedLeaves,
-    }).catch(() => {});
+    }).then(() => toast.success("연차 설정이 저장됐습니다.")).catch(() => { toast.error("저장에 실패했습니다."); });
     setLeaveSaved(true);
     setTimeout(() => setLeaveSaved(false), 2500);
   };
@@ -273,7 +278,9 @@ export default function SettingsPage() {
       mode: greetingMode,
       values: greetingValues,
     };
-    if (userId) upsertSettings(userId, { custom_greeting: payload }).catch(() => {});
+    if (userId) upsertSettings(userId, { custom_greeting: payload })
+      .then(() => toast.success("인사말이 저장됐습니다."))
+      .catch(() => toast.error("저장에 실패했습니다."));
     setGreetingSaved(true);
     setTimeout(() => setGreetingSaved(false), 2500);
   };
@@ -292,7 +299,7 @@ export default function SettingsPage() {
     setMenuSettings(next);
     saveMenuSettings(next);
     localStorage.setItem(JOB_KEY, pendingPreset);
-    if (userId) upsertSettings(userId, { menu_settings: next, job_preset: pendingPreset }).catch(() => {});
+    if (userId) upsertSettings(userId, { menu_settings: next, job_preset: pendingPreset }).catch(() => { toast.error("저장에 실패했습니다."); });
     setJobPreset(pendingPreset);
     setPendingPreset(null);
     setJobSaved(true);

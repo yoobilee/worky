@@ -8,6 +8,7 @@ import { IconTrash, IconChevronLeft, IconChevronRight } from "@tabler/icons-reac
 import { createClient } from "@/lib/supabase/client";
 import { getTodos, upsertTodos, getPastTodoRows } from "@/lib/db/todos";
 import { getMemos, upsertMemos } from "@/lib/db/memos";
+import { useToast } from "@/contexts/ToastContext";
 
 interface Todo {
   id: string;
@@ -106,6 +107,7 @@ async function doCarryoverAsync(
 }
 
 export default function TodoMemo() {
+  const toast = useToast();
   const [todos,        setTodos]        = useState<Todo[]>([]);
   const [input,        setInput]        = useState("");
   const [memoTab,        setMemoTab]        = useState<MemoTab>("업무");
@@ -223,7 +225,7 @@ export default function TodoMemo() {
   // 할 일 저장 (Supabase)
   useEffect(() => {
     if (!hydrated || !userId) return;
-    upsertTodos(userId, selectedDateRef.current, todos).catch(() => {});
+    upsertTodos(userId, selectedDateRef.current, todos).catch(() => { toast.error("할 일 저장에 실패했습니다."); });
   }, [todos, hydrated, userId]);
 
   // 날짜 이동 + 이월 처리
@@ -265,7 +267,7 @@ export default function TodoMemo() {
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
     debounceRef.current = setTimeout(() => {
-      if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: value }).catch(() => {});
+      if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: value }).catch(() => { toast.error("메모 저장에 실패했습니다."); });
       setSaveStatus("saved");
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     }, 500);
@@ -280,7 +282,7 @@ export default function TodoMemo() {
   const clearMemo = () => setConfirmAction("memo");
   const doClearMemo = () => {
     setMemos((prev) => ({ ...prev, [memoTab]: "" }));
-    if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: "" }).catch(() => {});
+    if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: "" }).catch(() => { toast.error("메모 초기화에 실패했습니다."); });
     setSaveStatus("idle");
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
