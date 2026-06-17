@@ -180,6 +180,7 @@ export default function HomePage() {
   const [menuSettings,   setMenuSettings]   = useState<MenuSettings>({});
   const [showMore,       setShowMore]       = useState(false);
   const [leaveData,      setLeaveData]      = useState<(LeaveResult & { used: number }) | null>(null);
+  const [dataLoaded,     setDataLoaded]     = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const customGreetingRef = useRef<CustomGreeting | null>(null);
@@ -253,6 +254,8 @@ export default function HomePage() {
         dbEvents.map(e => ({ date: e.date, title: e.title })),
         dbClients.map(c => ({ name: c.name, contract_start: c.contract_start, contract_days: c.contract_days }))
       );
+
+      setDataLoaded(true);
     });
 
     // 메뉴 설정
@@ -349,7 +352,11 @@ export default function HomePage() {
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
                   {greeting}
                 </h2>
-                {leaveRemaining !== null && leaveData && (() => {
+                {!dataLoaded ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-1.5 w-32" />
+                  </div>
+                ) : leaveRemaining !== null && leaveData && (() => {
                   const usedPct = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
                   return (
                     <div className="flex items-center gap-2 mt-1">
@@ -370,19 +377,17 @@ export default function HomePage() {
               {/* 오른쪽: 날씨 + 구분선 + 시계 */}
               <div className="flex items-center gap-3 shrink-0">
                 {/* 날씨 */}
-                <div className="flex flex-col items-center gap-1 min-w-[60px]">
-                  {geoStatus === "waiting" && (
-                    <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
-                      <IconMapPin className="w-3 h-3" /> 확인 중
-                    </span>
+                <div className="flex flex-col items-center gap-1 min-w-[60px] min-h-[64px] justify-center">
+                  {(geoStatus === "waiting" || (geoStatus === "ok" && !weather)) && (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full w-10 h-10" />
+                      <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-10" />
+                    </div>
                   )}
                   {geoStatus === "denied" && (
                     <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
                       <IconMapPin className="w-3 h-3" /> 없음
                     </span>
-                  )}
-                  {geoStatus === "ok" && !weather && (
-                    <span className="text-xs text-slate-400">날씨 로딩 중</span>
                   )}
                   {geoStatus === "ok" && weather && WeatherIcon && (
                     <>
@@ -429,7 +434,14 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {total === 0 ? (
+          {!dataLoaded ? (
+            <div className="flex-1 flex flex-col gap-2 py-2">
+              <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-8 w-16" />
+              <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2 w-full" />
+              <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-3/4 mt-1" />
+              <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-2/3" />
+            </div>
+          ) : total === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 py-6">
               <p className="text-sm text-slate-400 dark:text-zinc-500">등록된 할 일이 없습니다.</p>
               <Link
@@ -477,6 +489,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
+
 
         {/* 빠른 접근 */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm lg:col-span-2 overflow-hidden min-h-0">
@@ -584,7 +597,16 @@ export default function HomePage() {
                 )}
               </div>
 
-              {totalUsed === 0 ? (
+              {!dataLoaded ? (
+                <div className="space-y-2 py-1">
+                  {[72, 55, 88, 40].map((w, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-[88px] shrink-0" />
+                      <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2 flex-1" style={{ maxWidth: `${w}%` }} />
+                    </div>
+                  ))}
+                </div>
+              ) : totalUsed === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
                   <p className="text-sm text-slate-400 dark:text-zinc-500">이번 주 아직 사용 기록이 없습니다.</p>
                 </div>
@@ -632,7 +654,16 @@ export default function HomePage() {
               전체 <IconArrowRight className="w-3 h-3" />
             </Link>
           </div>
-          {upcomingEvents.length === 0 ? (
+          {!dataLoaded ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800 space-y-1.5">
+                  <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-3/4" />
+                  <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2 w-1/3" />
+                </div>
+              ))}
+            </div>
+          ) : upcomingEvents.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
               <p className="text-sm text-slate-400 dark:text-zinc-500">예정된 일정이 없습니다.</p>
               <Link href="/calendar"
