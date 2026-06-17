@@ -9,6 +9,8 @@ import {
 } from "@tabler/icons-react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
+import { createClient } from "@/lib/supabase/client";
+import { getClients } from "@/lib/db/clients";
 
 /* ── 보고 메시지 ── */
 type ToneId    = "formal" | "friendly" | "concise";
@@ -95,7 +97,6 @@ ${INSTA_TONE_GUIDE[tone]}
 - 마크다운(**, ## 등) 사용 금지`;
 }
 
-const CLIENTS_KEY     = "worky_clients";
 const TONE_SAMPLE_KEY = "worky_report_tone_sample";
 
 export default function ContentCreator() {
@@ -141,14 +142,16 @@ export default function ContentCreator() {
       const saved = localStorage.getItem(TONE_SAMPLE_KEY);
       if (saved) setCustomToneSample(saved);
     } catch {}
-    try {
-      const raw = localStorage.getItem(CLIENTS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as { id: string; name: string; tags?: string[] }[];
-        setInstaClients(parsed.map((c) => ({ id: c.id, name: c.name, tags: c.tags ?? [] })));
+
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id;
+      if (uid) {
+        const clients = await getClients(uid);
+        setInstaClients(clients.map((c) => ({ id: c.id, name: c.name, tags: (c.tags as string[]) ?? [] })));
       }
-    } catch {}
-    setHydrated(true);
+      setHydrated(true);
+    });
   }, []);
 
   const handleCustomToneChange = (v: string) => {
