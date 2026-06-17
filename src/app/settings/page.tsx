@@ -16,6 +16,7 @@ import {
 } from "@/lib/menuSettings";
 import { createClient } from "@/lib/supabase/client";
 import { getSettings, upsertSettings, type CustomGreeting } from "@/lib/db/settings";
+import DatePickerInput from "@/components/DatePickerInput";
 
 const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
@@ -390,6 +391,239 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* 연차 설정 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <button
+          onClick={() => setLeaveCollapsed((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+              <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">연차 설정</p>
+                {leaveSaved && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                    <IconCheck className="w-3.5 h-3.5" />저장됨
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                {joinDate ? `입사일: ${joinDate}` : "입사일을 설정하면 연차를 자동 계산합니다"}
+              </p>
+            </div>
+          </div>
+          {leaveCollapsed
+            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+        </button>
+
+        {!leaveCollapsed && (
+          <div className="px-5 pb-5 space-y-4">
+            {/* 입사일 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사일</label>
+              <DatePickerInput value={joinDate} onChange={(v) => { setJoinDate(v); setLeaveSaved(false); }} />
+            </div>
+
+            {/* 연차 기준 토글 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">연차 기준</label>
+              <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
+                {([
+                  { id: "join_date",   label: "입사일 기준" },
+                  { id: "fiscal_year", label: "회계연도 기준" },
+                ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => { setLeaveStandard(id); setLeaveSaved(false); }}
+                    className={[
+                      "py-1.5 rounded-lg text-xs font-medium transition-colors",
+                      leaveStandard === id
+                        ? "bg-[#6C63FF] text-white shadow-sm"
+                        : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                    ].join(" ")}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 사용한 연차 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">사용한 연차 (일)</label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setUsedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
+                >
+                  −
+                </button>
+                <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
+                  {usedLeaves}일
+                </span>
+                <button
+                  onClick={() => { setUsedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                  disabled={usedLeaves >= 25}
+                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleLeaveSave}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+            >
+              <IconDeviceFloppy className="w-3.5 h-3.5" />
+              저장
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 커스텀 인사말 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <button
+          onClick={() => setGreetingCollapsed((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+              <IconMessageCircle className="w-4 h-4 text-[#6C63FF]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">커스텀 인사말</p>
+                {greetingSaved && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                    <IconCheck className="w-3.5 h-3.5" />저장됨
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                홈 화면에 표시되는 인사말을 직접 설정합니다
+              </p>
+            </div>
+          </div>
+          {greetingCollapsed
+            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+        </button>
+
+        {!greetingCollapsed && (
+          <div className="px-5 pb-5 space-y-4">
+            {/* on/off 토글 */}
+            <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">커스텀 인사말 사용</p>
+                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                  끄면 기본 인사말이 표시됩니다
+                </p>
+              </div>
+              <button
+                onClick={handleGreetingToggle}
+                role="switch"
+                aria-checked={greetingEnabled}
+                className={[
+                  "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
+                  greetingEnabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                ].join(" ")}
+              >
+                <span className={[
+                  "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                  greetingEnabled ? "translate-x-5" : "translate-x-1",
+                ].join(" ")} />
+              </button>
+            </div>
+
+            {greetingEnabled && (
+              <>
+                {/* 모드 선택 탭 */}
+                <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
+                  {([
+                    { id: "basic", label: "기본" },
+                    { id: "time",  label: "시간대별" },
+                    { id: "day",   label: "요일별" },
+                  ] as { id: GreetingMode; label: string }[]).map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => { setGreetingMode(id); setGreetingSaved(false); }}
+                      className={[
+                        "py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
+                        greetingMode === id
+                          ? "bg-[#6C63FF] text-white shadow-sm"
+                          : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 기본 모드 */}
+                {greetingMode === "basic" && (
+                  <input
+                    value={greetingValues.default ?? ""}
+                    onChange={(e) => handleGreetingValueChange("default", e.target.value)}
+                    placeholder={GREETING_PLACEHOLDERS.default}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                  />
+                )}
+
+                {/* 시간대별 모드 */}
+                {greetingMode === "time" && (
+                  <div className="space-y-2">
+                    {GREETING_TIME_PERIODS.map(({ id, label }) => (
+                      <div key={id} className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
+                        <input
+                          value={greetingValues[id] ?? ""}
+                          onChange={(e) => handleGreetingValueChange(id, e.target.value)}
+                          placeholder={GREETING_PLACEHOLDERS.time[id]}
+                          className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 요일별 모드 */}
+                {greetingMode === "day" && (
+                  <div className="space-y-2">
+                    {GREETING_DAY_LABELS.map((label, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
+                        <input
+                          value={greetingValues[String(idx)] ?? ""}
+                          onChange={(e) => handleGreetingValueChange(String(idx), e.target.value)}
+                          placeholder={GREETING_PLACEHOLDERS.day[idx]}
+                          className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            <button
+              onClick={handleGreetingSave}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+            >
+              <IconDeviceFloppy className="w-3.5 h-3.5" />
+              저장
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* 직업군 설정 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
         <button
@@ -665,244 +899,6 @@ export default function SettingsPage() {
                 ].join(" ")} />
               </button>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* 커스텀 인사말 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <button
-          onClick={() => setGreetingCollapsed((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconMessageCircle className="w-4 h-4 text-[#6C63FF]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">커스텀 인사말</p>
-                {greetingSaved && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />저장됨
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                홈 화면에 표시되는 인사말을 직접 설정합니다
-              </p>
-            </div>
-          </div>
-          {greetingCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
-        </button>
-
-        {!greetingCollapsed && (
-          <div className="px-5 pb-5 space-y-4">
-            {/* on/off 토글 */}
-            <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-              <div>
-                <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">커스텀 인사말 사용</p>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                  끄면 기본 인사말이 표시됩니다
-                </p>
-              </div>
-              <button
-                onClick={handleGreetingToggle}
-                role="switch"
-                aria-checked={greetingEnabled}
-                className={[
-                  "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
-                  greetingEnabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                ].join(" ")}
-              >
-                <span className={[
-                  "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                  greetingEnabled ? "translate-x-5" : "translate-x-1",
-                ].join(" ")} />
-              </button>
-            </div>
-
-            {greetingEnabled && (
-              <>
-                {/* 모드 선택 탭 */}
-                <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
-                  {([
-                    { id: "basic", label: "기본" },
-                    { id: "time",  label: "시간대별" },
-                    { id: "day",   label: "요일별" },
-                  ] as { id: GreetingMode; label: string }[]).map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => { setGreetingMode(id); setGreetingSaved(false); }}
-                      className={[
-                        "py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
-                        greetingMode === id
-                          ? "bg-[#6C63FF] text-white shadow-sm"
-                          : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
-                      ].join(" ")}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* 기본 모드 */}
-                {greetingMode === "basic" && (
-                  <input
-                    value={greetingValues.default ?? ""}
-                    onChange={(e) => handleGreetingValueChange("default", e.target.value)}
-                    placeholder={GREETING_PLACEHOLDERS.default}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                  />
-                )}
-
-                {/* 시간대별 모드 */}
-                {greetingMode === "time" && (
-                  <div className="space-y-2">
-                    {GREETING_TIME_PERIODS.map(({ id, label }) => (
-                      <div key={id} className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
-                        <input
-                          value={greetingValues[id] ?? ""}
-                          onChange={(e) => handleGreetingValueChange(id, e.target.value)}
-                          placeholder={GREETING_PLACEHOLDERS.time[id]}
-                          className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* 요일별 모드 */}
-                {greetingMode === "day" && (
-                  <div className="space-y-2">
-                    {GREETING_DAY_LABELS.map((label, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
-                        <input
-                          value={greetingValues[String(idx)] ?? ""}
-                          onChange={(e) => handleGreetingValueChange(String(idx), e.target.value)}
-                          placeholder={GREETING_PLACEHOLDERS.day[idx]}
-                          className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            <button
-              onClick={handleGreetingSave}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
-              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-            >
-              <IconDeviceFloppy className="w-3.5 h-3.5" />
-              저장
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 연차 설정 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <button
-          onClick={() => setLeaveCollapsed((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">연차 설정</p>
-                {leaveSaved && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />저장됨
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                {joinDate ? `입사일: ${joinDate}` : "입사일을 설정하면 연차를 자동 계산합니다"}
-              </p>
-            </div>
-          </div>
-          {leaveCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
-        </button>
-
-        {!leaveCollapsed && (
-          <div className="px-5 pb-5 space-y-4">
-            {/* 입사일 */}
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사일</label>
-              <input
-                type="date"
-                value={joinDate}
-                onChange={(e) => { setJoinDate(e.target.value); setLeaveSaved(false); }}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-              />
-            </div>
-
-            {/* 연차 기준 토글 */}
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">연차 기준</label>
-              <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
-                {([
-                  { id: "join_date",   label: "입사일 기준" },
-                  { id: "fiscal_year", label: "회계연도 기준" },
-                ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => { setLeaveStandard(id); setLeaveSaved(false); }}
-                    className={[
-                      "py-1.5 rounded-lg text-xs font-medium transition-colors",
-                      leaveStandard === id
-                        ? "bg-[#6C63FF] text-white shadow-sm"
-                        : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
-                    ].join(" ")}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 사용한 연차 */}
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">사용한 연차 (일)</label>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => { setUsedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
-                >
-                  −
-                </button>
-                <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
-                  {usedLeaves}일
-                </span>
-                <button
-                  onClick={() => { setUsedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                  disabled={usedLeaves >= 25}
-                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={handleLeaveSave}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
-              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-            >
-              <IconDeviceFloppy className="w-3.5 h-3.5" />
-              저장
-            </button>
           </div>
         )}
       </div>
