@@ -3,7 +3,7 @@
 ## 프로젝트 개요
 - **이름:** Worky — AI 업무 보조 도구
 - **대상:** 신입사원 (사무직)
-- **배포:** https://worky-alpha.vercel.app
+- **배포:** https://worky-ai.vercel.app
 - **GitHub:** https://github.com/yoobilee/worky
 - **기술 스택:** Next.js 15.3.9 (App Router), TypeScript, Tailwind CSS, Groq API, Vercel
 
@@ -17,15 +17,16 @@
 - **Google Cloud 프로젝트:** worky
 - **Client ID:** 539952140347-u6aktledd76ekb7asuqglv20pia3mdjb.apps.googleusercontent.com
 - **Gmail API:** 활성화됨 (gmail.send 스코프)
-- **Vercel 환경변수:** NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+- **Vercel 환경변수:** NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, GROQ_API_KEY, KAKAO_REST_API_KEY, NEXT_PUBLIC_KAKAO_MAP_KEY
+- **KAKAO_REST_API_KEY:** 서버사이드 전용 (카카오 로컬 API — /api/kakao-places)
 
 ## Supabase 테이블
 | 테이블 | 설명 |
 |--------|------|
-| user_settings | 소속/이름/직급, 메뉴 설정, 도움말 버튼 on/off |
+| user_settings | 소속/이름/직급, 메뉴 설정, 도움말 버튼 on/off, job_preset, menu_order, custom_greeting(JSONB), join_date, leave_standard, used_leaves, employment_type, granted_leaves, speed_dial_custom(JSONB), custom_field_keys(JSONB) |
 | todos | 날짜별 할 일 |
 | memos | 업무/회의/개인 메모 |
-| calendar_events | 일정 관리 이벤트 |
+| calendar_events | 일정 관리 이벤트 (location_url 컬럼 포함 — 카카오맵 장소 URL) |
 | clients | 거래처 관리 (company_phone, mask_phone, mask_company_phone, custom_fields, kakao_chat_name, report_template, group_name 컬럼 포함) |
 | glossary | 용어집 |
 | usage_stats | 기능별 사용 통계 |
@@ -36,6 +37,8 @@ src/
   app/
     api/groq/route.ts         # Groq API Route
     api/gmail/route.ts        # Gmail API Route (이메일 전송)
+    api/weather/route.ts      # Open-Meteo 날씨 서버 프록시
+    api/kakao-places/route.ts # 카카오맵 장소 검색 (KAKAO_REST_API_KEY 사용)
     page.tsx                  # Home 대시보드
     settings/page.tsx         # 설정 페이지
     data/page.tsx             # 데이터 정리
@@ -56,6 +59,9 @@ src/
     auth/callback/page.tsx    # OAuth 콜백
   components/
     Sidebar.tsx
+    AppShell.tsx
+    ThemeProvider.tsx
+    Toast.tsx                 # 전역 토스트 UI
     DataCleaner.tsx
     TodoMemo.tsx
     TemplateGen.tsx
@@ -73,6 +79,23 @@ src/
     FeedbackOrganizer.tsx
     EditableResult.tsx
     HelpButton.tsx
+    GrassGrid.tsx             # 잔디밭 컴포넌트 (ClientManager에서 분리)
+    DatePickerInput.tsx       # 커스텀 날짜 피커 (공용)
+    ConfirmModal.tsx
+    NotificationBell.tsx
+    ReportMessage.tsx
+  contexts/
+    ToastContext.tsx           # 전역 토스트 시스템 (ToastProvider, useToast)
+  types/
+    client.ts                  # Client, FormState, ReportStatus 등 타입
+    supabase.ts                # Supabase CLI 자동 생성 타입
+  lib/
+    calendarStorage.ts         # CalendarEvent 타입, parseKoreanDate (localStorage 코드 제거됨)
+    menuSettings.ts            # 메뉴 설정 로드/저장
+    usageStats.ts              # 기능 사용 통계 (localStorage + Supabase 이중 저장)
+    leave.ts                   # 연차 계산 유틸
+    holidays.ts                # 연도별 한국 공휴일/대체공휴일
+    notifications.ts           # 브라우저 알림 시스템
   lib/db/
     settings.ts
     todos.ts
@@ -81,6 +104,9 @@ src/
     clients.ts
     glossary.ts
     usage_stats.ts
+  lib/supabase/
+    client.ts                  # Supabase 클라이언트 (브라우저)
+    server.ts                  # Supabase 클라이언트 (서버)
 ```
 
 ## 디자인 원칙
@@ -102,14 +128,15 @@ src/
 ## 기능 목록 및 상태
 
 ### 1. Home 대시보드 (`/`)
-- 요일/시간대별 맞춤 인사말
-- 실시간 시계, 날씨 (Open-Meteo API), 위치 (Nominatim)
+- 요일/시간대별 맞춤 인사말 (커스텀 인사말 설정 시 우선 적용)
+- 실시간 시계, 날씨 (Open-Meteo — /api/weather 서버 프록시 경유), 위치 (Nominatim)
+- 연차 잔여일/사용일 프로그레스바 (user_settings 연동)
 - 할 일 진행률 카드
-- 이번 주 기능별 사용 통계 바 차트
-- 오늘의 팁 (12개 랜덤)
-- 다가오는 일정 미니 카드
-- 빠른 접근 4x3 그리드
-- AI 바로가기 버튼, 플로팅 도움말 버튼
+- 이번 주 기능별 사용 통계 바 차트 (localStorage 즉시 표시 → Supabase 덮어씀)
+- 오늘의 팁 (날짜 기반 고정)
+- 다가오는 일정 미니 카드 (Supabase calendar_events)
+- 빠른 접근 그리드 (활성화된 메뉴만 표시)
+- AI 바로가기 플로팅 버튼 (기본 8개 + 커스텀 추가, Supabase speed_dial_custom 저장)
 
 ### 2. 할 일 / 메모 (`/todo`)
 - 날짜별 할 일 관리, 미완료 할 일 자동 이월
@@ -148,8 +175,9 @@ src/
 - "일정 관리에 저장" 버튼
 
 ### 11. 일정 관리 (`/calendar`)
-- 월별 캘린더, 한국 공휴일+대체공휴일
-- Supabase calendar_events 연동
+- 월별 캘린더, 한국 공휴일+대체공휴일 (lib/holidays.ts)
+- 일정 장소 카카오맵 검색 연동 (NEXT_PUBLIC_KAKAO_MAP_KEY)
+- Supabase calendar_events 연동 (location_url 포함)
 
 ### 12. 데이터 분석 (`/insight`)
 - 텍스트 입력, Groq API 분석
@@ -180,9 +208,24 @@ src/
 
 ### 17. 설정 (`/settings`)
 - 내 정보: 소속/이름/직급 (Supabase user_settings 연동)
-- 메뉴 설정: 선택 페이지 on/off
-- 사이드바 커스터마이징 (직업군 프리셋, 드래그&드롭 순서 변경)
+- 연차 설정: 입사일, 입사 유형(신입/경력), 기준(입사일기준/회계연도기준), 사용 연차 입력
+- 커스텀 인사말: 기본/시간대별/요일별 모드 설정
+- 메뉴 설정: 선택 페이지 on/off, 드래그&드롭 순서 변경
+- 직업군 프리셋 (마케팅/IT/경영지원/사무직/디자이너/기타)
 - 도움말 버튼 on/off
+- 알림 설정: 브라우저 권한 요청, 일정 알림/거래처 D-day 알림 on/off
+
+### 18. 알림 시스템 (`lib/notifications.ts`)
+- 브라우저 Notification API 기반 (PWA/데스크탑 모두 지원)
+- 오늘 일정 알림: 앱 열 때 오늘 일정 있으면 발송
+- 거래처 D-day 알림: 계약 만료 7일/3일/당일 단계별 메시지
+- 하루 한 번만 발송 (worky_notif_sent_date localStorage 체크)
+- 설정: worky_notification_settings localStorage 저장
+
+### 19. PWA 지원
+- manifest.json: standalone, 테마 #6C63FF
+- 아이콘: icon-192.png, icon-512.png, apple-touch-icon.png (180×180)
+- next-pwa: 프로덕션에서만 Service Worker 등록 (개발 환경 비활성)
 
 ## 사이드바
 - 접기/펼치기 토글
@@ -192,9 +235,11 @@ src/
 
 ## 코딩 컨벤션
 - 컴포넌트: 함수형, TypeScript interface
-- API 호출은 반드시 서버 사이드 (api/groq/route.ts)
-- 에러 처리 필수
+- API 호출은 반드시 서버 사이드 (api/groq/route.ts 등)
+- 에러 처리: `useToast()`로 toast.error()/toast.success() 사용, 빈 `.catch(() => {})` 금지
 - 한국어 UI
+- localStorage는 Supabase와 이중 저장 시 캐시 역할만 담당 — Supabase에 저장 가능한 데이터를 localStorage에만 저장하지 말 것, 빈 값으로 덮어쓰기 금지
+- Supabase 스키마 변경(컬럼 추가/삭제)은 항상 사용자가 직접 Supabase SQL Editor에서 실행 (Claude가 마이그레이션 자동 실행 금지)
 - 작업 완료 후 항상 git add, commit, push
 
 ---
