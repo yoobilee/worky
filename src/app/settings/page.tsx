@@ -330,7 +330,15 @@ export default function SettingsPage() {
     else toast.error("알림 권한이 거부됐습니다. 브라우저 설정에서 직접 허용해 주세요.");
   };
 
-  if (!hydrated) return null;
+  if (!hydrated) {
+    return (
+      <div className="max-w-2xl mx-auto w-full space-y-4">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-14" />
+        ))}
+      </div>
+    );
+  }
 
   const hasSender = info.org || info.name || info.title;
   const summary   = hasSender
