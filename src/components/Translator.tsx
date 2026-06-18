@@ -13,6 +13,7 @@ import {
   IconCopy,
   IconCheck,
   IconSparkles,
+  IconLoader2,
 } from "@tabler/icons-react";
 
 /* ───────── 타입 ───────── */
@@ -291,7 +292,7 @@ export default function Translator() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {loading ? (
-                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />번역 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />번역 중...</>
                 ) : (
                   <><IconWorld className="w-4 h-4" />번역하기</>
                 )}
@@ -351,7 +352,7 @@ export default function Translator() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {loading ? (
-                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />다듬는 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />다듬는 중...</>
                 ) : (
                   <><IconSparkles className="w-4 h-4" />AI로 다듬기</>
                 )}

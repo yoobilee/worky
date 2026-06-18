@@ -14,6 +14,7 @@ import {
   IconCopy,
   IconCheck,
   IconSparkles,
+  IconLoader2,
 } from "@tabler/icons-react";
 
 type InputMode = "text" | "file";
@@ -274,7 +275,7 @@ export default function DocSummary() {
             {/* 추출 중 */}
             {extracting && (
               <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
-                <span className="w-4 h-4 border-2 border-slate-300 border-t-[#6C63FF] rounded-full animate-spin shrink-0" />
+                <IconLoader2 className="w-4 h-4 animate-spin text-[#6C63FF] shrink-0" />
                 텍스트 추출 중...
               </div>
             )}
@@ -334,7 +335,7 @@ export default function DocSummary() {
           >
             {loading ? (
               <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <IconLoader2 className="w-4 h-4 animate-spin text-white" />
                 요약 중...
               </>
             ) : (

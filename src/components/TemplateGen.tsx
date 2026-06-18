@@ -4,7 +4,7 @@
 import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
-import { IconReport, IconNotes, IconBulb, IconAlertTriangle } from "@tabler/icons-react";
+import { IconReport, IconNotes, IconBulb, IconAlertTriangle, IconLoader2 } from "@tabler/icons-react";
 import EditableResult from "@/components/EditableResult";
 import React from "react";
 
@@ -275,7 +275,7 @@ export default function TemplateGen() {
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
             {loading ? (
-              <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />생성 중...</>
+              <><IconLoader2 className="w-4 h-4 animate-spin text-white" />생성 중...</>
             ) : (
               <><SelectedTemplateIcon className="w-4 h-4" />{selectedTemplate.label} 생성</>
             )}

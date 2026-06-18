@@ -5,7 +5,7 @@ import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef } from "react";
 import {
   IconSend, IconBrandInstagram, IconCopy, IconCheck,
-  IconChevronDown, IconX,
+  IconChevronDown, IconX, IconLoader2,
 } from "@tabler/icons-react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
@@ -340,7 +340,7 @@ export default function ContentCreator() {
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
               {reportLoading ? (
-                <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />생성 중...</>
+                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />생성 중...</>
               ) : (
                 <><IconSend className="w-4 h-4" />메시지 생성</>
               )}
@@ -476,7 +476,7 @@ export default function ContentCreator() {
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
               {instaLoading ? (
-                <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />생성 중...</>
+                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />생성 중...</>
               ) : (
                 <><IconBrandInstagram className="w-4 h-4" />게시글 생성</>
               )}

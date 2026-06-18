@@ -138,7 +138,7 @@ export default function FeedbackOrganizer() {
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
           >
             {loading ? (
-              <><IconLoader2 className="w-4 h-4 animate-spin" />분석 중...</>
+              <><IconLoader2 className="w-4 h-4 animate-spin text-white" />분석 중...</>
             ) : (
               <><IconMessageCheck className="w-4 h-4" />피드백 정리</>
             )}

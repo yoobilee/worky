@@ -2,6 +2,7 @@
 
 import HelpButton from "./HelpButton";
 import { useState, useRef, useEffect } from "react";
+import { IconLoader2 } from "@tabler/icons-react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 
@@ -218,7 +219,7 @@ export default function DataCleaner() {
           >
             {loading ? (
               <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <IconLoader2 className="w-4 h-4 animate-spin text-white" />
                 {chunkProgress && chunkProgress.total > 1
                   ? `정리 중... (${chunkProgress.done}/${chunkProgress.total})`
                   : "정리 중..."}

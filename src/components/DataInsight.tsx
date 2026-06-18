@@ -324,7 +324,7 @@ export default function DataInsight() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {loading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin" />분석 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />분석 중...</>
                 ) : (
                   <><IconChartBar className="w-4 h-4" />AI로 분석하기</>
                 )}
@@ -365,7 +365,7 @@ export default function DataInsight() {
             />
             {extracting && (
               <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
-                <span className="w-4 h-4 border-2 border-slate-300 border-t-[#6C63FF] rounded-full animate-spin shrink-0" />
+                <IconLoader2 className="w-4 h-4 animate-spin text-[#6C63FF] shrink-0" />
                 데이터 추출 중...
               </div>
             )}
@@ -388,7 +388,7 @@ export default function DataInsight() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {loading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin" />분석 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />분석 중...</>
                 ) : (
                   <><IconChartBar className="w-4 h-4" />AI로 분석하기</>
                 )}
@@ -485,7 +485,7 @@ export default function DataInsight() {
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
             >
               {reportLoading ? (
-                <><IconLoader2 className="w-4 h-4 animate-spin" />생성 중...</>
+                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />생성 중...</>
               ) : (
                 <><IconFileAnalytics className="w-4 h-4" />보고서로 생성</>
               )}
