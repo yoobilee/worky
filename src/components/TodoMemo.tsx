@@ -311,7 +311,22 @@ export default function TodoMemo() {
   const progress  = total === 0 ? 0 : Math.round((completed / total) * 100);
   const isToday   = selectedDate === todayKey();
 
-  if (!hydrated) return null;
+  if (!hydrated) {
+    return (
+      <div className="space-y-4 max-w-5xl mx-auto w-full h-full flex flex-col">
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-16" />
+          ))}
+        </div>
+        <div className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-xl h-10 w-full" />
+        <div className="flex-1 grid lg:grid-cols-2 gap-4">
+          <div className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-full min-h-[300px]" />
+          <div className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-full min-h-[300px]" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto w-full h-full flex flex-col">

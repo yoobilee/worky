@@ -592,7 +592,24 @@ export default function ClientManager() {
       ? addBusinessDays(form.contractStart, Number(form.contractDays) * contractDaysUnitMultiplier[form.contractDaysUnit])
       : null;
 
-  if (!hydrated) return null;
+  if (!hydrated) {
+    return (
+      <div className="space-y-4 max-w-5xl mx-auto w-full">
+        <div className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-10 w-48" />
+        <div className="grid grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-20" />
+          ))}
+        </div>
+        <div className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-xl h-10 w-full" />
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-xl h-14" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const SORT_LABELS: Record<SortOrder, string> = {
     status:             "상태순",

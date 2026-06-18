@@ -341,7 +341,18 @@ export default function CalendarComponent() {
     setEditingId(null);
   };
 
-  if (!hydrated) return null;
+  if (!hydrated) {
+    return (
+      <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
+        <div className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-10 w-40" />
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-xl aspect-square" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const sidePanelContent = (
     <>
