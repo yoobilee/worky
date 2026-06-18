@@ -526,7 +526,7 @@ export default function EmailReply() {
             </div>
           )}
 
-          {drafts.length > 0 && (
+          {drafts.length > 0 ? (
             <div ref={replyResultRef} className="grid gap-3 lg:grid-cols-3">
               {drafts.map((draft, i) => (
                 <div
@@ -572,6 +572,11 @@ export default function EmailReply() {
                   </EditableResult>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
+              <IconMailPlus className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+              <p className="text-sm text-slate-400 dark:text-zinc-500">이메일 내용을 입력하면 여러 답장 초안이 여기에 생성됩니다.</p>
             </div>
           )}
         </>
