@@ -73,11 +73,17 @@ function getDday(endDate: string): number {
 }
 
 function formatDday(dday: number): { text: string; cls: string } {
-  if (dday < 0)   return { text: `D+${Math.abs(dday)}`, cls: "text-slate-400 dark:text-zinc-500" };
+  if (dday < 0)   return { text: `D+${Math.abs(dday)}`, cls: "text-red-500 font-semibold" };
   if (dday === 0) return { text: "D-Day",                cls: "text-red-500 font-bold" };
   if (dday <= 3)  return { text: `D-${dday}`,            cls: "text-red-500 font-semibold" };
   if (dday <= 7)  return { text: `D-${dday}`,            cls: "text-orange-500 font-medium" };
   return               { text: `D-${dday}`,            cls: "text-slate-500 dark:text-zinc-400" };
+}
+
+function ddayAccentColor(dday: number): string | null {
+  if (dday <= 3) return "#EF4444";
+  if (dday <= 7) return "#F97316";
+  return null;
 }
 
 function formatDate(s: string): string {
@@ -1382,7 +1388,7 @@ export default function ClientManager() {
                     onMouseEnter={() => setHoveredRowId(c.id)}
                     onMouseLeave={() => setHoveredRowId(null)}
                     className="group border-t border-slate-100 dark:border-zinc-800 transition-colors"
-                    style={{ backgroundColor: rowBgColor }}
+                    style={{ backgroundColor: rowBgColor, borderLeft: dday != null && contractEnd ? `4px solid ${ddayAccentColor(dday) ?? "transparent"}` : undefined }}
                   >
                     <td className="px-2 h-[52px] whitespace-nowrap">
                       {listEditMode === "edit" ? (
@@ -1634,9 +1640,14 @@ export default function ClientManager() {
             const histOpen    = expandedHistories.has(c.id);
             const showGrass   = c.status === "inprogress" && c.showGrassGrid && !!c.contractStart && !!contractEnd;
 
+            const accentColor = dday != null && contractEnd ? ddayAccentColor(dday) : null;
             return (
               <div key={c.id}
-                className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-2.5 group"
+                className={[
+                  "bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-2.5 group",
+                  accentColor ? "border-l-4" : "",
+                ].join(" ")}
+                style={accentColor ? { borderLeftColor: accentColor } : undefined}
               >
                 {/* 헤더: 거래처명 + 상태 드롭다운 */}
                 <div className="flex items-start justify-between gap-2">
