@@ -360,7 +360,7 @@ export default function DocSummary() {
       )}
 
       {/* 결과 */}
-      {result && (
+      {result ? (
         <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
@@ -388,6 +388,11 @@ export default function DocSummary() {
               {renderMarkdown(result)}
             </div>
           </EditableResult>
+        </div>
+      ) : (
+        <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
+          <IconSparkles className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+          <p className="text-sm text-slate-400 dark:text-zinc-500">문서를 입력하고 요약하면 핵심 내용이 여기에 정리됩니다.</p>
         </div>
       )}
       <HelpButton

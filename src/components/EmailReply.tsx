@@ -407,7 +407,7 @@ export default function EmailReply() {
             </div>
           )}
 
-          {newResult && (
+          {newResult ? (
             <div ref={newResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 이메일</span>
@@ -439,6 +439,11 @@ export default function EmailReply() {
                   {newResult}
                 </p>
               </EditableResult>
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
+              <IconMailPlus className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+              <p className="text-sm text-slate-400 dark:text-zinc-500">이메일 내용을 입력하면 답장 초안이 여기에 생성됩니다.</p>
             </div>
           )}
         </>

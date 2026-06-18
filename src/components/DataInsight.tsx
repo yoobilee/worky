@@ -407,7 +407,7 @@ export default function DataInsight() {
       )}
 
       {/* 결과 */}
-      {result && (
+      {result ? (
         <div ref={resultRef} className="space-y-3">
 
           {/* 복사 버튼 */}
@@ -536,6 +536,11 @@ export default function DataInsight() {
             </div>
           )}
 
+        </div>
+      ) : (
+        <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
+          <IconChartBar className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+          <p className="text-sm text-slate-400 dark:text-zinc-500">데이터를 입력하고 분석하면 인사이트가 여기에 표시됩니다.</p>
         </div>
       )}
       <HelpButton

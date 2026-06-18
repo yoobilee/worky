@@ -2,7 +2,7 @@
 
 import HelpButton from "./HelpButton";
 import { useState, useRef, useEffect } from "react";
-import { IconLoader2 } from "@tabler/icons-react";
+import { IconLoader2, IconSparkles } from "@tabler/icons-react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 
@@ -247,7 +247,7 @@ export default function DataCleaner() {
       )}
 
       {/* 결과 */}
-      {tableHtml && (
+      {tableHtml ? (
         <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">정리된 표</h2>
@@ -286,6 +286,11 @@ export default function DataCleaner() {
               <div dangerouslySetInnerHTML={{ __html: tableHtml }} />
             </div>
           </EditableResult>
+        </div>
+      ) : (
+        <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
+          <IconSparkles className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+          <p className="text-sm text-slate-400 dark:text-zinc-500">텍스트를 입력하고 표로 정리하면 결과가 여기에 표시됩니다.</p>
         </div>
       )}
       <HelpButton

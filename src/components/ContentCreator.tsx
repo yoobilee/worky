@@ -356,7 +356,7 @@ export default function ContentCreator() {
             </div>
           )}
 
-          {reportResult && (
+          {reportResult ? (
             <div ref={reportResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 보고 메시지</h2>
@@ -368,6 +368,11 @@ export default function ContentCreator() {
               <EditableResult value={reportResult} onChange={setReportResult} rows={8}>
                 <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{reportResult}</p>
               </EditableResult>
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
+              <IconSend className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+              <p className="text-sm text-slate-400 dark:text-zinc-500">내용을 입력하고 생성하면 보고서가 여기에 만들어집니다.</p>
             </div>
           )}
         </>
@@ -492,7 +497,7 @@ export default function ContentCreator() {
             </div>
           )}
 
-          {instaResult && (
+          {instaResult ? (
             <div ref={instaResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 인스타 게시글</h2>
@@ -504,6 +509,11 @@ export default function ContentCreator() {
               <EditableResult value={instaResult} onChange={setInstaResult} rows={10}>
                 <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{instaResult}</p>
               </EditableResult>
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
+              <IconBrandInstagram className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+              <p className="text-sm text-slate-400 dark:text-zinc-500">거래처를 선택하고 생성하면 인스타그램 게시물 초안이 여기에 만들어집니다.</p>
             </div>
           )}
         </>

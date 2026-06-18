@@ -192,7 +192,7 @@ export default function DocumentWriter() {
       )}
 
       {/* 결과 */}
-      {result && (
+      {result ? (
         <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 {doc.label}</h2>
@@ -216,6 +216,11 @@ export default function DocumentWriter() {
               })}
             </div>
           </EditableResult>
+        </div>
+      ) : (
+        <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
+          <IconFileCertificate className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+          <p className="text-sm text-slate-400 dark:text-zinc-500">필요한 내용을 입력하고 작성하면 문서가 여기에 만들어집니다.</p>
         </div>
       )}
       <HelpButton
