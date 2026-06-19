@@ -155,7 +155,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                           if (el) contentRefs.current.set(a.id, el);
                           else contentRefs.current.delete(a.id);
                         }}
-                        className={`text-xs text-slate-500 dark:text-zinc-400 mt-0.5 transition-all duration-300 ease-in-out ${
+                        className={`text-xs text-slate-500 dark:text-zinc-400 mt-0.5 whitespace-pre-line transition-all duration-300 ease-in-out ${
                           isExpanded ? "line-clamp-none" : "line-clamp-2"
                         }`}
                       >
