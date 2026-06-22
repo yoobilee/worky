@@ -357,6 +357,7 @@ export default function CalendarComponent() {
   const [formLocationUrl, setFormLocationUrl] = useState<string | undefined>(undefined);
   const [formRepeat,      setFormRepeat]      = useState<RepeatType>("none");
   const [formRepeatEnd,   setFormRepeatEnd]   = useState("");
+  const [repeatVisible,   setRepeatVisible]   = useState(false);
   const [hydrated,   setHydrated]   = useState(false);
   const [userId,     setUserId]     = useState<string | null>(null);
   const [editingId,       setEditingId]       = useState<string | null>(null);
@@ -401,7 +402,7 @@ export default function CalendarComponent() {
 
   const resetForm = () => {
     setFormTitle(""); setFormTime(""); setFormLocation(""); setFormLocationUrl(undefined);
-    setFormRepeat("none"); setFormRepeatEnd("");
+    setFormRepeat("none"); setFormRepeatEnd(""); setRepeatVisible(false);
   };
 
   const buildRepeatDates = (start: string, end: string, repeat: RepeatType): string[] => {
@@ -618,7 +619,7 @@ export default function CalendarComponent() {
           placeholder="일정 제목을 입력하세요"
           className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <TimePickerInput value={formTime} onChange={setFormTime} />
           <LocationInput
             value={formLocation}
@@ -627,15 +628,23 @@ export default function CalendarComponent() {
             onUrlChange={setFormLocationUrl}
           />
         </div>
-        <RepeatPicker
-          value={formRepeat}
-          onValueChange={(v) => { setFormRepeat(v); if (v === "none") setFormRepeatEnd(""); }}
-          endDate={formRepeatEnd}
-          onEndDateChange={setFormRepeatEnd}
-        />
-        <div className="flex justify-end">
+        <div className="flex items-center gap-2">
+          {(repeatVisible || formRepeat !== "none") ? (
+            <RepeatPicker
+              value={formRepeat}
+              onValueChange={(v) => { setFormRepeat(v); if (v === "none") { setFormRepeatEnd(""); setRepeatVisible(false); } }}
+              endDate={formRepeatEnd}
+              onEndDateChange={setFormRepeatEnd}
+            />
+          ) : (
+            <button type="button" onClick={() => setRepeatVisible(true)}
+              className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-700 transition shrink-0"
+              aria-label="반복 설정">
+              <IconRepeat className="w-4 h-4" />
+            </button>
+          )}
           <button onClick={handleAdd} disabled={!formTitle.trim() || (formRepeat !== "none" && !formRepeatEnd)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 shrink-0 ml-auto"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
             <IconPlus className="w-4 h-4" />
             추가
