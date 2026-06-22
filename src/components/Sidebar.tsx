@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconEdit, IconFileText, IconMessageCheck, IconLogout } from "@tabler/icons-react";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconAddressBook, IconEdit, IconFileText, IconMessageCheck, IconLogout } from "@tabler/icons-react";
 import { loadMenuOrder, MENU_ORDER_EVENT } from "@/lib/menuSettings";
 import { useTheme } from "./ThemeProvider";
 import {
@@ -128,6 +128,11 @@ const navItems = [
     href: "/clients",
     label: "거래처 관리",
     icon: <IconBuilding className="w-4 h-4" />,
+  },
+  {
+    href: "/contacts",
+    label: "연락처 관리",
+    icon: <IconAddressBook className="w-4 h-4" />,
   },
   {
     href: "/insight",

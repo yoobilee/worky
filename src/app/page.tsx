@@ -8,7 +8,7 @@ import {
   IconCircleCheck, IconMessageDots, IconNotes, IconPlus,
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
   IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
-  IconBuilding, IconSparkles, IconX,
+  IconBuilding, IconAddressBook, IconSparkles, IconX,
   IconBrandOpenai, IconBrandGoogle, IconBrandGmail, IconBrandGoogleDrive, IconBrandNotion, IconSearch,
   IconBrandGithub, IconBrandYoutube, IconBrandInstagram, IconBrandX, IconBrandFigma,
   IconBrandLinkedin, IconBrandSlack, IconBrandDiscord, IconMessageCircle, IconBrandFacebook,
@@ -65,6 +65,7 @@ const QUICK_LINKS = [
   { href: "/glossary",  label: "용어집",         Icon: IconBook,           desc: "사내 용어 관리" },
   { href: "/calendar",  label: "일정 관리",      Icon: IconCalendar,       desc: "월별 일정 관리" },
   { href: "/clients",   label: "거래처 관리",    Icon: IconBuilding,       desc: "거래처 보고 관리" },
+  { href: "/contacts",  label: "연락처 관리",    Icon: IconAddressBook,    desc: "팀원·지인 연락처" },
 ];
 
 /* ───────── 인사말 ───────── */

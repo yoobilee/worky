@@ -1,6 +1,7 @@
 export const OPTIONAL_MENU_ITEMS = [
   { href: "/content",   label: "메시지 작성" },
   { href: "/clients",   label: "거래처 관리" },
+  { href: "/contacts",  label: "연락처 관리" },
   { href: "/template",  label: "템플릿 생성" },
   { href: "/document",  label: "공문서 작성" },
   { href: "/translate", label: "번역·다듬기" },
