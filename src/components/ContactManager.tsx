@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   IconUser, IconPhone, IconMail, IconMessageCircle,
   IconPlus, IconPencil, IconTrash, IconSearch, IconX,
-  IconTag, IconUsersGroup,
+  IconUsersGroup,
 } from "@tabler/icons-react";
 import ConfirmModal from "./ConfirmModal";
 import HelpButton from "./HelpButton";
@@ -19,19 +19,42 @@ const EMPTY_FORM: ContactFormState = {
   email: "", kakaoId: "", birthday: "", memo: "", tags: [],
 };
 
+const EMAIL_DOMAINS = [
+  "gmail.com", "naver.com", "daum.net", "kakao.com",
+  "nate.com", "hanmail.net", "outlook.com", "icloud.com",
+];
+const CUSTOM_DOMAIN = "__custom__";
+
+const INPUT_CLS = "w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition";
+
+function parseEmail(email: string): { id: string; domain: string; custom: string } {
+  if (!email) return { id: "", domain: "", custom: "" };
+  const [id, domain] = email.split("@");
+  if (!domain) return { id, domain: "", custom: "" };
+  if (EMAIL_DOMAINS.includes(domain)) return { id, domain, custom: "" };
+  return { id, domain: CUSTOM_DOMAIN, custom: domain };
+}
+
 export default function ContactManager() {
   const toast = useToast();
 
-  const [hydrated,         setHydrated]         = useState(false);
-  const [contacts,         setContacts]         = useState<Contact[]>([]);
-  const [search,           setSearch]           = useState("");
-  const [groupByDept,      setGroupByDept]      = useState(false);
-  const [showForm,         setShowForm]         = useState(false);
-  const [editingId,        setEditingId]        = useState<string | null>(null);
-  const [form,             setForm]             = useState<ContactFormState>(EMPTY_FORM);
-  const [confirmDeleteId,  setConfirmDeleteId]  = useState<string | null>(null);
-  const [tagInput,         setTagInput]         = useState("");
-  const [userId,           setUserId]           = useState<string | null>(null);
+  const [hydrated,        setHydrated]        = useState(false);
+  const [contacts,        setContacts]        = useState<Contact[]>([]);
+  const [search,          setSearch]          = useState("");
+  const [groupByDept,     setGroupByDept]     = useState(false);
+  const [showForm,        setShowForm]        = useState(false);
+  const [editingId,       setEditingId]       = useState<string | null>(null);
+  const [form,            setForm]            = useState<ContactFormState>(EMPTY_FORM);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [userId,          setUserId]          = useState<string | null>(null);
+
+  // 이메일 분리 state
+  const [emailId,      setEmailId]      = useState("");
+  const [emailDomain,  setEmailDomain]  = useState("");
+  const [customDomain, setCustomDomain] = useState("");
+
+  // 유효성 오류
+  const [errors, setErrors] = useState<{ phone?: string; email?: string }>({});
 
   useEffect(() => {
     const supabase = createClient();
@@ -51,8 +74,7 @@ export default function ContactManager() {
       (c.department ?? "").toLowerCase().includes(q) ||
       (c.position ?? "").toLowerCase().includes(q) ||
       (c.phone ?? "").toLowerCase().includes(q) ||
-      (c.email ?? "").toLowerCase().includes(q) ||
-      c.tags.some(t => t.toLowerCase().includes(q))
+      (c.email ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -74,10 +96,18 @@ export default function ContactManager() {
       .map(([dept, items]) => ({ dept, items }));
   })();
 
+  const resetEmailState = (email: string) => {
+    const { id, domain, custom } = parseEmail(email);
+    setEmailId(id);
+    setEmailDomain(domain);
+    setCustomDomain(custom);
+  };
+
   const openAdd = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
-    setTagInput("");
+    resetEmailState("");
+    setErrors({});
     setShowForm(true);
   };
 
@@ -94,7 +124,8 @@ export default function ContactManager() {
       memo:       c.memo ?? "",
       tags:       [...c.tags],
     });
-    setTagInput("");
+    resetEmailState(c.email ?? "");
+    setErrors({});
     setShowForm(true);
   };
 
@@ -102,38 +133,48 @@ export default function ContactManager() {
     setShowForm(false);
     setEditingId(null);
     setForm(EMPTY_FORM);
-    setTagInput("");
+    resetEmailState("");
+    setErrors({});
   };
-
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    const t = tagInput.trim();
-    if (t && !form.tags.includes(t)) setForm(f => ({ ...f, tags: [...f.tags, t] }));
-    setTagInput("");
-  };
-
-  const removeTag = (t: string) => setForm(f => ({ ...f, tags: f.tags.filter(x => x !== t) }));
 
   const handleSave = async () => {
     if (!form.name.trim() || !userId) return;
+
+    const finalDomain = emailDomain === CUSTOM_DOMAIN ? customDomain.trim() : emailDomain;
+    const finalEmail  = emailId.trim() && finalDomain ? `${emailId.trim()}@${finalDomain}` : "";
+
+    const newErrors: { phone?: string; email?: string } = {};
+    if (finalEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(finalEmail)) {
+      newErrors.email = "올바른 이메일 형식이 아닙니다";
+    }
+    if (form.phone.trim() && !/^[0-9\-+() ]{7,20}$/.test(form.phone.trim())) {
+      newErrors.phone = "올바른 전화번호 형식이 아닙니다";
+    }
+    if (newErrors.email || newErrors.phone) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
+    const payload: ContactFormState = { ...form, email: finalEmail };
+
     if (editingId) {
-      await updateContact(editingId, form);
+      await updateContact(editingId, payload);
       setContacts(prev => prev.map(c => c.id !== editingId ? c : {
         id: c.id,
-        name:       form.name.trim(),
-        position:   form.position.trim() || null,
-        department: form.department.trim() || null,
-        phone:      form.phone.trim() || null,
-        email:      form.email.trim() || null,
-        kakaoId:    form.kakaoId.trim() || null,
-        birthday:   form.birthday || null,
-        memo:       form.memo.trim() || null,
-        tags:       form.tags,
+        name:       payload.name.trim(),
+        position:   payload.position.trim() || null,
+        department: payload.department.trim() || null,
+        phone:      payload.phone.trim() || null,
+        email:      payload.email.trim() || null,
+        kakaoId:    payload.kakaoId.trim() || null,
+        birthday:   payload.birthday || null,
+        memo:       payload.memo.trim() || null,
+        tags:       payload.tags,
       }));
       toast.success("연락처가 수정되었습니다");
     } else {
-      const row = await addContact(userId, form);
+      const row = await addContact(userId, payload);
       if (row) setContacts(prev => [...prev, row]);
       toast.success("연락처가 추가되었습니다");
     }
@@ -150,7 +191,7 @@ export default function ContactManager() {
 
   if (!hydrated) {
     return (
-      <div className="space-y-4 max-w-3xl mx-auto w-full">
+      <div className="space-y-4 max-w-5xl mx-auto w-full">
         <div className="flex items-center justify-between">
           <div className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-8 w-40" />
           <div className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-xl h-9 w-24" />
@@ -176,39 +217,55 @@ export default function ContactManager() {
         value={form.name}
         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
         placeholder="이름 *"
-        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+        className={INPUT_CLS}
       />
 
       {/* 직급 + 소속 */}
       <div className="grid grid-cols-2 gap-2">
-        <input
-          value={form.position}
-          onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
-          placeholder="직급"
-          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-        />
-        <input
-          value={form.department}
-          onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
-          placeholder="소속"
-          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-        />
+        <input value={form.position}   onChange={e => setForm(f => ({ ...f, position:   e.target.value }))} placeholder="직급"  className={INPUT_CLS} />
+        <input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} placeholder="소속"  className={INPUT_CLS} />
       </div>
 
-      {/* 전화번호 + 이메일 */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* 전화번호 */}
+      <div>
         <input
           value={form.phone}
-          onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+          onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(e => ({ ...e, phone: undefined })); }}
           placeholder="전화번호"
-          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          className={INPUT_CLS}
         />
-        <input
-          value={form.email}
-          onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-          placeholder="이메일"
-          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-        />
+        {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+      </div>
+
+      {/* 이메일 */}
+      <div>
+        <div className="flex items-center gap-1.5">
+          <input
+            value={emailId}
+            onChange={e => { setEmailId(e.target.value); setErrors(e => ({ ...e, email: undefined })); }}
+            placeholder="아이디"
+            className={`flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition`}
+          />
+          <span className="text-slate-400 dark:text-zinc-500 text-sm shrink-0">@</span>
+          <select
+            value={emailDomain}
+            onChange={e => { setEmailDomain(e.target.value); if (e.target.value !== CUSTOM_DOMAIN) setCustomDomain(""); setErrors(e => ({ ...e, email: undefined })); }}
+            className="shrink-0 w-28 px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          >
+            <option value="">선택</option>
+            {EMAIL_DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
+            <option value={CUSTOM_DOMAIN}>직접 입력</option>
+          </select>
+        </div>
+        {emailDomain === CUSTOM_DOMAIN && (
+          <input
+            value={customDomain}
+            onChange={e => { setCustomDomain(e.target.value); setErrors(e => ({ ...e, email: undefined })); }}
+            placeholder="도메인 직접 입력 (예: company.com)"
+            className={`w-full mt-1.5 ${INPUT_CLS}`}
+          />
+        )}
+        {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
       </div>
 
       {/* 카카오톡 ID + 생일 */}
@@ -217,7 +274,7 @@ export default function ContactManager() {
           value={form.kakaoId}
           onChange={e => setForm(f => ({ ...f, kakaoId: e.target.value }))}
           placeholder="카카오톡 ID"
-          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          className={INPUT_CLS}
         />
         <DatePickerInput value={form.birthday} onChange={v => setForm(f => ({ ...f, birthday: v }))} placeholder="생일 선택" />
       </div>
@@ -228,31 +285,8 @@ export default function ContactManager() {
         onChange={e => setForm(f => ({ ...f, memo: e.target.value }))}
         placeholder="메모"
         rows={2}
-        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition resize-none"
+        className={`${INPUT_CLS} resize-none`}
       />
-
-      {/* 태그 */}
-      <div className="space-y-1.5">
-        <input
-          value={tagInput}
-          onChange={e => setTagInput(e.target.value)}
-          onKeyDown={handleTagKeyDown}
-          placeholder="태그 입력 후 Enter"
-          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-        />
-        {form.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {form.tags.map(t => (
-              <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-[#6C63FF]/10 text-[#6C63FF] rounded-full text-xs font-medium">
-                {t}
-                <button type="button" onClick={() => removeTag(t)} className="hover:opacity-70 transition">
-                  <IconX className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* 버튼 */}
       <div className="flex justify-end gap-2 pt-1">
@@ -271,12 +305,9 @@ export default function ContactManager() {
 
   const ContactRow = ({ c }: { c: Contact }) => (
     <div className="group flex items-center gap-3 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800 px-3 py-2.5 transition">
-      {/* 아바타 */}
       <div className="w-9 h-9 rounded-full bg-[#6C63FF] text-white font-bold flex items-center justify-center text-sm shrink-0 select-none">
         {c.name.charAt(0)}
       </div>
-
-      {/* 본문 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{c.name}</span>
@@ -303,18 +334,7 @@ export default function ContactManager() {
             </span>
           )}
         </div>
-        {c.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {c.tags.map(t => (
-              <span key={t} className="px-2 py-0.5 bg-[#6C63FF]/10 text-[#6C63FF] rounded-full text-[11px] font-medium">
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
-
-      {/* 수정/삭제 */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
         <button onClick={() => openEdit(c)}
           className="p-1.5 rounded-lg hover:bg-[#6C63FF]/10 text-[#6C63FF] transition">
@@ -347,7 +367,6 @@ export default function ContactManager() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {/* 소속별 토글 */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500 dark:text-zinc-400">소속별로 보기</span>
             <button
@@ -381,7 +400,7 @@ export default function ContactManager() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="이름, 소속, 직급, 전화번호, 이메일, 태그 검색"
+          placeholder="이름, 소속, 직급, 전화번호, 이메일 검색"
           className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
         {search && (
@@ -430,11 +449,11 @@ export default function ContactManager() {
       <HelpButton
         title="연락처 관리 사용법"
         steps={[
-          { step: "연락처 추가", desc: "우측 상단 추가 버튼으로 이름, 직급, 소속, 연락처, 태그 등을 등록합니다." },
-          { step: "검색", desc: "이름·소속·직급·전화번호·이메일·태그로 통합 검색이 가능합니다." },
+          { step: "연락처 추가", desc: "우측 상단 추가 버튼으로 이름, 직급, 소속, 연락처 정보를 등록합니다." },
+          { step: "이메일 입력", desc: "아이디와 도메인을 분리해서 입력하거나 직접 입력 옵션을 선택합니다." },
+          { step: "검색", desc: "이름·소속·직급·전화번호·이메일로 통합 검색이 가능합니다." },
           { step: "소속별 보기", desc: "소속별로 보기 토글을 켜면 부서·소속별로 그룹화해서 볼 수 있습니다." },
           { step: "수정/삭제", desc: "각 행에 마우스를 올리면 수정·삭제 아이콘이 나타납니다." },
-          { step: "태그 활용", desc: "태그를 입력 후 Enter로 추가하고, 검색에서 태그로도 찾을 수 있습니다." },
         ]}
       />
     </div>
