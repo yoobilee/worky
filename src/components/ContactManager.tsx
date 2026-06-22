@@ -329,7 +329,7 @@ export default function ContactManager() {
   );
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto w-full">
+    <div className="space-y-4 max-w-5xl mx-auto w-full">
       {confirmDeleteId && (
         <ConfirmModal
           message="연락처를 삭제하시겠습니까?"
@@ -400,10 +400,6 @@ export default function ContactManager() {
         <div className="flex flex-col items-center justify-center py-20 text-slate-300 dark:text-zinc-600">
           <IconUser className="w-12 h-12 mb-3" />
           <p className="text-sm font-medium text-slate-400 dark:text-zinc-500">등록된 연락처가 없습니다</p>
-          <button onClick={openAdd}
-            className="mt-2 text-xs text-[#6C63FF] hover:underline transition">
-            연락처 추가하기
-          </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-slate-300 dark:text-zinc-600">
