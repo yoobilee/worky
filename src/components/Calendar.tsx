@@ -347,6 +347,9 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
             <div className="space-y-1.5">
               <p className="text-[11px] text-slate-400 dark:text-zinc-500">종료 날짜</p>
               <DatePickerInput value={endDate} onChange={onEndDateChange} />
+              {isActive && !endDate && (
+                <p className="text-xs text-red-500">종료 날짜를 선택해주세요</p>
+              )}
             </div>
           )}
 
