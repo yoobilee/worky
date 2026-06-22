@@ -7,9 +7,9 @@ type DbEventUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
 
 export type DbEvent = Pick<DbEventRow,
   "id" | "date" | "title" | "time" | "location" | "location_url" | "description"
->;
+> & { recurrence_group_id?: string | null };
 
-const SELECT_COLS = "id, date, title, time, location, location_url, description";
+const SELECT_COLS = "id, date, title, time, location, location_url, description, recurrence_group_id";
 
 export async function getEvents(userId: string): Promise<DbEvent[]> {
   const supabase = createClient();
@@ -23,7 +23,7 @@ export async function getEvents(userId: string): Promise<DbEvent[]> {
 
 export async function addEvent(
   userId: string,
-  event: Omit<DbEventInsert, "id" | "created_at" | "updated_at" | "user_id">
+  event: Omit<DbEventInsert, "id" | "created_at" | "updated_at" | "user_id"> & { recurrence_group_id?: string | null }
 ): Promise<DbEvent | null> {
   const supabase = createClient();
   const { data } = await supabase

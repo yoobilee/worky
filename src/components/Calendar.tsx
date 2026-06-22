@@ -7,12 +7,14 @@ import ConfirmModal from "./ConfirmModal";
 import {
   IconChevronLeft, IconChevronRight, IconPlus,
   IconTrash, IconCalendar, IconClock, IconMapPin,
-  IconPencil, IconCheck, IconX,
+  IconPencil, IconCheck, IconX, IconRepeat,
 } from "@tabler/icons-react";
 import { CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
 import { getEvents, addEvent, updateEvent, deleteEvent } from "@/lib/db/calendar";
 import { getHolidays } from "@/lib/holidays";
+import { useToast } from "@/contexts/ToastContext";
+import DatePickerInput from "./DatePickerInput";
 
 const DAY_LABELS  = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
@@ -244,7 +246,16 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
   );
 }
 
+type RepeatType = "none" | "daily" | "weekly" | "monthly";
+const REPEAT_OPTIONS: { value: RepeatType; label: string }[] = [
+  { value: "none",    label: "안함" },
+  { value: "daily",   label: "매일" },
+  { value: "weekly",  label: "매주" },
+  { value: "monthly", label: "매월" },
+];
+
 export default function CalendarComponent() {
+  const toast    = useToast();
   const today    = new Date();
   const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -256,6 +267,8 @@ export default function CalendarComponent() {
   const [formTime,        setFormTime]        = useState("");
   const [formLocation,    setFormLocation]    = useState("");
   const [formLocationUrl, setFormLocationUrl] = useState<string | undefined>(undefined);
+  const [formRepeat,      setFormRepeat]      = useState<RepeatType>("none");
+  const [formRepeatEnd,   setFormRepeatEnd]   = useState("");
   const [hydrated,   setHydrated]   = useState(false);
   const [userId,     setUserId]     = useState<string | null>(null);
   const [editingId,       setEditingId]       = useState<string | null>(null);
@@ -298,17 +311,67 @@ export default function CalendarComponent() {
   const eventsOn       = (key: string) => events.filter(e => e.date === key);
   const selectedEvents = displayed ? eventsOn(displayed) : [];
 
+  const resetForm = () => {
+    setFormTitle(""); setFormTime(""); setFormLocation(""); setFormLocationUrl(undefined);
+    setFormRepeat("none"); setFormRepeatEnd("");
+  };
+
+  const buildRepeatDates = (start: string, end: string, repeat: RepeatType): string[] => {
+    const dates: string[] = [];
+    const cur = new Date(start);
+    const endDate = new Date(end);
+    while (cur <= endDate) {
+      const key = toKey(cur.getFullYear(), cur.getMonth(), cur.getDate());
+      dates.push(key);
+      if (repeat === "daily") {
+        cur.setDate(cur.getDate() + 1);
+      } else if (repeat === "weekly") {
+        cur.setDate(cur.getDate() + 7);
+      } else if (repeat === "monthly") {
+        const targetDay = new Date(start).getDate();
+        cur.setMonth(cur.getMonth() + 1);
+        if (cur.getDate() !== targetDay) {
+          // 해당 월에 그 날짜가 없으면 건너뛰기
+          cur.setDate(1);
+          cur.setMonth(cur.getMonth() + 1);
+          cur.setDate(targetDay);
+        }
+      }
+    }
+    return dates;
+  };
+
   const handleAdd = async () => {
     if (!formTitle.trim() || !displayed || !userId) return;
-    const row = await addEvent(userId, {
-      date: displayed,
+    const base = {
       title: formTitle.trim(),
       time: formTime.trim() || undefined,
       location: formLocation.trim() || undefined,
       location_url: formLocation.trim() ? formLocationUrl : undefined,
-    });
-    if (row) setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time ?? undefined, location: row.location ?? undefined, location_url: row.location_url ?? undefined }]);
-    setFormTitle(""); setFormTime(""); setFormLocation(""); setFormLocationUrl(undefined);
+    };
+
+    if (formRepeat === "none" || !formRepeatEnd) {
+      const row = await addEvent(userId, { date: displayed, ...base });
+      if (row) setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time ?? undefined, location: row.location ?? undefined, location_url: row.location_url ?? undefined }]);
+      resetForm();
+      return;
+    }
+
+    const dates = buildRepeatDates(displayed, formRepeatEnd, formRepeat);
+    if (dates.length > 100) {
+      toast.error("기간을 줄여주세요 (최대 100개)");
+      return;
+    }
+
+    const groupId = crypto.randomUUID();
+    const newEvents: CalendarEvent[] = [];
+    for (const date of dates) {
+      const row = await addEvent(userId, { date, ...base, recurrence_group_id: groupId });
+      if (row) newEvents.push({ id: row.id, date: row.date, title: row.title, time: row.time ?? undefined, location: row.location ?? undefined, location_url: row.location_url ?? undefined });
+    }
+    setEvents((prev) => [...prev, ...newEvents]);
+    toast.success(`${newEvents.length}개 일정이 생성되었습니다`);
+    resetForm();
   };
 
   const handleDelete = (id: string) => setConfirmDeleteId(id);
@@ -476,8 +539,34 @@ export default function CalendarComponent() {
             onUrlChange={setFormLocationUrl}
           />
         </div>
+        {/* 반복 옵션 */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <IconRepeat className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
+            <div className="flex gap-1 flex-wrap">
+              {REPEAT_OPTIONS.map(opt => (
+                <button key={opt.value} type="button"
+                  onClick={() => { setFormRepeat(opt.value); if (opt.value === "none") setFormRepeatEnd(""); }}
+                  className={[
+                    "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
+                    formRepeat === opt.value
+                      ? "text-white"
+                      : "text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700",
+                  ].join(" ")}
+                  style={formRepeat === opt.value ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+                >{opt.label}</button>
+              ))}
+            </div>
+          </div>
+          {formRepeat !== "none" && (
+            <div className="pl-5">
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mb-1">종료 날짜</p>
+              <DatePickerInput value={formRepeatEnd} onChange={setFormRepeatEnd} />
+            </div>
+          )}
+        </div>
         <div className="flex justify-end">
-          <button onClick={handleAdd} disabled={!formTitle.trim()}
+          <button onClick={handleAdd} disabled={!formTitle.trim() || (formRepeat !== "none" && !formRepeatEnd)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
             <IconPlus className="w-4 h-4" />
