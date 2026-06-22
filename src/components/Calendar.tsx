@@ -247,12 +247,100 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
 }
 
 type RepeatType = "none" | "daily" | "weekly" | "monthly";
-const REPEAT_OPTIONS: { value: RepeatType; label: string }[] = [
-  { value: "none",    label: "안함" },
+const REPEAT_CYCLE_OPTIONS: { value: Exclude<RepeatType, "none">; label: string }[] = [
   { value: "daily",   label: "매일" },
   { value: "weekly",  label: "매주" },
   { value: "monthly", label: "매월" },
 ];
+const REPEAT_CYCLE_LABEL: Record<Exclude<RepeatType, "none">, string> = {
+  daily: "매일", weekly: "매주", monthly: "매월",
+};
+
+interface RepeatPickerProps {
+  value: RepeatType;
+  onValueChange: (v: RepeatType) => void;
+  endDate: string;
+  onEndDateChange: (v: string) => void;
+}
+
+function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: RepeatPickerProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const isActive = value !== "none";
+
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className={[
+          "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
+          "bg-slate-50 dark:bg-zinc-800",
+          isActive ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500",
+        ].join(" ")}
+      >
+        <IconRepeat className="w-3.5 h-3.5 shrink-0" />
+        {isActive
+          ? `${REPEAT_CYCLE_LABEL[value as Exclude<RepeatType, "none">]} 반복${endDate ? ` · ${endDate} 까지` : ""}`
+          : "반복 안함"}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-full p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">반복 설정</span>
+            <button type="button" onClick={() => setOpen(false)}
+              className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+              <IconX className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="flex gap-1.5">
+            {REPEAT_CYCLE_OPTIONS.map(opt => (
+              <button key={opt.value} type="button"
+                onClick={() => onValueChange(opt.value)}
+                className={[
+                  "flex-1 py-1.5 rounded-lg text-xs font-medium transition-all",
+                  value === opt.value ? "text-white" : "text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700",
+                ].join(" ")}
+                style={value === opt.value ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+              >{opt.label}</button>
+            ))}
+          </div>
+
+          {isActive && (
+            <div className="space-y-1">
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500">종료 날짜</p>
+              <DatePickerInput value={endDate} onChange={onEndDateChange} />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-zinc-800">
+            <button type="button"
+              onClick={() => { onValueChange("none"); onEndDateChange(""); setOpen(false); }}
+              className="text-xs text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition">
+              반복 안함
+            </button>
+            <button type="button" onClick={() => setOpen(false)}
+              disabled={!endDate}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-40 transition"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+              완료
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CalendarComponent() {
   const toast    = useToast();
@@ -539,32 +627,12 @@ export default function CalendarComponent() {
             onUrlChange={setFormLocationUrl}
           />
         </div>
-        {/* 반복 옵션 */}
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <IconRepeat className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
-            <div className="flex gap-1 flex-wrap">
-              {REPEAT_OPTIONS.map(opt => (
-                <button key={opt.value} type="button"
-                  onClick={() => { setFormRepeat(opt.value); if (opt.value === "none") setFormRepeatEnd(""); }}
-                  className={[
-                    "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
-                    formRepeat === opt.value
-                      ? "text-white"
-                      : "text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700",
-                  ].join(" ")}
-                  style={formRepeat === opt.value ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-                >{opt.label}</button>
-              ))}
-            </div>
-          </div>
-          {formRepeat !== "none" && (
-            <div className="pl-5">
-              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mb-1">종료 날짜</p>
-              <DatePickerInput value={formRepeatEnd} onChange={setFormRepeatEnd} />
-            </div>
-          )}
-        </div>
+        <RepeatPicker
+          value={formRepeat}
+          onValueChange={(v) => { setFormRepeat(v); if (v === "none") setFormRepeatEnd(""); }}
+          endDate={formRepeatEnd}
+          onEndDateChange={setFormRepeatEnd}
+        />
         <div className="flex justify-end">
           <button onClick={handleAdd} disabled={!formTitle.trim() || (formRepeat !== "none" && !formRepeatEnd)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40"
