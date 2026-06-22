@@ -84,6 +84,8 @@ src/
     ConfirmModal.tsx
     NotificationBell.tsx
     ReportMessage.tsx
+    OnboardingModal.tsx       # 첫 로그인 온보딩 3단계 모달
+    SpeedDial.tsx             # AI 바로가기 플로팅 버튼 (page.tsx에서 분리)
   contexts/
     ToastContext.tsx           # 전역 토스트 시스템 (ToastProvider, useToast)
   types/
@@ -110,7 +112,15 @@ src/
 ```
 
 ## 디자인 원칙
-- **트렌드:** 2026 Bento Grid + Calm UI
+- **카드 위계 시스템 (홈 화면):** 1티어(그라디언트 배경+흰 텍스트, 가장 중요한 카드 1개만) /
+  2티어(흰 배경+테두리+shadow-sm, 일반 기능 카드) / 3티어(흰 배경, 테두리·그림자 없음, 부가 정보)
+  — 강조색은 1티어에만 집중, 나머지는 의도적으로 차분하게 유지
+- **로딩 처리:** dataLoaded/hydrated 상태 + animate-pulse 스켈레톤 (실제 레이아웃과 동일한 wrapper 안에 배치 —
+  return null 금지, 레이아웃 시프트 방지가 원칙). 홈/설정/캘린더/거래처/할일 전부 적용됨.
+- **로딩 스피너:** IconLoader2 (tabler-icons) 로 통일. 그라디언트 버튼 안 = text-white,
+  흰 배경에 단독 배치 = text-[#6C63FF]
+- **빈 상태(empty state):** AI 입출력형 결과 영역은 border-2 border-dashed border-slate-200
+  dark:border-zinc-700 rounded-2xl + 아이콘 + 안내문구 패턴으로 통일
 - **포인트 컬러:** #6C63FF (인디고 바이올렛)
 - **다크모드:** 지원 (Tailwind dark: 클래스)
 - **아이콘:** Tabler Icons만 사용 (이모지 없음)
@@ -137,6 +147,10 @@ src/
 - 다가오는 일정 미니 카드 (Supabase calendar_events)
 - 빠른 접근 그리드 (활성화된 메뉴만 표시)
 - AI 바로가기 플로팅 버튼 (기본 8개 + 커스텀 추가, Supabase speed_dial_custom 저장)
+- 첫 로그인 온보딩 모달 (소속/이름/직급 → 직업군 → 입사일, 전부 선택사항, 건너뛰기 가능)
+  트리거 조건: sender_info/job_preset/join_date 전부 비어있고 localStorage 'worky_onboarding_dismissed' 미설정 시
+- 카드 위계 적용: 할 일 진행률(1티어 강조) / 빠른 접근(2티어) / 이번 주 활동·다가오는 일정·오늘의 팁(3티어)
+- 환영 영역은 박스 없이 페이지 배경 위에 텍스트로 표시 (헤더 형태)
 
 ### 2. 할 일 / 메모 (`/todo`)
 - 날짜별 할 일 관리, 미완료 할 일 자동 이월
@@ -198,6 +212,8 @@ src/
 - 검색: 거래처명/담당자/연락처/태그/메모/보고톤/링크/커스텀 속성 전체 검색
 - 정렬: 상태순/만료임박순/계약시작일↑↓/거래처명↑↓/담당자↑↓
 - 진행 현황 잔디밭: 계약 기간 내 일별 완료/실패 기록, 주 단위 네비게이션
+- D-day 시각적 강조: 만료됨/D-3 이내 → 카드·행 좌측 빨간 띠(border-l-4, #EF4444) + 텍스트 빨강,
+  D-7 이내 → 주황 띠(#F97316), formatDday()/ddayAccentColor() 함수 (ClientManager.tsx)
 - Supabase clients 연동: mask_phone, mask_company_phone, company_phone, custom_fields(JSONB), user_settings.custom_field_keys(JSONB)
 
 ### 15. 공문서 작성 (`/document`)
@@ -227,6 +243,15 @@ src/
 - 아이콘: icon-192.png, icon-512.png, apple-touch-icon.png (180×180)
 - next-pwa: 프로덕션에서만 Service Worker 등록 (개발 환경 비활성)
 
+## 20. GitHub Actions / 릴리스 워크플로우
+- **keep-alive.yml:** 매주 월요일 UTC 00:00, Supabase REST API ping (무료 플랜 프로젝트 일시정지 방지)
+- **patch-announcement.yml:** `v*` 태그 푸시 시 자동 실행 — CHANGELOG.md에서 해당 버전 섹션을 파싱해서
+  Supabase announcements 테이블에 공지 insert. 파싱 시 줄바꿈은 `\n` 리터럴로 변환되어 저장됨
+  (NotificationBell.tsx에서 whitespace-pre-line으로 렌더링)
+- **CHANGELOG.md 컨벤션:** `## [vX.Y.Z] - YYYY-MM-DD` 형식, 카테고리별 이모지 헤더(✨🎨🔔🐛 등) +
+  `- ` 불릿 목록. 새 버전 추가 시 최상단([v1.2.0] 위)에 삽입
+- **현재 버전:** v1.3.0 (package.json version 필드와 동기화됨)
+
 ## 사이드바
 - 접기/펼치기 토글
 - 로고 클릭 시 홈으로 이동
@@ -240,6 +265,8 @@ src/
 - 한국어 UI
 - localStorage는 Supabase와 이중 저장 시 캐시 역할만 담당 — Supabase에 저장 가능한 데이터를 localStorage에만 저장하지 말 것, 빈 값으로 덮어쓰기 금지
 - Supabase 스키마 변경(컬럼 추가/삭제)은 항상 사용자가 직접 Supabase SQL Editor에서 실행 (Claude가 마이그레이션 자동 실행 금지)
+- 페이지/컴포넌트의 초기 로딩 가드는 `if (!hydrated) return null` 대신,
+  실제 콘텐츠와 동일한 wrapper + animate-pulse 스켈레톤으로 처리 (레이아웃 시프트 방지)
 - 작업 완료 후 항상 git add, commit, push
 
 ---
