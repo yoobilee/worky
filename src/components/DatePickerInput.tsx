@@ -10,7 +10,7 @@ function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
-export default function DatePickerInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export default function DatePickerInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const parseYear  = () => value ? Number(value.split("-")[0]) : new Date().getFullYear();
   const parseMonth = () => value ? Number(value.split("-")[1]) - 1 : new Date().getMonth();
 
@@ -42,7 +42,7 @@ export default function DatePickerInput({ value, onChange }: { value: string; on
   while (cells.length % 7 !== 0) cells.push(null);
 
   const display = (() => {
-    if (!value) return "날짜 선택";
+    if (!value) return placeholder ?? "날짜 선택";
     const [y, m, d] = value.split("-").map(Number);
     return `${y}년 ${m}월 ${d}일 (${PICKER_DAYS[new Date(y, m-1, d).getDay()]})`;
   })();
