@@ -34,6 +34,18 @@ export async function addEvent(
   return (data ?? null) as DbEvent | null;
 }
 
+export async function addEvents(
+  userId: string,
+  events: Array<Omit<DbEventInsert, "id" | "created_at" | "updated_at" | "user_id"> & { recurrence_group_id?: string | null }>
+): Promise<DbEvent[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("calendar_events")
+    .insert(events.map(e => ({ user_id: userId, ...e })))
+    .select(SELECT_COLS);
+  return (data ?? []) as DbEvent[];
+}
+
 export async function updateEvent(id: string, patch: DbEventUpdate): Promise<void> {
   const supabase = createClient();
   await supabase.from("calendar_events").update(patch).eq("id", id);
