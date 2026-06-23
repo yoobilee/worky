@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   IconUser, IconUsers, IconPhone, IconMail, IconMessageCircle,
   IconPlus, IconPencil, IconTrash, IconSearch, IconX,
-  IconUsersGroup, IconCalendar,
+  IconUsersGroup, IconCalendar, IconChevronDown,
 } from "@tabler/icons-react";
 import ConfirmModal from "./ConfirmModal";
 import HelpButton from "./HelpButton";
@@ -48,6 +48,51 @@ function parseEmail(email: string): { id: string; domain: string; custom: string
   if (!domain) return { id, domain: "", custom: "" };
   if (EMAIL_DOMAINS.includes(domain)) return { id, domain, custom: "" };
   return { id, domain: CUSTOM_DOMAIN, custom: domain };
+}
+
+function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const label = value === CUSTOM_DOMAIN ? "직접 입력" : value || "도메인 선택";
+
+  return (
+    <div className="relative flex-1 min-w-0" ref={ref}>
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className={[
+          "w-full px-3 py-2 rounded-xl border text-xs text-left flex items-center justify-between gap-1 transition",
+          "bg-slate-50 dark:bg-zinc-800",
+          value ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500",
+        ].join(" ")}
+      >
+        <span className="truncate">{label}</span>
+        <IconChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full max-h-56 overflow-y-auto">
+          {EMAIL_DOMAINS.map(d => (
+            <button key={d} type="button" onClick={() => { onChange(d); setOpen(false); }}
+              className={`w-full px-3 py-2 text-xs text-left transition ${d === value ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+              {d}
+            </button>
+          ))}
+          <button type="button" onClick={() => { onChange(CUSTOM_DOMAIN); setOpen(false); }}
+            className={`w-full px-3 py-2 text-xs text-left border-t border-slate-100 dark:border-zinc-800 transition ${value === CUSTOM_DOMAIN ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+            직접 입력
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ContactManager() {
@@ -336,15 +381,10 @@ export default function ContactManager() {
               className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <span className="text-slate-400 dark:text-zinc-500 text-sm shrink-0">@</span>
-            <select
+            <EmailDomainPicker
               value={emailDomain}
-              onChange={e => { setEmailDomain(e.target.value); if (e.target.value !== CUSTOM_DOMAIN) setCustomDomain(""); setErrors(prev => ({ ...prev, email: undefined })); }}
-              className={`${emailDomain === CUSTOM_DOMAIN ? "shrink-0 w-20" : "flex-1 min-w-0"} px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition`}
-            >
-              <option value="">선택</option>
-              {EMAIL_DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
-              <option value={CUSTOM_DOMAIN}>직접 입력</option>
-            </select>
+              onChange={(v) => { setEmailDomain(v); if (v !== CUSTOM_DOMAIN) setCustomDomain(""); setErrors(prev => ({ ...prev, email: undefined })); }}
+            />
             {emailDomain === CUSTOM_DOMAIN && (
               <input
                 value={customDomain}
