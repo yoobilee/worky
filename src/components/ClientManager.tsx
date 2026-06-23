@@ -357,7 +357,7 @@ export default function ClientManager() {
   };
 
   const handleExport = () => {
-    const rows = clients.map(c => ({
+    const rows = filtered.map(c => ({
       "거래처명": c.name,
       "상태": STATUS_CONFIG[c.status].label,
       "담당자": c.contact,
@@ -374,7 +374,10 @@ export default function ClientManager() {
     XLSX.utils.book_append_sheet(wb, ws, "거래처");
     const today = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `worky_거래처_${today}.xlsx`);
-    toast.success(`${rows.length}개 거래처를 내보냈습니다`);
+    const exportMsg = searchQuery.trim()
+      ? `검색 결과 ${rows.length}개를 내보냈습니다`
+      : `${rows.length}개 거래처를 내보냈습니다`;
+    toast.success(exportMsg);
   };
 
   const toggleColumn = (key: ColumnKey) => {
