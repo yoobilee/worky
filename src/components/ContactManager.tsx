@@ -304,7 +304,7 @@ export default function ContactManager() {
         {editingId ? "연락처 수정" : "연락처 추가"}
       </p>
 
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
+      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 px-1 -mx-1">
         <input
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -339,7 +339,7 @@ export default function ContactManager() {
             <select
               value={emailDomain}
               onChange={e => { setEmailDomain(e.target.value); if (e.target.value !== CUSTOM_DOMAIN) setCustomDomain(""); setErrors(prev => ({ ...prev, email: undefined })); }}
-              className="shrink-0 w-24 px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className={`${emailDomain === CUSTOM_DOMAIN ? "shrink-0 w-20" : "flex-1 min-w-0"} px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition`}
             >
               <option value="">선택</option>
               {EMAIL_DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
