@@ -13,8 +13,9 @@ import {
   IconMessage, IconChevronDown, IconChevronUp,
   IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight, IconCheck, IconSearch,
   IconEye, IconEyeOff, IconTag, IconLayoutColumns,
-  IconClock, IconPlayerPlay, IconCircleCheck, IconCircleX,
+  IconClock, IconPlayerPlay, IconCircleCheck, IconCircleX, IconFileExport,
 } from "@tabler/icons-react";
+import * as XLSX from "xlsx";
 import { useTheme } from "./ThemeProvider";
 import { useToast } from "@/contexts/ToastContext";
 import { createClient } from "@/lib/supabase/client";
@@ -353,6 +354,27 @@ export default function ClientManager() {
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem(VIEW_MODE_KEY, mode);
+  };
+
+  const handleExport = () => {
+    const rows = clients.map(c => ({
+      "거래처명": c.name,
+      "상태": STATUS_CONFIG[c.status].label,
+      "담당자": c.contact,
+      "담당자 연락처": c.phone,
+      "거래처 연락처": c.companyPhone,
+      "태그": c.tags.join(", "),
+      "계약 시작일": c.contractStart,
+      "계약기간(일)": c.contractDays ?? "",
+      "보고 톤": c.reportTone,
+      "메모": c.memo,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "거래처");
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `worky_거래처_${today}.xlsx`);
+    toast.success(`${rows.length}개 거래처를 내보냈습니다`);
   };
 
   const toggleColumn = (key: ColumnKey) => {
@@ -793,6 +815,11 @@ export default function ClientManager() {
               <IconLayoutSidebarRight className="w-4 h-4" />
             </button>
           )}
+          <button onClick={handleExport}
+            className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+            aria-label="엑셀 내보내기" title="엑셀 내보내기">
+            <IconFileExport className="w-4 h-4" />
+          </button>
           <button
             onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
