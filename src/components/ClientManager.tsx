@@ -226,6 +226,10 @@ export default function ClientManager() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; id: string; type: "name" | "memo" | "tone" } | null>(null);
   const [iconTooltip, setIconTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStatuses, setExportStatuses] = useState<Set<ReportStatus>>(
+    new Set(["pending", "inprogress", "complete", "stopped"])
+  );
   const [revealingPhoneId, setRevealingPhoneId] = useState<string | null>(null);
   const [revealingCompanyPhoneId, setRevealingCompanyPhoneId] = useState<string | null>(null);
   const [savedCustomKeys, setSavedCustomKeys] = useState<string[]>([]);
@@ -358,18 +362,21 @@ export default function ClientManager() {
   };
 
   const handleExport = () => {
-    const rows = filtered.map(c => ({
-      "거래처명": c.name,
-      "상태": STATUS_CONFIG[c.status].label,
-      "담당자": c.contact,
-      "담당자 연락처": c.phone,
-      "거래처 연락처": c.companyPhone,
-      "태그": c.tags.join(", "),
-      "계약 시작일": c.contractStart,
-      "계약기간(일)": c.contractDays ?? "",
-      "보고 톤": c.reportTone,
-      "메모": c.memo,
-    }));
+    const rows = filtered
+      .filter(c => exportStatuses.has(c.status))
+      .map(c => ({
+        "거래처명": c.name,
+        "상태": STATUS_CONFIG[c.status].label,
+        "담당자": c.contact,
+        "담당자 연락처": c.phone,
+        "거래처 연락처": c.companyPhone,
+        "태그": c.tags.join(", "),
+        "계약 시작일": c.contractStart,
+        "계약기간(일)": c.contractDays ?? "",
+        "보고 톤": c.reportTone,
+        "메모": c.memo,
+      }));
+    if (rows.length === 0) { toast.error("내보낼 거래처가 없습니다"); return; }
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "거래처");
@@ -379,6 +386,7 @@ export default function ClientManager() {
       ? `검색 결과 ${rows.length}개를 내보냈습니다`
       : `${rows.length}개 거래처를 내보냈습니다`;
     toast.success(exportMsg);
+    setShowExportModal(false);
   };
 
   const toggleColumn = (key: ColumnKey) => {
@@ -703,6 +711,48 @@ export default function ClientManager() {
         </div>
       )}
 
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowExportModal(false)}>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">엑셀 내보내기</h3>
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mb-4">내보낼 상태를 선택하세요</p>
+            <div className="space-y-2">
+              {(Object.keys(STATUS_CONFIG) as ReportStatus[]).map(status => {
+                const checked = exportStatuses.has(status);
+                return (
+                  <button key={status} type="button"
+                    onClick={() => setExportStatuses(prev => {
+                      const next = new Set(prev);
+                      if (next.has(status)) next.delete(status); else next.add(status);
+                      return next;
+                    })}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 transition text-left">
+                    <div className={[
+                      "w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition",
+                      checked ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+                    ].join(" ")}>
+                      {checked && <IconCheck className="w-3 h-3 text-white" />}
+                    </div>
+                    <span className={`text-sm font-medium ${STATUS_CONFIG[status].textCls}`}>{STATUS_CONFIG[status].label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setShowExportModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-sm text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                취소
+              </button>
+              <button onClick={handleExport} disabled={exportStatuses.size === 0}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+                내보내기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmBulkDelete && (
         <ConfirmModal
           message={`${selectedIds.size}개 거래처를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
@@ -831,7 +881,7 @@ export default function ClientManager() {
               <IconLayoutSidebarRight className="w-4 h-4" />
             </button>
           )}
-          <button onClick={handleExport}
+          <button onClick={() => setShowExportModal(true)}
             className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
             aria-label="엑셀 내보내기"
             onMouseEnter={(e) => {
