@@ -339,21 +339,21 @@ export default function ContactManager() {
             <select
               value={emailDomain}
               onChange={e => { setEmailDomain(e.target.value); if (e.target.value !== CUSTOM_DOMAIN) setCustomDomain(""); setErrors(prev => ({ ...prev, email: undefined })); }}
-              className="shrink-0 w-32 px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="shrink-0 w-24 px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             >
               <option value="">선택</option>
               {EMAIL_DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
               <option value={CUSTOM_DOMAIN}>직접 입력</option>
             </select>
+            {emailDomain === CUSTOM_DOMAIN && (
+              <input
+                value={customDomain}
+                onChange={e => { setCustomDomain(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
+                placeholder="도메인 직접 입력"
+                className="flex-1 min-w-0 px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              />
+            )}
           </div>
-          {emailDomain === CUSTOM_DOMAIN && (
-            <input
-              value={customDomain}
-              onChange={e => { setCustomDomain(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
-              placeholder="도메인 직접 입력 (예: company.com)"
-              className={`w-full mt-1.5 ${INPUT_CLS}`}
-            />
-          )}
           {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
         </div>
 
