@@ -53,6 +53,7 @@ function parseEmail(email: string): { id: string; domain: string; custom: string
 function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -67,7 +68,7 @@ function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: s
 
   return (
     <div className="relative flex-1 min-w-0" ref={ref}>
-      <button type="button" onClick={() => setOpen(v => !v)}
+      <button type="button" onClick={() => setOpen(v => { const next = !v; if (next) requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })); return next; })}
         className={[
           "w-full px-3 py-2 rounded-xl border text-xs text-left flex items-center justify-between gap-1 transition",
           "bg-slate-50 dark:bg-zinc-800",
@@ -78,7 +79,7 @@ function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: s
         <IconChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-max min-w-full">
+        <div ref={popoverRef} className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-max min-w-full">
           <div className="max-h-56 overflow-y-auto">
             {EMAIL_DOMAINS.map(d => (
               <button key={d} type="button" onClick={() => { onChange(d); setOpen(false); }}

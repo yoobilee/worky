@@ -81,6 +81,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
     const rect = triggerRef.current?.getBoundingClientRect();
     if (rect) setPos(computePos(rect));
     setOpen(true);
+    requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
   };
 
   const prevMonth = () => month === 0  ? (setYear((y) => y-1), setMonth(11)) : setMonth((m) => m-1);

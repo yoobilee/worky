@@ -52,6 +52,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
   const ref = useRef<HTMLDivElement>(null);
   const hourRef = useRef<HTMLDivElement>(null);
   const minuteRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -84,7 +85,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
 
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen(v => !v)}
+      <button type="button" onClick={() => setOpen(v => { const next = !v; if (next) requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })); return next; })}
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
           "bg-slate-50 dark:bg-zinc-800",
@@ -96,7 +97,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-[280px] max-w-[calc(100vw-2rem)] p-3 space-y-3">
+        <div ref={popoverRef} className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-[280px] max-w-[calc(100vw-2rem)] p-3 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">시간 설정</span>
             <button type="button" onClick={() => setOpen(false)}
@@ -289,6 +290,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
   const [open, setOpen] = useState(false);
   const [useEndDate, setUseEndDate] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -303,7 +305,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
 
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen(v => !v)}
+      <button type="button" onClick={() => setOpen(v => { const next = !v; if (next) requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })); return next; })}
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
           "bg-slate-50 dark:bg-zinc-800",
@@ -317,7 +319,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-[280px] max-w-[calc(100vw-2rem)] p-3 space-y-3">
+        <div ref={popoverRef} className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-[280px] max-w-[calc(100vw-2rem)] p-3 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">반복 설정</span>
             <button type="button" onClick={() => setOpen(false)}
