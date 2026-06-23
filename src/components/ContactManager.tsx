@@ -50,7 +50,7 @@ function parseEmail(email: string): { id: string; domain: string; custom: string
   return { id, domain: CUSTOM_DOMAIN, custom: domain };
 }
 
-function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function EmailDomainPicker({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -72,7 +72,7 @@ function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: s
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center justify-between gap-1 transition",
           "bg-slate-50 dark:bg-zinc-800",
-          value ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500",
+          error ? "border-red-400 dark:border-red-500 text-red-500" : value ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500",
         ].join(" ")}
       >
         <span className="truncate">{label}</span>
@@ -370,7 +370,7 @@ export default function ContactManager() {
             value={form.phone}
             onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(prev => ({ ...prev, phone: undefined })); }}
             placeholder="전화번호"
-            className={INPUT_CLS}
+            className={`${INPUT_CLS} ${errors.phone ? "border-red-400 dark:border-red-500 focus:ring-red-300/40" : ""}`}
           />
           {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
         </div>
@@ -381,19 +381,20 @@ export default function ContactManager() {
               value={emailId}
               onChange={e => { setEmailId(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
               placeholder="아이디"
-              className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className={`flex-1 min-w-0 px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition ${errors.email ? "border-red-400 dark:border-red-500 focus:ring-red-300/40" : "border-slate-200 dark:border-zinc-700 focus:ring-[#6C63FF]/40"}`}
             />
             <span className="text-slate-400 dark:text-zinc-500 text-sm shrink-0">@</span>
             <EmailDomainPicker
               value={emailDomain}
               onChange={(v) => { setEmailDomain(v); if (v !== CUSTOM_DOMAIN) setCustomDomain(""); setErrors(prev => ({ ...prev, email: undefined })); }}
+              error={!!errors.email}
             />
             {emailDomain === CUSTOM_DOMAIN && (
               <input
                 value={customDomain}
                 onChange={e => { setCustomDomain(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
                 placeholder="도메인 직접 입력"
-                className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                className={`flex-1 min-w-0 px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition ${errors.email ? "border-red-400 dark:border-red-500 focus:ring-red-300/40" : "border-slate-200 dark:border-zinc-700 focus:ring-[#6C63FF]/40"}`}
               />
             )}
           </div>
