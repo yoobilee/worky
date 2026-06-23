@@ -37,6 +37,18 @@ export async function addClient(
   return (data ?? null) as DbClient | null;
 }
 
+export async function addClients(
+  userId: string,
+  clients: Array<Omit<DbClientInsert, "id" | "created_at" | "updated_at" | "user_id">>
+): Promise<DbClient[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("clients")
+    .insert(clients.map(c => ({ user_id: userId, ...c })))
+    .select(SELECT_COLS);
+  return (data ?? []) as DbClient[];
+}
+
 export async function updateClient(id: string, patch: DbClientUpdate): Promise<void> {
   const supabase = createClient();
   await supabase.from("clients").update(patch).eq("id", id);
