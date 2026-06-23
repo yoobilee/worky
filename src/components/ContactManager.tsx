@@ -352,7 +352,7 @@ export default function ContactManager() {
         {editingId ? "연락처 수정" : "연락처 추가"}
       </p>
 
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 px-1 -mx-1">
+      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 px-1 -mx-1 pt-1 -mt-1">
         <input
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
