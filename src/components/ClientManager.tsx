@@ -225,6 +225,7 @@ export default function ClientManager() {
   const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; id: string; type: "name" | "memo" | "tone" } | null>(null);
+  const [iconTooltip, setIconTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [revealingPhoneId, setRevealingPhoneId] = useState<string | null>(null);
   const [revealingCompanyPhoneId, setRevealingCompanyPhoneId] = useState<string | null>(null);
   const [savedCustomKeys, setSavedCustomKeys] = useState<string[]>([]);
@@ -690,6 +691,18 @@ export default function ClientManager() {
         );
       })()}
 
+      {iconTooltip && (
+        <div
+          style={{ position: "fixed", left: iconTooltip.x, top: iconTooltip.y, transform: "translateX(-50%)" }}
+          className={[
+            "z-[9999] text-xs px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none whitespace-nowrap",
+            isDark ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-white",
+          ].join(" ")}
+        >
+          {iconTooltip.text}
+        </div>
+      )}
+
       {confirmBulkDelete && (
         <ConfirmModal
           message={`${selectedIds.size}개 거래처를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
@@ -820,7 +833,12 @@ export default function ClientManager() {
           )}
           <button onClick={handleExport}
             className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-            aria-label="엑셀 내보내기" title="엑셀 내보내기">
+            aria-label="엑셀 내보내기"
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setIconTooltip({ x: rect.left + rect.width / 2, y: rect.bottom + 6, text: "엑셀 내보내기" });
+            }}
+            onMouseLeave={() => setIconTooltip(null)}>
             <IconFileExport className="w-4 h-4" />
           </button>
           <button
