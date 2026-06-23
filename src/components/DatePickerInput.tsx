@@ -46,26 +46,24 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
 
   const computePos = (rect: DOMRect) => {
     if (forceDown) {
-      return { top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 256) };
+      return { top: rect.bottom + 4 + window.scrollY, left: rect.left, width: Math.max(rect.width, 256) };
     }
     const estimatedHeight = 340;
     const spaceBelow = window.innerHeight - rect.bottom;
     const openUpward = spaceBelow < estimatedHeight + 16 && rect.top > estimatedHeight + 16;
-    const top = openUpward ? rect.top - estimatedHeight - 4 : rect.bottom + 4;
+    const top = (openUpward ? rect.top - estimatedHeight - 4 : rect.bottom + 4) + window.scrollY;
     return { top, left: rect.left, width: Math.max(rect.width, 256) };
   };
 
-  // 스크롤/리사이즈 시 팝업 위치 재계산
+  // 리사이즈 시 팝업 위치 재계산
   useEffect(() => {
     if (!open) return;
     const recalc = () => {
       const rect = triggerRef.current?.getBoundingClientRect();
       if (rect) setPos(computePos(rect));
     };
-    window.addEventListener("scroll", recalc, true);
     window.addEventListener("resize", recalc);
     return () => {
-      window.removeEventListener("scroll", recalc, true);
       window.removeEventListener("resize", recalc);
     };
   }, [open]);
@@ -106,8 +104,8 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
   const popover = open && pos ? (
     <div
       ref={popoverRef}
-      style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 50, maxHeight: `calc(100vh - ${pos.top}px - 16px)` }}
-      className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3 overflow-y-auto"
+      style={{ position: "absolute", top: pos.top, left: pos.left, width: pos.width, zIndex: 50 }}
+      className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3"
     >
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-2 px-1">
