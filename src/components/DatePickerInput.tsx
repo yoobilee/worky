@@ -14,7 +14,7 @@ function toDateKey(d: Date): string {
 const THIS_YEAR   = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: THIS_YEAR + 5 - (THIS_YEAR - 100) + 1 }, (_, i) => THIS_YEAR + 5 - i);
 
-export default function DatePickerInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+export default function DatePickerInput({ value, onChange, placeholder, forceDown }: { value: string; onChange: (v: string) => void; placeholder?: string; forceDown?: boolean }) {
   const parseYear  = () => value ? Number(value.split("-")[0]) : new Date().getFullYear();
   const parseMonth = () => value ? Number(value.split("-")[1]) - 1 : new Date().getMonth();
 
@@ -45,6 +45,9 @@ export default function DatePickerInput({ value, onChange, placeholder }: { valu
   }, [open]);
 
   const computePos = (rect: DOMRect) => {
+    if (forceDown) {
+      return { top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 256) };
+    }
     const estimatedHeight = 340;
     const spaceBelow = window.innerHeight - rect.bottom;
     const openUpward = spaceBelow < estimatedHeight + 16 && rect.top > estimatedHeight + 16;
@@ -103,8 +106,8 @@ export default function DatePickerInput({ value, onChange, placeholder }: { valu
   const popover = open && pos ? (
     <div
       ref={popoverRef}
-      style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 50 }}
-      className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3"
+      style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 50, maxHeight: `calc(100vh - ${pos.top}px - 16px)` }}
+      className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3 overflow-y-auto"
     >
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-2 px-1">
