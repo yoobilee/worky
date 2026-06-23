@@ -114,7 +114,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                 ].join(" ")}
               >{hour}시</button>
               {hourOpen && (
-                <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
+                <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-max min-w-full">
                   <div className="max-h-40 overflow-y-auto">
                     {HOUR_OPTIONS.map(h => (
                       <button key={h} type="button" onClick={() => { commit(h, minute); setHourOpen(false); }}
@@ -136,7 +136,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                 ].join(" ")}
               >{minute}분</button>
               {minuteOpen && (
-                <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
+                <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-max min-w-full">
                   <div className="max-h-40 overflow-y-auto">
                     {MINUTE_OPTIONS.map(m => (
                       <button key={m} type="button" onClick={() => { commit(hour, m); setMinuteOpen(false); }}
