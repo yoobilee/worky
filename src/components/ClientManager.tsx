@@ -13,14 +13,14 @@ import {
   IconMessage, IconChevronDown, IconChevronUp,
   IconLayoutGrid, IconLayoutList, IconLayoutSidebarRight, IconCheck, IconSearch,
   IconEye, IconEyeOff, IconTag, IconLayoutColumns,
-  IconClock, IconPlayerPlay, IconCircleCheck, IconCircleX, IconFileExport,
+  IconClock, IconPlayerPlay, IconCircleCheck, IconCircleX, IconFileExport, IconFileImport,
 } from "@tabler/icons-react";
 import * as XLSX from "xlsx";
 import { useTheme } from "./ThemeProvider";
 import { useToast } from "@/contexts/ToastContext";
 import { createClient } from "@/lib/supabase/client";
 import {
-  getClients as getDbClients, addClient as addDbClient,
+  getClients as getDbClients, addClient as addDbClient, addClients as addDbClients,
   updateClient as updateDbClient, deleteClient as deleteDbClient,
   type DbClient,
 } from "@/lib/db/clients";
@@ -31,6 +31,10 @@ import {
   type ColumnKey, type ViewMode,
   ALL_COLUMNS, CONTRACT_UNIT_LABELS, EMPTY_FORM, STATUS_CONFIG,
 } from "@/types/client";
+
+const STATUS_LABEL_TO_KEY: Record<string, ReportStatus> = Object.fromEntries(
+  (Object.keys(STATUS_CONFIG) as ReportStatus[]).map(k => [STATUS_CONFIG[k].label, k])
+);
 
 const STATUS_ICONS: Record<ReportStatus, React.ReactNode> = {
   pending:    <IconClock       className="w-3.5 h-3.5 shrink-0" />,
@@ -228,6 +232,11 @@ export default function ClientManager() {
   const [iconTooltip, setIconTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportSelectedIds, setExportSelectedIds] = useState<Set<string>>(new Set());
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importRows, setImportRows] = useState<Array<{ name: string; status: ReportStatus; contact: string; phone: string; companyPhone: string; tags: string[]; contractStart: string; contractDays: number | null; reportTone: string; memo: string }>>([]);
+  const [importSelected, setImportSelected] = useState<Set<number>>(new Set());
+  const [importSkipped, setImportSkipped] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [revealingPhoneId, setRevealingPhoneId] = useState<string | null>(null);
   const [revealingCompanyPhoneId, setRevealingCompanyPhoneId] = useState<string | null>(null);
   const [savedCustomKeys, setSavedCustomKeys] = useState<string[]>([]);
@@ -357,6 +366,80 @@ export default function ClientManager() {
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem(VIEW_MODE_KEY, mode);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
+      let skipped = 0;
+      const rows = json.map(r => {
+        const name = String(r["거래처명"] ?? "").trim();
+        if (!name) { skipped++; return null; }
+        const statusLabel = String(r["상태"] ?? "").trim();
+        const status = STATUS_LABEL_TO_KEY[statusLabel] ?? "pending";
+        const rawStart = r["계약 시작일"];
+        const contractStart = rawStart instanceof Date
+          ? rawStart.toISOString().slice(0, 10)
+          : String(rawStart ?? "").trim();
+        const daysNum = Number(r["계약기간(일)"]);
+        return {
+          name,
+          status: status as ReportStatus,
+          contact: String(r["담당자"] ?? "").trim(),
+          phone: String(r["담당자 연락처"] ?? "").trim(),
+          companyPhone: String(r["거래처 연락처"] ?? "").trim(),
+          tags: String(r["태그"] ?? "").split(",").map((t: string) => t.trim()).filter(Boolean),
+          contractStart,
+          contractDays: Number.isFinite(daysNum) ? daysNum : null,
+          reportTone: String(r["보고 톤"] ?? "").trim(),
+          memo: String(r["메모"] ?? "").trim(),
+        };
+      }).filter((r): r is NonNullable<typeof r> => r !== null);
+      setImportRows(rows);
+      setImportSelected(new Set(rows.map((_, i) => i)));
+      setImportSkipped(skipped);
+      setShowImportModal(true);
+    } catch {
+      toast.error("엑셀 파일을 읽는 중 오류가 발생했습니다");
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!userId) return;
+    const toInsert = importRows
+      .filter((_, i) => importSelected.has(i))
+      .map(r => ({
+        name:               r.name,
+        status:             r.status,
+        contact_person:     r.contact,
+        phone:              r.phone,
+        link:               "",
+        tags:               r.tags,
+        contract_start:     r.contractStart || null,
+        contract_days:      r.contractDays,
+        report_tone:        r.reportTone,
+        memo:               r.memo,
+        history:            [] as unknown as import("@/types/supabase").Json,
+        progress:           {} as unknown as import("@/types/supabase").Json,
+        show_grass_grid:    false,
+        mask_phone:         false,
+        company_phone:      r.companyPhone,
+        mask_company_phone: false,
+        custom_fields:      [] as unknown as import("@/types/supabase").Json,
+      }));
+    if (toInsert.length === 0) { toast.error("가져올 거래처를 선택해주세요"); return; }
+    const inserted = await addDbClients(userId, toInsert);
+    setClients(prev => [...prev, ...inserted.map(dbToClient)]);
+    toast.success(`${inserted.length}개 거래처를 가져왔습니다`);
+    setShowImportModal(false);
+    setImportRows([]);
+    setImportSelected(new Set());
   };
 
   const toggleAll = () => {
@@ -725,6 +808,51 @@ export default function ClientManager() {
         </div>
       )}
 
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowImportModal(false)}>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">엑셀 가져오기</h3>
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mb-3 shrink-0">
+              가져올 거래처를 선택하세요{importSkipped > 0 && ` (이름 없는 ${importSkipped}개 행은 제외됨)`}
+            </p>
+            <div className="flex-1 overflow-y-auto rounded-xl border border-slate-100 dark:border-zinc-800 min-h-0">
+              {importRows.length === 0 ? (
+                <p className="text-xs text-slate-400 dark:text-zinc-500 text-center py-6">가져올 거래처가 없습니다</p>
+              ) : (
+                importRows.map((r, i) => {
+                  const checked = importSelected.has(i);
+                  return (
+                    <button key={i} type="button"
+                      onClick={() => setImportSelected(prev => { const next = new Set(prev); checked ? next.delete(i) : next.add(i); return next; })}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 border-b border-slate-100 dark:border-zinc-800 last:border-0 hover:bg-slate-50 dark:hover:bg-zinc-800 transition text-left">
+                      <div className={["w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition", checked ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600"].join(" ")}>
+                        {checked && <IconCheck className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-sm text-slate-700 dark:text-zinc-200 truncate flex-1 min-w-0">{r.name}</span>
+                      <span className={`text-xs font-medium shrink-0 ${STATUS_CONFIG[r.status].textCls}`}>{STATUS_CONFIG[r.status].label}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div className="flex items-center justify-between mt-4 shrink-0">
+              <span className="text-xs text-slate-400 dark:text-zinc-500">{importSelected.size}개 선택됨</span>
+              <div className="flex gap-2">
+                <button onClick={() => setShowImportModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-sm text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                  취소
+                </button>
+                <button onClick={handleConfirmImport} disabled={importSelected.size === 0}
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition"
+                  style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+                  가져오기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showExportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowExportModal(false)}>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
@@ -935,6 +1063,14 @@ export default function ClientManager() {
               <IconLayoutSidebarRight className="w-4 h-4" />
             </button>
           )}
+          <button onClick={() => fileInputRef.current?.click()}
+            onMouseEnter={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setIconTooltip({ x: rect.left + rect.width / 2, y: rect.bottom + 6, text: "엑셀 가져오기" }); }}
+            onMouseLeave={() => setIconTooltip(null)}
+            className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+            aria-label="엑셀 가져오기">
+            <IconFileImport className="w-4 h-4" />
+          </button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileSelect} />
           <button onClick={() => { setExportSelectedIds(new Set(filtered.map(c => c.id))); setShowExportModal(true); }}
             className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
             aria-label="엑셀 내보내기"
