@@ -96,7 +96,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-full p-3 space-y-3">
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-[280px] max-w-[calc(100vw-2rem)] p-3 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">시간 설정</span>
             <button type="button" onClick={() => setOpen(false)}
@@ -317,7 +317,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-full p-3 space-y-3">
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-[280px] max-w-[calc(100vw-2rem)] p-3 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">반복 설정</span>
             <button type="button" onClick={() => setOpen(false)}
