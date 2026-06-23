@@ -732,16 +732,33 @@ export default function ClientManager() {
             <p className="text-xs text-slate-400 dark:text-zinc-500 mb-3 shrink-0">내보낼 거래처를 선택하세요</p>
 
             <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
-              <button onClick={toggleAll}
-                className="px-2.5 py-1 rounded-full text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-                전체 {exportSelectedIds.size === filtered.length ? "해제" : "선택"}
-              </button>
-              {(Object.keys(STATUS_CONFIG) as ReportStatus[]).map(status => (
-                <button key={status} onClick={() => toggleStatusGroup(status)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 transition ${STATUS_CONFIG[status].textCls}`}>
-                  {STATUS_CONFIG[status].label}
-                </button>
-              ))}
+              {(() => {
+                const allChecked = filtered.length > 0 && exportSelectedIds.size === filtered.length;
+                return (
+                  <button onClick={toggleAll}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${
+                      allChecked
+                        ? "border-[#6C63FF] bg-[#6C63FF]/10 text-[#6C63FF]"
+                        : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800"
+                    }`}>
+                    전체 {allChecked ? "해제" : "선택"}
+                  </button>
+                );
+              })()}
+              {(Object.keys(STATUS_CONFIG) as ReportStatus[]).map(status => {
+                const idsOfStatus = filtered.filter(c => c.status === status).map(c => c.id);
+                const isOn = idsOfStatus.length > 0 && idsOfStatus.every(id => exportSelectedIds.has(id));
+                return (
+                  <button key={status} onClick={() => toggleStatusGroup(status)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${
+                      isOn
+                        ? `border-[#6C63FF] bg-[#6C63FF]/10 ${STATUS_CONFIG[status].textCls}`
+                        : `border-slate-200 dark:border-zinc-700 ${STATUS_CONFIG[status].textCls} hover:bg-slate-50 dark:hover:bg-zinc-800`
+                    }`}>
+                    {STATUS_CONFIG[status].label}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex-1 overflow-y-auto rounded-xl border border-slate-100 dark:border-zinc-800 min-h-0">
