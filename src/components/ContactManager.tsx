@@ -70,7 +70,7 @@ function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: s
     <div className="relative flex-1 min-w-0" ref={ref}>
       <button type="button" onClick={() => setOpen(v => { const next = !v; if (next) requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })); return next; })}
         className={[
-          "w-full px-3 py-2 rounded-xl border text-xs text-left flex items-center justify-between gap-1 transition",
+          "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center justify-between gap-1 transition",
           "bg-slate-50 dark:bg-zinc-800",
           value ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500",
         ].join(" ")}
@@ -83,12 +83,12 @@ function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: s
           <div className="max-h-56 overflow-y-auto">
             {EMAIL_DOMAINS.map(d => (
               <button key={d} type="button" onClick={() => { onChange(d); setOpen(false); }}
-                className={`w-full px-3 py-2 text-xs text-left transition ${d === value ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+                className={`w-full px-3 py-2 text-sm text-left transition ${d === value ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
                 {d}
               </button>
             ))}
             <button type="button" onClick={() => { onChange(CUSTOM_DOMAIN); setOpen(false); }}
-              className={`w-full px-3 py-2 text-xs text-left border-t border-slate-100 dark:border-zinc-800 transition ${value === CUSTOM_DOMAIN ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+              className={`w-full px-3 py-2 text-sm text-left border-t border-slate-100 dark:border-zinc-800 transition ${value === CUSTOM_DOMAIN ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
               직접 입력
             </button>
           </div>
@@ -393,7 +393,7 @@ export default function ContactManager() {
                 value={customDomain}
                 onChange={e => { setCustomDomain(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
                 placeholder="도메인 직접 입력"
-                className="flex-1 min-w-0 px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
             )}
           </div>
