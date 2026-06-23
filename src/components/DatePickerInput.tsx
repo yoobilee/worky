@@ -44,12 +44,20 @@ export default function DatePickerInput({ value, onChange, placeholder }: { valu
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  const computePos = (rect: DOMRect) => {
+    const estimatedHeight = 340;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < estimatedHeight + 16 && rect.top > estimatedHeight + 16;
+    const top = openUpward ? rect.top - estimatedHeight - 4 : rect.bottom + 4;
+    return { top, left: rect.left, width: Math.max(rect.width, 256) };
+  };
+
   // 스크롤/리사이즈 시 팝업 위치 재계산
   useEffect(() => {
     if (!open) return;
     const recalc = () => {
       const rect = triggerRef.current?.getBoundingClientRect();
-      if (rect) setPos({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 256) });
+      if (rect) setPos(computePos(rect));
     };
     window.addEventListener("scroll", recalc, true);
     window.addEventListener("resize", recalc);
@@ -70,7 +78,7 @@ export default function DatePickerInput({ value, onChange, placeholder }: { valu
     setYear(parseYear());
     setMonth(parseMonth());
     const rect = triggerRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 256) });
+    if (rect) setPos(computePos(rect));
     setOpen(true);
   };
 
