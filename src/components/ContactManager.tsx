@@ -79,7 +79,7 @@ function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: s
         <IconChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div ref={popoverRef} className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-max min-w-full">
+        <div ref={popoverRef} className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
           <div className="max-h-56 overflow-y-auto">
             {EMAIL_DOMAINS.map(d => (
               <button key={d} type="button" onClick={() => { onChange(d); setOpen(false); }}
