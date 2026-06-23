@@ -78,17 +78,19 @@ function EmailDomainPicker({ value, onChange }: { value: string; onChange: (v: s
         <IconChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full max-h-56 overflow-y-auto">
-          {EMAIL_DOMAINS.map(d => (
-            <button key={d} type="button" onClick={() => { onChange(d); setOpen(false); }}
-              className={`w-full px-3 py-2 text-xs text-left transition ${d === value ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
-              {d}
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
+          <div className="max-h-56 overflow-y-auto">
+            {EMAIL_DOMAINS.map(d => (
+              <button key={d} type="button" onClick={() => { onChange(d); setOpen(false); }}
+                className={`w-full px-3 py-2 text-xs text-left transition ${d === value ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+                {d}
+              </button>
+            ))}
+            <button type="button" onClick={() => { onChange(CUSTOM_DOMAIN); setOpen(false); }}
+              className={`w-full px-3 py-2 text-xs text-left border-t border-slate-100 dark:border-zinc-800 transition ${value === CUSTOM_DOMAIN ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+              직접 입력
             </button>
-          ))}
-          <button type="button" onClick={() => { onChange(CUSTOM_DOMAIN); setOpen(false); }}
-            className={`w-full px-3 py-2 text-xs text-left border-t border-slate-100 dark:border-zinc-800 transition ${value === CUSTOM_DOMAIN ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
-            직접 입력
-          </button>
+          </div>
         </div>
       )}
     </div>

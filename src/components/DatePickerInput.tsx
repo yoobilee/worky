@@ -125,7 +125,8 @@ export default function DatePickerInput({ value, onChange, placeholder }: { valu
 
       {/* 연도 피커 */}
       {yearPickerOpen ? (
-        <div ref={yearListRef} className="max-h-48 overflow-y-auto rounded-xl border border-slate-100 dark:border-zinc-800">
+        <div className="rounded-xl border border-slate-100 dark:border-zinc-800 overflow-hidden">
+          <div ref={yearListRef} className="max-h-48 overflow-y-auto">
           {YEAR_OPTIONS.map(y => (
             <button key={y} type="button" data-year={y}
               onClick={() => { setYear(y); setYearPickerOpen(false); }}
@@ -137,6 +138,7 @@ export default function DatePickerInput({ value, onChange, placeholder }: { valu
               ].join(" ")}
             >{y}년</button>
           ))}
+          </div>
         </div>
       ) : (
         <>
