@@ -370,7 +370,7 @@ export default function ContactManager() {
             value={form.phone}
             onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(prev => ({ ...prev, phone: undefined })); }}
             placeholder="전화번호"
-            className={`${INPUT_CLS} ${errors.phone ? "border-2 border-red-500 dark:border-red-500 bg-red-50/60 dark:bg-red-950/20 focus:ring-red-300/40" : ""}`}
+            className={`w-full px-3 py-2 rounded-xl border text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition ${errors.phone ? "border-2 border-red-500 dark:border-red-500 bg-red-50/60 dark:bg-red-950/20 focus:ring-red-300/40" : "border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 focus:ring-[#6C63FF]/40"}`}
           />
           {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
         </div>
