@@ -86,16 +86,23 @@ Deno.serve(async () => {
   // 2. 진행 중 거래처 보고 알림
   const { data: inProgressClients, error: inProgressError } = await supabase
     .from("clients")
-    .select("id, user_id, name")
+    .select("id, user_id, name, contract_start, contract_days")
     .eq("status", "inprogress");
 
   if (inProgressError) {
     console.error("[daily-notifications] inprogress clients select error:", inProgressError);
   }
 
-  if (inProgressClients && inProgressClients.length > 0) {
+  const activeClients = (inProgressClients ?? []).filter((c) => {
+    if (!c.contract_start || !c.contract_days) return true;
+    const start = new Date(`${c.contract_start}T00:00:00Z`);
+    const expiry = addBusinessDays(start, c.contract_days as number);
+    return diffInDays(expiry, todayDate) >= 0;
+  });
+
+  if (activeClients.length > 0) {
     const grouped = new Map<string, { name: string }[]>();
-    for (const c of inProgressClients) {
+    for (const c of activeClients) {
       if (!grouped.has(c.user_id)) grouped.set(c.user_id, []);
       grouped.get(c.user_id)!.push({ name: c.name });
     }
