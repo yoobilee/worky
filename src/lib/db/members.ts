@@ -1,14 +1,14 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/types/supabase";
-import type { Contact, ContactFormState } from "@/types/contact";
+import type { Member, MemberFormState } from "@/types/member";
 
-type DbContactRow    = Database["public"]["Tables"]["contacts"]["Row"];
-type DbContactInsert = Database["public"]["Tables"]["contacts"]["Insert"];
-type DbContactUpdate = Database["public"]["Tables"]["contacts"]["Update"];
+type DbMemberRow    = Database["public"]["Tables"]["members"]["Row"];
+type DbMemberInsert = Database["public"]["Tables"]["members"]["Insert"];
+type DbMemberUpdate = Database["public"]["Tables"]["members"]["Update"];
 
 const SELECT_COLS = "id, name, position, department, phone, email, kakao_id, birthday, memo, tags";
 
-function rowToContact(row: DbContactRow): Contact {
+function rowToMember(row: DbMemberRow): Member {
   return {
     id:         row.id,
     name:       row.name,
@@ -23,7 +23,7 @@ function rowToContact(row: DbContactRow): Contact {
   };
 }
 
-function formToInsert(form: ContactFormState): Omit<DbContactInsert, "id" | "created_at" | "updated_at" | "user_id"> {
+function formToInsert(form: MemberFormState): Omit<DbMemberInsert, "id" | "created_at" | "updated_at" | "user_id"> {
   return {
     name:       form.name.trim(),
     position:   form.position.trim() || null,
@@ -37,8 +37,8 @@ function formToInsert(form: ContactFormState): Omit<DbContactInsert, "id" | "cre
   };
 }
 
-function formToUpdate(patch: Partial<ContactFormState>): DbContactUpdate {
-  const update: DbContactUpdate = {};
+function formToUpdate(patch: Partial<MemberFormState>): DbMemberUpdate {
+  const update: DbMemberUpdate = {};
   if (patch.name       !== undefined) update.name       = patch.name.trim();
   if (patch.position   !== undefined) update.position   = patch.position.trim() || null;
   if (patch.department !== undefined) update.department = patch.department.trim() || null;
@@ -51,60 +51,60 @@ function formToUpdate(patch: Partial<ContactFormState>): DbContactUpdate {
   return update;
 }
 
-export async function getContacts(userId: string): Promise<Contact[]> {
+export async function getMembers(userId: string): Promise<Member[]> {
   try {
     const supabase = createClient();
     const { data, error } = await supabase
-      .from("contacts")
+      .from("members")
       .select(SELECT_COLS)
       .eq("user_id", userId)
       .order("name");
     if (error) throw error;
-    return (data ?? []).map(row => rowToContact(row as DbContactRow));
+    return (data ?? []).map(row => rowToMember(row as DbMemberRow));
   } catch (err) {
-    console.error("[contacts] getContacts:", err);
+    console.error("[members] getMembers:", err);
     return [];
   }
 }
 
-export async function addContact(userId: string, form: ContactFormState): Promise<Contact | null> {
+export async function addMember(userId: string, form: MemberFormState): Promise<Member | null> {
   try {
     const supabase = createClient();
     const { data, error } = await supabase
-      .from("contacts")
+      .from("members")
       .insert({ user_id: userId, ...formToInsert(form) })
       .select(SELECT_COLS)
       .single();
     if (error) throw error;
-    return data ? rowToContact(data as DbContactRow) : null;
+    return data ? rowToMember(data as DbMemberRow) : null;
   } catch (err) {
-    console.error("[contacts] addContact:", err);
+    console.error("[members] addMember:", err);
     return null;
   }
 }
 
-export async function updateContact(id: string, patch: Partial<ContactFormState>): Promise<void> {
+export async function updateMember(id: string, patch: Partial<MemberFormState>): Promise<void> {
   try {
     const supabase = createClient();
     const { error } = await supabase
-      .from("contacts")
+      .from("members")
       .update(formToUpdate(patch))
       .eq("id", id);
     if (error) throw error;
   } catch (err) {
-    console.error("[contacts] updateContact:", err);
+    console.error("[members] updateMember:", err);
   }
 }
 
-export async function deleteContact(id: string): Promise<void> {
+export async function deleteMember(id: string): Promise<void> {
   try {
     const supabase = createClient();
     const { error } = await supabase
-      .from("contacts")
+      .from("members")
       .delete()
       .eq("id", id);
     if (error) throw error;
   } catch (err) {
-    console.error("[contacts] deleteContact:", err);
+    console.error("[members] deleteMember:", err);
   }
 }

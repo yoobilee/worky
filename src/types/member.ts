@@ -1,4 +1,4 @@
-export interface Contact {
+export interface Member {
   id: string;
   name: string;
   position?: string | null;
@@ -11,7 +11,7 @@ export interface Contact {
   tags: string[];
 }
 
-export interface ContactFormState {
+export interface MemberFormState {
   name: string;
   position: string;
   department: string;

@@ -11,10 +11,10 @@ import HelpButton from "./HelpButton";
 import DatePickerInput from "./DatePickerInput";
 import { useToast } from "@/contexts/ToastContext";
 import { createClient } from "@/lib/supabase/client";
-import { getContacts, addContact, updateContact, deleteContact } from "@/lib/db/contacts";
-import type { Contact, ContactFormState } from "@/types/contact";
+import { getMembers, addMember, updateMember, deleteMember } from "@/lib/db/members";
+import type { Member, MemberFormState } from "@/types/member";
 
-const EMPTY_FORM: ContactFormState = {
+const EMPTY_FORM: MemberFormState = {
   name: "", position: "", department: "", phone: "",
   email: "", kakaoId: "", birthday: "", memo: "", tags: [],
 };
@@ -102,12 +102,12 @@ export default function MemberManager() {
   const toast = useToast();
 
   const [hydrated,        setHydrated]        = useState(false);
-  const [contacts,        setContacts]        = useState<Contact[]>([]);
+  const [members,         setMembers]         = useState<Member[]>([]);
   const [search,          setSearch]          = useState("");
   const [groupByDept,     setGroupByDept]     = useState(false);
   const [showForm,        setShowForm]        = useState(false);
   const [editingId,       setEditingId]       = useState<string | null>(null);
-  const [form,            setForm]            = useState<ContactFormState>(EMPTY_FORM);
+  const [form,            setForm]            = useState<MemberFormState>(EMPTY_FORM);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [userId,          setUserId]          = useState<string | null>(null);
   const [selectedId,      setSelectedId]      = useState<string | null>(null);
@@ -122,33 +122,33 @@ export default function MemberManager() {
     supabase.auth.getUser().then(async ({ data }) => {
       const uid = data.user?.id ?? null;
       setUserId(uid);
-      if (uid) setContacts(await getContacts(uid));
+      if (uid) setMembers(await getMembers(uid));
       setHydrated(true);
     });
   }, []);
 
-  const selectedContact = contacts.find(c => c.id === selectedId) ?? null;
+  const selectedMember = members.find(m => m.id === selectedId) ?? null;
 
-  const filtered = contacts.filter(c => {
+  const filtered = members.filter(m => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
-      c.name.toLowerCase().includes(q) ||
-      (c.department ?? "").toLowerCase().includes(q) ||
-      (c.position ?? "").toLowerCase().includes(q) ||
-      (c.phone ?? "").toLowerCase().includes(q) ||
-      (c.email ?? "").toLowerCase().includes(q)
+      m.name.toLowerCase().includes(q) ||
+      (m.department ?? "").toLowerCase().includes(q) ||
+      (m.position ?? "").toLowerCase().includes(q) ||
+      (m.phone ?? "").toLowerCase().includes(q) ||
+      (m.email ?? "").toLowerCase().includes(q)
     );
   });
 
   const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
-  const grouped: { dept: string; items: Contact[] }[] = (() => {
-    const map = new Map<string, Contact[]>();
-    for (const c of sorted) {
-      const key = c.department?.trim() || "미분류";
+  const grouped: { dept: string; items: Member[] }[] = (() => {
+    const map = new Map<string, Member[]>();
+    for (const m of sorted) {
+      const key = m.department?.trim() || "미분류";
       if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(c);
+      map.get(key)!.push(m);
     }
     return Array.from(map.entries())
       .sort(([a], [b]) => {
@@ -172,15 +172,15 @@ export default function MemberManager() {
     setShowForm(true);
   };
 
-  const openEdit = (c: Contact) => {
-    setEditingId(c.id);
-    setSelectedId(c.id);
+  const openEdit = (m: Member) => {
+    setEditingId(m.id);
+    setSelectedId(m.id);
     setForm({
-      name: c.name, position: c.position ?? "", department: c.department ?? "",
-      phone: c.phone ?? "", email: c.email ?? "", kakaoId: c.kakaoId ?? "",
-      birthday: c.birthday ?? "", memo: c.memo ?? "", tags: [...c.tags],
+      name: m.name, position: m.position ?? "", department: m.department ?? "",
+      phone: m.phone ?? "", email: m.email ?? "", kakaoId: m.kakaoId ?? "",
+      birthday: m.birthday ?? "", memo: m.memo ?? "", tags: [...m.tags],
     });
-    resetEmailState(c.email ?? "");
+    resetEmailState(m.email ?? "");
     setErrors({});
     setShowForm(true);
   };
@@ -207,12 +207,12 @@ export default function MemberManager() {
     if (newErrors.email || newErrors.phone) { setErrors(newErrors); return; }
     setErrors({});
 
-    const payload: ContactFormState = { ...form, email: finalEmail };
+    const payload: MemberFormState = { ...form, email: finalEmail };
 
     if (editingId) {
-      await updateContact(editingId, payload);
-      setContacts(prev => prev.map(c => c.id !== editingId ? c : {
-        id: c.id,
+      await updateMember(editingId, payload);
+      setMembers(prev => prev.map(m => m.id !== editingId ? m : {
+        id: m.id,
         name:       payload.name.trim(),
         position:   payload.position.trim()   || null,
         department: payload.department.trim() || null,
@@ -226,8 +226,8 @@ export default function MemberManager() {
       setSelectedId(editingId);
       toast.success("구성원이 수정되었습니다");
     } else {
-      const row = await addContact(userId, payload);
-      if (row) { setContacts(prev => [...prev, row]); setSelectedId(row.id); }
+      const row = await addMember(userId, payload);
+      if (row) { setMembers(prev => [...prev, row]); setSelectedId(row.id); }
       toast.success("구성원이 추가되었습니다");
     }
     setShowForm(false);
@@ -239,9 +239,9 @@ export default function MemberManager() {
 
   const doDelete = async () => {
     if (!confirmDeleteId) return;
-    await deleteContact(confirmDeleteId);
+    await deleteMember(confirmDeleteId);
     if (confirmDeleteId === selectedId) setSelectedId(null);
-    setContacts(prev => prev.filter(c => c.id !== confirmDeleteId));
+    setMembers(prev => prev.filter(m => m.id !== confirmDeleteId));
     toast.success("구성원이 삭제되었습니다");
     setConfirmDeleteId(null);
   };
@@ -275,29 +275,29 @@ export default function MemberManager() {
   );
 
   // ── ProfileContent ──────────────────────────────────────────────────
-  const ProfileContent = selectedContact ? (
+  const ProfileContent = selectedMember ? (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-4">
         <div
           className="w-16 h-16 rounded-full text-white flex items-center justify-center text-xl font-bold shrink-0 select-none"
-          style={{ background: avatarGradient(selectedContact.id) }}
+          style={{ background: avatarGradient(selectedMember.id) }}
         >
-          {selectedContact.name.charAt(0)}
+          {selectedMember.name.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-lg font-bold text-slate-800 dark:text-zinc-100 truncate">{selectedContact.name}</p>
-          {(selectedContact.position || selectedContact.department) && (
+          <p className="text-lg font-bold text-slate-800 dark:text-zinc-100 truncate">{selectedMember.name}</p>
+          {(selectedMember.position || selectedMember.department) && (
             <p className="text-sm text-slate-400 dark:text-zinc-500 truncate">
-              {[selectedContact.position, selectedContact.department].filter(Boolean).join(" · ")}
+              {[selectedMember.position, selectedMember.department].filter(Boolean).join(" · ")}
             </p>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => openEdit(selectedContact)}
+          <button onClick={() => openEdit(selectedMember)}
             className="p-2 rounded-lg text-[#6C63FF] hover:bg-[#6C63FF]/10 transition">
             <IconPencil className="w-4 h-4" />
           </button>
-          <button onClick={() => setConfirmDeleteId(selectedContact.id)}
+          <button onClick={() => setConfirmDeleteId(selectedMember.id)}
             className="p-2 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition">
             <IconTrash className="w-4 h-4" />
           </button>
@@ -306,40 +306,40 @@ export default function MemberManager() {
 
       <div className="border-t border-slate-100 dark:border-zinc-800 my-4" />
 
-      {(!selectedContact.phone && !selectedContact.email && !selectedContact.kakaoId && !selectedContact.birthday && !selectedContact.memo) ? (
+      {(!selectedMember.phone && !selectedMember.email && !selectedMember.kakaoId && !selectedMember.birthday && !selectedMember.memo) ? (
         <p className="text-xs text-slate-400 dark:text-zinc-500 italic">등록된 추가 정보가 없습니다</p>
       ) : (
         <div className="space-y-3">
-          {selectedContact.phone && (
+          {selectedMember.phone && (
             <div className="flex items-center gap-3">
               <IconPhone className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-              <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedContact.phone}</span>
+              <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedMember.phone}</span>
             </div>
           )}
-          {selectedContact.email && (
+          {selectedMember.email && (
             <div className="flex items-center gap-3">
               <IconMail className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-              <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedContact.email}</span>
+              <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedMember.email}</span>
             </div>
           )}
-          {selectedContact.kakaoId && (
+          {selectedMember.kakaoId && (
             <div className="flex items-center gap-3">
               <IconMessageCircle className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-              <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedContact.kakaoId}</span>
+              <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedMember.kakaoId}</span>
             </div>
           )}
-          {selectedContact.birthday && (
+          {selectedMember.birthday && (
             <div className="flex items-center gap-3">
               <IconCalendar className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-              <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedContact.birthday}</span>
+              <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedMember.birthday}</span>
             </div>
           )}
         </div>
       )}
 
-      {selectedContact.memo && (
+      {selectedMember.memo && (
         <div className="mt-4 bg-slate-50 dark:bg-zinc-800 rounded-xl p-3">
-          <p className="text-sm text-slate-600 dark:text-zinc-300 whitespace-pre-line">{selectedContact.memo}</p>
+          <p className="text-sm text-slate-600 dark:text-zinc-300 whitespace-pre-line">{selectedMember.memo}</p>
         </div>
       )}
     </div>
@@ -430,12 +430,12 @@ export default function MemberManager() {
   );
 
   // ── 목록 행 ─────────────────────────────────────────────────────────
-  const ContactRow = ({ c }: { c: Contact }) => {
-    const isSelected = c.id === selectedId && !showForm;
+  const MemberRow = ({ m }: { m: Member }) => {
+    const isSelected = m.id === selectedId && !showForm;
     return (
       <button
         type="button"
-        onClick={() => { setSelectedId(c.id); setShowForm(false); }}
+        onClick={() => { setSelectedId(m.id); setShowForm(false); }}
         className={[
           "w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left transition",
           isSelected ? "bg-[#6C63FF]/10" : "hover:bg-slate-50 dark:hover:bg-zinc-800",
@@ -443,17 +443,17 @@ export default function MemberManager() {
       >
         <div
           className="w-8 h-8 rounded-full text-white flex items-center justify-center text-sm font-bold shrink-0 select-none"
-          style={{ background: avatarGradient(c.id) }}
+          style={{ background: avatarGradient(m.id) }}
         >
-          {c.name.charAt(0)}
+          {m.name.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium truncate ${isSelected ? "text-[#6C63FF]" : "text-slate-800 dark:text-zinc-100"}`}>
-            {c.name}
+            {m.name}
           </p>
-          {(c.position || c.department) && (
+          {(m.position || m.department) && (
             <p className="text-xs text-slate-400 dark:text-zinc-500 truncate">
-              {[c.position, c.department].filter(Boolean).join(" · ")}
+              {[m.position, m.department].filter(Boolean).join(" · ")}
             </p>
           )}
         </div>
@@ -461,7 +461,7 @@ export default function MemberManager() {
     );
   };
 
-  const listContent = contacts.length === 0 ? (
+  const listContent = members.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-8 gap-1 text-slate-300 dark:text-zinc-600">
       <IconUser className="w-8 h-8" />
       <p className="text-xs text-slate-400 dark:text-zinc-500">등록된 구성원이 없습니다</p>
@@ -480,15 +480,15 @@ export default function MemberManager() {
             <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">{dept}</span>
             <span className="text-[11px] text-slate-300 dark:text-zinc-600">{items.length}명</span>
           </div>
-          {items.map(c => <ContactRow key={c.id} c={c} />)}
+          {items.map(m => <MemberRow key={m.id} m={m} />)}
         </div>
       ))}
     </div>
   ) : (
-    <div>{sorted.map(c => <ContactRow key={c.id} c={c} />)}</div>
+    <div>{sorted.map(m => <MemberRow key={m.id} m={m} />)}</div>
   );
 
-  const rightPanelContent = showForm ? FormContent : selectedContact ? ProfileContent : EmptyState;
+  const rightPanelContent = showForm ? FormContent : selectedMember ? ProfileContent : EmptyState;
 
   return (
     <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
@@ -508,7 +508,7 @@ export default function MemberManager() {
           <div className="flex items-center gap-2 shrink-0">
             <h2 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">구성원 관리</h2>
             <span className="text-xs text-slate-400 dark:text-zinc-500 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
-              {contacts.length}명
+              {members.length}명
             </span>
           </div>
 
@@ -577,7 +577,7 @@ export default function MemberManager() {
         style={{ maxHeight: (selectedId || showForm) ? "2000px" : "0px", opacity: (selectedId || showForm) ? 1 : 0 }}
       >
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
-          {showForm ? FormContent : selectedContact ? ProfileContent : null}
+          {showForm ? FormContent : selectedMember ? ProfileContent : null}
         </div>
       </div>
 
