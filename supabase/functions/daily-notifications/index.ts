@@ -33,7 +33,7 @@ Deno.serve(async () => {
   // 1. 거래처 계약 만료 알림
   const { data: clients, error: clientsError } = await supabase
     .from("clients")
-    .select("id, name, contract_start, contract_days, status")
+    .select("id, user_id, name, contract_start, contract_days, status")
     .not("contract_start", "is", null)
     .not("contract_days", "is", null);
 
@@ -49,8 +49,9 @@ Deno.serve(async () => {
     if (![7, 3, 1, 0].includes(dday)) continue;
 
     const { data: existing, error: existingError } = await supabase
-      .from("announcements")
+      .from("user_notifications")
       .select("id")
+      .eq("user_id", client.user_id)
       .eq("metadata->>type", "expiry")
       .eq("metadata->>client_id", client.id)
       .eq("metadata->>date", today)
@@ -69,7 +70,8 @@ Deno.serve(async () => {
         ? `${client.name} 계약이 오늘 만료됩니다.`
         : `${client.name} 계약이 ${dday}일 후 만료됩니다.`;
 
-    const { error: insertError } = await supabase.from("announcements").insert({
+    const { error: insertError } = await supabase.from("user_notifications").insert({
+      user_id: client.user_id,
       title,
       content,
       type: "schedule",
@@ -84,7 +86,7 @@ Deno.serve(async () => {
   // 2. 진행 중 거래처 보고 알림
   const { data: inProgressClients, error: inProgressError } = await supabase
     .from("clients")
-    .select("id, name")
+    .select("id, user_id, name")
     .eq("status", "inprogress");
 
   if (inProgressError) {
@@ -92,22 +94,32 @@ Deno.serve(async () => {
   }
 
   if (inProgressClients && inProgressClients.length > 0) {
-    const { data: existingReport, error: existingReportError } = await supabase
-      .from("announcements")
-      .select("id")
-      .eq("metadata->>type", "daily_report")
-      .eq("metadata->>date", today)
-      .maybeSingle();
-
-    if (existingReportError) {
-      console.error("[daily-notifications] daily_report check error:", existingReportError);
+    const grouped = new Map<string, { name: string }[]>();
+    for (const c of inProgressClients) {
+      if (!grouped.has(c.user_id)) grouped.set(c.user_id, []);
+      grouped.get(c.user_id)!.push({ name: c.name });
     }
 
-    if (!existingReport) {
-      const names = inProgressClients.map((c) => c.name).join(", ");
-      const { error: insertError } = await supabase.from("announcements").insert({
+    for (const [userId, list] of grouped) {
+      const { data: existingReport, error: existingReportError } = await supabase
+        .from("user_notifications")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("metadata->>type", "daily_report")
+        .eq("metadata->>date", today)
+        .maybeSingle();
+
+      if (existingReportError) {
+        console.error("[daily-notifications] daily_report check error:", existingReportError);
+        continue;
+      }
+      if (existingReport) continue;
+
+      const names = list.map((c) => c.name).join(", ");
+      const { error: insertError } = await supabase.from("user_notifications").insert({
+        user_id: userId,
         title: "오늘 보고 대상 거래처",
-        content: `진행 중인 거래처 ${inProgressClients.length}개: ${names} 보고가 필요합니다.`,
+        content: `진행 중인 거래처 ${list.length}개: ${names} 보고가 필요합니다.`,
         type: "notice",
         metadata: { date: today, type: "daily_report" },
       });
