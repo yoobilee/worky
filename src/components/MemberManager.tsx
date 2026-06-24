@@ -13,6 +13,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { createClient } from "@/lib/supabase/client";
 import { getMembers, addMember, updateMember, deleteMember } from "@/lib/db/members";
 import type { Member, MemberFormState } from "@/types/member";
+import SeatingPlanner from "./SeatingPlanner";
 
 const EMPTY_FORM: MemberFormState = {
   name: "", position: "", department: "", phone: "",
@@ -112,6 +113,7 @@ export default function MemberManager() {
   const [userId,          setUserId]          = useState<string | null>(null);
   const [selectedId,      setSelectedId]      = useState<string | null>(null);
 
+  const [activeTab,    setActiveTab]    = useState<"list" | "seating">("list");
   const [emailId,      setEmailId]      = useState("");
   const [emailDomain,  setEmailDomain]  = useState("");
   const [customDomain, setCustomDomain] = useState("");
@@ -500,6 +502,18 @@ export default function MemberManager() {
         />
       )}
 
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-zinc-800 w-fit">
+        <button onClick={() => setActiveTab("list")}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "list" ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm" : "text-slate-500 dark:text-zinc-400"}`}>
+          목록
+        </button>
+        <button onClick={() => setActiveTab("seating")}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "seating" ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm" : "text-slate-500 dark:text-zinc-400"}`}>
+          자리 배치도
+        </button>
+      </div>
+
+      {activeTab === "list" && (
       <div className="flex flex-col sm:flex-row gap-4 items-start">
 
         {/* 왼쪽: 목록 패널 */}
@@ -570,8 +584,9 @@ export default function MemberManager() {
           {rightPanelContent}
         </div>
       </div>
+      )}
 
-      {/* 모바일: 상세 패널 (목록 아래 펼침) */}
+      {activeTab === "list" && (
       <div
         className="sm:hidden overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out"
         style={{ maxHeight: (selectedId || showForm) ? "2000px" : "0px", opacity: (selectedId || showForm) ? 1 : 0 }}
@@ -580,6 +595,9 @@ export default function MemberManager() {
           {showForm ? FormContent : selectedMember ? ProfileContent : null}
         </div>
       </div>
+      )}
+
+      {activeTab === "seating" && <SeatingPlanner members={members} avatarGradient={avatarGradient} />}
 
       <HelpButton
         title="구성원 관리 사용법"
