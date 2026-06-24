@@ -130,8 +130,8 @@ const navItems = [
     icon: <IconBuilding className="w-4 h-4" />,
   },
   {
-    href: "/contacts",
-    label: "연락처 관리",
+    href: "/members",
+    label: "구성원 관리",
     icon: <IconAddressBook className="w-4 h-4" />,
   },
   {

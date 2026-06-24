@@ -23,7 +23,7 @@ const routeMeta: Record<string, { title: string; desc: string; aiChip: boolean }
   "/content":   { title: "메시지 작성",  desc: "업무 보고 메시지와 SNS 게시글을 AI로 빠르게 작성합니다",       aiChip: true  },
   "/document":  { title: "공문서 작성",  desc: "품의서·공문·지출결의서·업무협조 요청서를 AI로 작성합니다",         aiChip: true  },
   "/clients":   { title: "거래처 관리",  desc: "거래처별 보고 현황과 담당자 정보를 관리하세요",               aiChip: false },
-  "/contacts":  { title: "연락처 관리",  desc: "팀원과 자주 연락하는 사람들의 정보를 관리하세요",             aiChip: false },
+  "/members":   { title: "구성원 관리",  desc: "팀원과 자주 연락하는 사람들의 정보를 관리하세요",             aiChip: false },
   "/settings":  { title: "설정",        desc: "내 정보와 앱 환경설정을 관리하세요",                        aiChip: false },
 };
 

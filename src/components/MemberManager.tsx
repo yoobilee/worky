@@ -98,7 +98,7 @@ function EmailDomainPicker({ value, onChange, error }: { value: string; onChange
   );
 }
 
-export default function ContactManager() {
+export default function MemberManager() {
   const toast = useToast();
 
   const [hydrated,        setHydrated]        = useState(false);
@@ -224,11 +224,11 @@ export default function ContactManager() {
         tags:       payload.tags,
       }));
       setSelectedId(editingId);
-      toast.success("연락처가 수정되었습니다");
+      toast.success("구성원이 수정되었습니다");
     } else {
       const row = await addContact(userId, payload);
       if (row) { setContacts(prev => [...prev, row]); setSelectedId(row.id); }
-      toast.success("연락처가 추가되었습니다");
+      toast.success("구성원이 추가되었습니다");
     }
     setShowForm(false);
     setEditingId(null);
@@ -242,7 +242,7 @@ export default function ContactManager() {
     await deleteContact(confirmDeleteId);
     if (confirmDeleteId === selectedId) setSelectedId(null);
     setContacts(prev => prev.filter(c => c.id !== confirmDeleteId));
-    toast.success("연락처가 삭제되었습니다");
+    toast.success("구성원이 삭제되었습니다");
     setConfirmDeleteId(null);
   };
 
@@ -270,7 +270,7 @@ export default function ContactManager() {
   const EmptyState = (
     <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-300 dark:text-zinc-600">
       <IconUsers className="w-12 h-12" />
-      <p className="text-sm text-slate-400 dark:text-zinc-500">연락처를 선택하거나 추가해보세요</p>
+      <p className="text-sm text-slate-400 dark:text-zinc-500">구성원을 선택하거나 추가해보세요</p>
     </div>
   );
 
@@ -349,7 +349,7 @@ export default function ContactManager() {
   const FormContent = (
     <div className="flex flex-col h-full">
       <p className="text-sm font-semibold text-slate-700 dark:text-zinc-200 mb-4 shrink-0">
-        {editingId ? "연락처 수정" : "연락처 추가"}
+        {editingId ? "구성원 수정" : "구성원 추가"}
       </p>
 
       <div className="flex-1 overflow-y-auto space-y-3 min-h-0 px-1 -mx-1 pt-1 -mt-1">
@@ -464,7 +464,7 @@ export default function ContactManager() {
   const listContent = contacts.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-8 gap-1 text-slate-300 dark:text-zinc-600">
       <IconUser className="w-8 h-8" />
-      <p className="text-xs text-slate-400 dark:text-zinc-500">등록된 연락처가 없습니다</p>
+      <p className="text-xs text-slate-400 dark:text-zinc-500">등록된 구성원이 없습니다</p>
     </div>
   ) : filtered.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-8 gap-1 text-slate-300 dark:text-zinc-600">
@@ -494,7 +494,7 @@ export default function ContactManager() {
     <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
       {confirmDeleteId && (
         <ConfirmModal
-          message="연락처를 삭제하시겠습니까?"
+          message="구성원을 삭제하시겠습니까?"
           onConfirm={doDelete}
           onCancel={() => setConfirmDeleteId(null)}
         />
@@ -506,7 +506,7 @@ export default function ContactManager() {
         <div className="w-full sm:w-[300px] shrink-0 self-stretch bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-4 flex flex-col gap-3 sm:h-[600px]">
           {/* 헤더 */}
           <div className="flex items-center gap-2 shrink-0">
-            <h2 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">연락처 관리</h2>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">구성원 관리</h2>
             <span className="text-xs text-slate-400 dark:text-zinc-500 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
               {contacts.length}명
             </span>
@@ -553,7 +553,7 @@ export default function ContactManager() {
               onClick={openAdd}
               className="w-8 h-8 rounded-full flex items-center justify-center text-white transition shrink-0"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              aria-label="연락처 추가"
+              aria-label="구성원 추가"
             >
               <IconPlus className="w-4 h-4" />
             </button>
@@ -582,13 +582,13 @@ export default function ContactManager() {
       </div>
 
       <HelpButton
-        title="연락처 관리 사용법"
+        title="구성원 관리 사용법"
         steps={[
-          { step: "연락처 추가", desc: "목록 패널 우측 상단 + 버튼으로 새 연락처를 등록합니다." },
+          { step: "구성원 추가", desc: "목록 패널 우측 상단 + 버튼으로 새 구성원을 등록합니다." },
           { step: "이메일 입력", desc: "아이디와 도메인을 분리해서 입력하거나 직접 입력 옵션을 선택합니다." },
           { step: "검색", desc: "이름·소속·직급·전화번호·이메일로 통합 검색이 가능합니다." },
           { step: "소속별 보기", desc: "소속별로 보기 토글을 켜면 부서·소속별로 그룹화해서 볼 수 있습니다." },
-          { step: "수정/삭제", desc: "연락처를 선택하면 상세 패널에서 수정·삭제 버튼이 표시됩니다." },
+          { step: "수정/삭제", desc: "구성원을 선택하면 상세 패널에서 수정·삭제 버튼이 표시됩니다." },
         ]}
       />
     </div>
