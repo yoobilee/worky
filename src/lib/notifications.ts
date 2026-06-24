@@ -1,3 +1,5 @@
+import { addUserNotification } from "@/lib/db/user_notifications";
+
 export interface NotificationSettings {
   eventNotif: boolean;
   ddayNotif:  boolean;
@@ -76,9 +78,10 @@ function todayStr(): string {
 
 /* ── 일정 알림 ── */
 
-export function checkTodayEvents(
-  events: Array<{ date: string; title: string }>
-): void {
+export async function checkTodayEvents(
+  events: Array<{ date: string; title: string }>,
+  userId?: string | null
+): Promise<void> {
   const today  = todayStr();
   const todays = events.filter((e) => e.date === today);
   if (todays.length === 0) return;
@@ -87,13 +90,15 @@ export function checkTodayEvents(
     ? `오늘 일정: ${titles}`
     : `오늘 ${todays.length}개 일정 — ${titles}`;
   sendNotification("📅 오늘의 일정", body);
+  if (userId) await addUserNotification(userId, "📅 오늘의 일정", body, "schedule");
 }
 
 /* ── 거래처 D-day 알림 ── */
 
-export function checkDdayClients(
-  clients: Array<{ name: string; contract_start?: string | null; contract_days?: number | null }>
-): void {
+export async function checkDdayClients(
+  clients: Array<{ name: string; contract_start?: string | null; contract_days?: number | null }>,
+  userId?: string | null
+): Promise<void> {
   for (const c of clients) {
     if (!c.contract_start || !c.contract_days) continue;
     const end  = addBusinessDays(c.contract_start, c.contract_days);
@@ -106,22 +111,22 @@ export function checkDdayClients(
     else body = `${c.name} 계약 만료 D-${dday}`;
 
     sendNotification("⚠️ 계약 만료 임박", body);
+    if (userId) await addUserNotification(userId, "⚠️ 계약 만료 임박", body, "notice");
   }
 }
 
 /* ── 하루 한 번 전체 체크 ── */
 
-export function runDailyNotificationChecks(
+export async function runDailyNotificationChecks(
   events:  Array<{ date: string; title: string }>,
-  clients: Array<{ name: string; contract_start?: string | null; contract_days?: number | null }>
-): void {
-  if (getPermissionStatus() !== "granted") return;
-
+  clients: Array<{ name: string; contract_start?: string | null; contract_days?: number | null }>,
+  userId?: string | null
+): Promise<void> {
   const today = todayStr();
   if (localStorage.getItem(SENT_DATE_KEY) === today) return;
   localStorage.setItem(SENT_DATE_KEY, today);
 
   const settings = loadNotificationSettings();
-  if (settings.eventNotif) checkTodayEvents(events);
-  if (settings.ddayNotif)  checkDdayClients(clients);
+  if (settings.eventNotif) await checkTodayEvents(events, userId);
+  if (settings.ddayNotif)  await checkDdayClients(clients, userId);
 }

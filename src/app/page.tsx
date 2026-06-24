@@ -256,7 +256,8 @@ export default function HomePage() {
       // 하루 한 번 브라우저 알림 (일정 + 거래처 D-day)
       runDailyNotificationChecks(
         dbEvents.map(e => ({ date: e.date, title: e.title })),
-        dbClients.map(c => ({ name: c.name, contract_start: c.contract_start, contract_days: c.contract_days }))
+        dbClients.map(c => ({ name: c.name, contract_start: c.contract_start, contract_days: c.contract_days })),
+        uid
       );
 
       setDataLoaded(true);
