@@ -13,7 +13,7 @@ interface SeatingPlannerProps {
 
 const PLAN_WIDTH = 900;
 const PLAN_HEIGHT = 560;
-const DESK_WIDTH = 96;
+const DESK_WIDTH = 130;
 const DESK_HEIGHT = 64;
 const SNAP_THRESHOLD = 6;
 
@@ -124,20 +124,24 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
         </button>
       </div>
 
-      <div className="overflow-auto rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/40 p-4">
-        <div ref={planRef} className="relative bg-white dark:bg-zinc-900 rounded-xl" style={{ width: PLAN_WIDTH, height: PLAN_HEIGHT }}>
+      <div className="overflow-auto rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/40 p-4 flex justify-center">
+        <div
+          ref={planRef}
+          className="relative rounded-xl shrink-0 dark:bg-zinc-900"
+          style={{
+            width: PLAN_WIDTH,
+            height: PLAN_HEIGHT,
+            backgroundColor: "var(--grid-bg, #ffffff)",
+            backgroundImage: "linear-gradient(to right, rgba(108,99,255,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(108,99,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        >
 
           {guides.x !== null && (
             <div className="absolute top-0 bottom-0 w-px bg-[#6C63FF]/60 pointer-events-none" style={{ left: guides.x + DESK_WIDTH / 2 }} />
           )}
           {guides.y !== null && (
             <div className="absolute left-0 right-0 h-px bg-[#6C63FF]/60 pointer-events-none" style={{ top: guides.y + DESK_HEIGHT / 2 }} />
-          )}
-
-          {desks.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-slate-300 dark:text-zinc-600 text-sm">
-              책상을 추가해서 자리 배치를 시작하세요
-            </div>
           )}
 
           {desks.map(desk => {

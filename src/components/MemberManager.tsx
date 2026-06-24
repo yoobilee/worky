@@ -502,15 +502,19 @@ export default function MemberManager() {
         />
       )}
 
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-zinc-800 w-fit">
-        <button onClick={() => setActiveTab("list")}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "list" ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm" : "text-slate-500 dark:text-zinc-400"}`}>
-          목록
-        </button>
-        <button onClick={() => setActiveTab("seating")}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "seating" ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm" : "text-slate-500 dark:text-zinc-400"}`}>
-          자리 배치도
-        </button>
+      <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
+        {([
+          { id: "list" as const, label: "목록" },
+          { id: "seating" as const, label: "자리 배치도" },
+        ]).map(({ id, label }) => (
+          <button key={id} onClick={() => setActiveTab(id)}
+            className={[
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              activeTab === id ? "bg-[#6C63FF] text-white shadow-sm" : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
+            ].join(" ")}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {activeTab === "list" && (
