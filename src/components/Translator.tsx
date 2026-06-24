@@ -179,7 +179,7 @@ export default function Translator() {
               "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
               mode === id
                 ? "bg-[#6C63FF] text-white shadow-sm"
-                : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700",
+                : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
