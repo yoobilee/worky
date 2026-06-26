@@ -11,8 +11,8 @@ interface SeatingPlannerProps {
   avatarGradient: (id: string) => string;
 }
 
-const PLAN_WIDTH = 900;
-const PLAN_HEIGHT = 560;
+const PLAN_WIDTH = 1800;
+const PLAN_HEIGHT = 1000;
 const DESK_WIDTH = 130;
 const DESK_HEIGHT = 64;
 const SNAP_THRESHOLD = 6;
@@ -169,7 +169,7 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
               >
                 <button
                   onClick={(e) => { e.stopPropagation(); if (movedRef.current) return; setAssignOpenId(assignOpenId === desk.id ? null : desk.id); }}
-                  className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  className="flex items-center gap-2 w-full min-w-0 text-left"
                 >
                   {member ? (
                     <>
@@ -186,24 +186,26 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
                     </>
                   )}
                 </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteDesk(desk.id); }}
-                  className="opacity-0 group-hover:opacity-100 transition shrink-0 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-red-400"
-                >
-                  <IconX className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (movedRef.current) return;
-                    const next = ((desk.rotation ?? 0) + 90) % 360;
-                    setDesks(prev => prev.map(d => d.id === desk.id ? { ...d, rotation: next } : d));
-                    updateDeskRotation(desk.id, next);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 transition shrink-0 p-1 rounded-md hover:bg-[#6C63FF]/10 text-[#6C63FF]"
-                >
-                  <IconRotate className="w-3 h-3" />
-                </button>
+                <div className="absolute -top-2 -right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (movedRef.current) return;
+                      const next = ((desk.rotation ?? 0) + 90) % 360;
+                      setDesks(prev => prev.map(d => d.id === desk.id ? { ...d, rotation: next } : d));
+                      updateDeskRotation(desk.id, next);
+                    }}
+                    className="w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm flex items-center justify-center text-[#6C63FF] hover:bg-[#6C63FF]/10 transition"
+                  >
+                    <IconRotate className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteDesk(desk.id); }}
+                    className="w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm flex items-center justify-center text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+                  >
+                    <IconX className="w-3 h-3" />
+                  </button>
+                </div>
 
                 {assignOpenId === desk.id && (
                   <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-44 overflow-hidden">
