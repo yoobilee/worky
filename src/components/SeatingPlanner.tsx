@@ -134,10 +134,11 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
         </button>
       </div>
 
-      <div className="overflow-auto rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/40 p-4 flex justify-center">
+      <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+      <div className="overflow-auto bg-slate-50 dark:bg-zinc-950/40 p-4">
         <div
           ref={planRef}
-          className="relative rounded-xl shrink-0 dark:bg-zinc-900"
+          className="relative rounded-xl shrink-0 mx-auto dark:bg-zinc-900"
           style={{
             width: PLAN_WIDTH,
             height: PLAN_HEIGHT,
@@ -231,6 +232,7 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );
