@@ -46,9 +46,9 @@ export async function getRowsByOriginalId(
   const { data } = await supabase
     .from("todos")
     .select("date, todos")
-    .eq("user_id", userId)
-    .contains("todos", [{ originalId }] as unknown as readonly unknown[]);
-  return (data ?? []) as { date: string; todos: TodoItem[] }[];
+    .eq("user_id", userId);
+  const rows = (data ?? []) as { date: string; todos: TodoItem[] }[];
+  return rows.filter((row) => row.todos.some((t) => t.originalId === originalId));
 }
 
 export async function updateTodoInRow(
