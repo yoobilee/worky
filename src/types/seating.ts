@@ -3,4 +3,5 @@ export interface Desk {
   memberId: string | null;
   x: number;
   y: number;
+  rotation: number;
 }

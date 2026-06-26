@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { IconPlus, IconX, IconUserPlus } from "@tabler/icons-react";
+import { IconPlus, IconX, IconUserPlus, IconRotate } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
-import { getDesks, addDesk, updateDeskPosition, assignDeskMember, deleteDesk } from "@/lib/db/seating";
+import { getDesks, addDesk, updateDeskPosition, assignDeskMember, deleteDesk, updateDeskRotation } from "@/lib/db/seating";
 import type { Desk } from "@/types/seating";
 import type { Member } from "@/types/member";
 
@@ -26,6 +26,8 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
   const [assignOpenId, setAssignOpenId] = useState<string | null>(null);
   const planRef = useRef<HTMLDivElement>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const movedRef = useRef(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const supabase = createClient();
@@ -57,6 +59,8 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
   };
 
   const startDrag = (e: React.PointerEvent, desk: Desk) => {
+    movedRef.current = false;
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
     e.preventDefault();
     const planRect = planRef.current?.getBoundingClientRect();
     if (!planRect) return;
@@ -73,8 +77,14 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
     if (!planRect) return;
     let x = e.clientX - planRect.left - dragOffset.current.x;
     let y = e.clientY - planRect.top - dragOffset.current.y;
-    x = Math.max(0, Math.min(PLAN_WIDTH - DESK_WIDTH, x));
-    y = Math.max(0, Math.min(PLAN_HEIGHT - DESK_HEIGHT, y));
+    const dist = Math.hypot(e.clientX - dragStartPos.current.x, e.clientY - dragStartPos.current.y);
+    if (dist > 4) movedRef.current = true;
+    const draggingDesk = desks.find(d => d.id === draggingId);
+    const rotated = draggingDesk && (draggingDesk.rotation === 90 || draggingDesk.rotation === 270);
+    const effW = rotated ? DESK_HEIGHT : DESK_WIDTH;
+    const effH = rotated ? DESK_WIDTH : DESK_HEIGHT;
+    x = Math.max(0, Math.min(PLAN_WIDTH - effW, x));
+    y = Math.max(0, Math.min(PLAN_HEIGHT - effH, y));
 
     let snapX: number | null = null;
     let snapY: number | null = null;
@@ -155,10 +165,10 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
                   isDragging ? "shadow-xl cursor-grabbing z-10" : "shadow-sm hover:shadow-md",
                   member ? "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800" : "border-dashed border-slate-300 dark:border-zinc-600 bg-slate-50 dark:bg-zinc-800/50",
                 ].join(" ")}
-                style={{ left: desk.x, top: desk.y, width: DESK_WIDTH, height: DESK_HEIGHT }}
+                style={{ left: desk.x, top: desk.y, width: DESK_WIDTH, height: DESK_HEIGHT, transform: `rotate(${desk.rotation ?? 0}deg)` }}
               >
                 <button
-                  onClick={(e) => { e.stopPropagation(); setAssignOpenId(assignOpenId === desk.id ? null : desk.id); }}
+                  onClick={(e) => { e.stopPropagation(); if (movedRef.current) return; setAssignOpenId(assignOpenId === desk.id ? null : desk.id); }}
                   className="flex items-center gap-2 flex-1 min-w-0 text-left"
                 >
                   {member ? (
@@ -181,6 +191,18 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
                   className="opacity-0 group-hover:opacity-100 transition shrink-0 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-red-400"
                 >
                   <IconX className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (movedRef.current) return;
+                    const next = ((desk.rotation ?? 0) + 90) % 360;
+                    setDesks(prev => prev.map(d => d.id === desk.id ? { ...d, rotation: next } : d));
+                    updateDeskRotation(desk.id, next);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition shrink-0 p-1 rounded-md hover:bg-[#6C63FF]/10 text-[#6C63FF]"
+                >
+                  <IconRotate className="w-3 h-3" />
                 </button>
 
                 {assignOpenId === desk.id && (

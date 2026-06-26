@@ -5,9 +5,9 @@ export async function getDesks(userId: string): Promise<Desk[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("seating_desks")
-    .select("id, member_id, x, y")
+    .select("id, member_id, x, y, rotation")
     .eq("user_id", userId);
-  return (data ?? []).map(d => ({ id: d.id, memberId: d.member_id, x: Number(d.x), y: Number(d.y) }));
+  return (data ?? []).map(d => ({ id: d.id, memberId: d.member_id, x: Number(d.x), y: Number(d.y), rotation: d.rotation ?? 0 }));
 }
 
 export async function addDesk(userId: string, x: number, y: number): Promise<Desk | null> {
@@ -15,9 +15,9 @@ export async function addDesk(userId: string, x: number, y: number): Promise<Des
   const { data } = await supabase
     .from("seating_desks")
     .insert({ user_id: userId, x, y })
-    .select("id, member_id, x, y")
+    .select("id, member_id, x, y, rotation")
     .single();
-  return data ? { id: data.id, memberId: data.member_id, x: Number(data.x), y: Number(data.y) } : null;
+  return data ? { id: data.id, memberId: data.member_id, x: Number(data.x), y: Number(data.y), rotation: data.rotation ?? 0 } : null;
 }
 
 export async function updateDeskPosition(id: string, x: number, y: number): Promise<void> {
@@ -33,4 +33,9 @@ export async function assignDeskMember(id: string, memberId: string | null): Pro
 export async function deleteDesk(id: string): Promise<void> {
   const supabase = createClient();
   await supabase.from("seating_desks").delete().eq("id", id);
+}
+
+export async function updateDeskRotation(id: string, rotation: number): Promise<void> {
+  const supabase = createClient();
+  await supabase.from("seating_desks").update({ rotation }).eq("id", id);
 }
