@@ -38,6 +38,39 @@ export async function getPastTodoRows(
   return (data ?? []) as { date: string; todos: TodoItem[] }[];
 }
 
+export async function getRowsByOriginalId(
+  userId: string,
+  originalId: string
+): Promise<{ date: string; todos: TodoItem[] }[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("todos")
+    .select("date, todos")
+    .eq("user_id", userId)
+    .contains("todos", [{ originalId }] as unknown as readonly unknown[]);
+  return (data ?? []) as { date: string; todos: TodoItem[] }[];
+}
+
+export async function updateTodoInRow(
+  userId: string,
+  date: string,
+  todoId: string,
+  completed: boolean
+): Promise<void> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("todos")
+    .select("todos")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .maybeSingle();
+  if (!data) return;
+  const updated = (data.todos as TodoItem[]).map((t) =>
+    t.id === todoId ? { ...t, completed } : t
+  );
+  await upsertTodos(userId, date, updated);
+}
+
 export async function upsertTodos(userId: string, date: string, todos: TodoItem[]): Promise<void> {
   const supabase = createClient();
   await supabase

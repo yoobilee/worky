@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import ConfirmModal from "./ConfirmModal";
 import { IconTrash, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
-import { getTodos, upsertTodos, getPastTodoRows } from "@/lib/db/todos";
+import { getTodos, upsertTodos, getPastTodoRows, updateTodoInRow, getRowsByOriginalId } from "@/lib/db/todos";
 import { getMemos, upsertMemos } from "@/lib/db/memos";
 import { useToast } from "@/contexts/ToastContext";
 
@@ -300,8 +300,31 @@ export default function TodoMemo() {
     inputRef.current?.focus();
   };
 
-  const toggleTodo = (id: string) =>
-    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+  const toggleTodo = (id: string) => {
+    const target = todos.find((t) => t.id === id);
+    if (!target) return;
+    const newCompleted = !target.completed;
+
+    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, completed: newCompleted } : t)));
+
+    if (!userId) return;
+
+    // 복사본을 체크/해제한 경우 → 원본도 동기화
+    if (target.carriedOver && target.originalId && target.originalDate) {
+      updateTodoInRow(userId, target.originalDate, target.originalId, newCompleted).catch(() => {});
+    }
+
+    // 원본을 체크/해제한 경우 → 그 원본에서 나온 모든 복사본도 동기화
+    if (!target.carriedOver) {
+      getRowsByOriginalId(userId, id).then((rows) => {
+        for (const row of rows) {
+          if (row.date === selectedDateRef.current) continue; // 현재 화면의 행은 기존 useEffect가 처리
+          const hasMatch = row.todos.some((t) => t.originalId === id && t.completed !== newCompleted);
+          if (hasMatch) updateTodoInRow(userId, row.date, row.todos.find((t) => t.originalId === id)!.id, newCompleted).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  };
 
   const deleteTodo = (id: string) =>
     setTodos((prev) => prev.filter((t) => t.id !== id));
