@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import ConfirmModal from "./ConfirmModal";
 import { IconTrash, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
-import { getTodos, upsertTodos, getPastTodoRows, updateTodoInRow, getRowsByOriginalId } from "@/lib/db/todos";
+import { getTodos, upsertTodos, getPastTodoRows, updateTodoInRow, getRowsByOriginalId, deleteTodoFromRow } from "@/lib/db/todos";
 import { getMemos, upsertMemos } from "@/lib/db/memos";
 import { useToast } from "@/contexts/ToastContext";
 
@@ -319,8 +319,15 @@ export default function TodoMemo() {
       getRowsByOriginalId(userId, id).then((rows) => {
         for (const row of rows) {
           if (row.date === selectedDateRef.current) continue; // 현재 화면의 행은 기존 useEffect가 처리
-          const hasMatch = row.todos.some((t) => t.originalId === id && t.completed !== newCompleted);
-          if (hasMatch) updateTodoInRow(userId, row.date, row.todos.find((t) => t.originalId === id)!.id, newCompleted).catch(() => {});
+          const match = row.todos.find((t) => t.originalId === id);
+          if (!match) continue;
+          if (newCompleted) {
+            // 원본 완료 → 이월된 복사본은 더 이상 필요 없으므로 삭제
+            deleteTodoFromRow(userId, row.date, match.id).catch(() => {});
+          } else if (match.completed !== newCompleted) {
+            // 원본을 다시 미완료로 되돌린 경우 (드문 케이스) — 기존처럼 동기화
+            updateTodoInRow(userId, row.date, match.id, newCompleted).catch(() => {});
+          }
         }
       }).catch(() => {});
     }

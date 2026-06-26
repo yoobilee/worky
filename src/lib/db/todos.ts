@@ -71,6 +71,23 @@ export async function updateTodoInRow(
   await upsertTodos(userId, date, updated);
 }
 
+export async function deleteTodoFromRow(
+  userId: string,
+  date: string,
+  todoId: string
+): Promise<void> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("todos")
+    .select("todos")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .maybeSingle();
+  if (!data) return;
+  const updated = (data.todos as TodoItem[]).filter((t) => t.id !== todoId);
+  await upsertTodos(userId, date, updated);
+}
+
 export async function upsertTodos(userId: string, date: string, todos: TodoItem[]): Promise<void> {
   const supabase = createClient();
   await supabase
