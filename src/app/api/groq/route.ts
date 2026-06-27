@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -23,6 +24,12 @@ You must respond ONLY in Korean (한국어). Do not use any Chinese characters (
 - 자연스러운 현대 한국어 비즈니스 문체 사용`;
 
 export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
   try {
