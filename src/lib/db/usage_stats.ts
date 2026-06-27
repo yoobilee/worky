@@ -3,7 +3,7 @@ import type { Json } from "@/types/supabase";
 
 export type FeatureKey =
   | "data" | "email" | "template" | "translate"
-  | "summary" | "schedule" | "insight" | "qa" | "report";
+  | "summary" | "schedule" | "insight" | "qa" | "report" | "feedback";
 
 function getWeekStart(): string {
   const now  = new Date();

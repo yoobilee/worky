@@ -3,7 +3,7 @@ import { trackFeature } from "@/lib/db/usage_stats";
 
 export type FeatureKey =
   | "data" | "email" | "template" | "translate"
-  | "summary" | "schedule" | "insight" | "qa" | "report";
+  | "summary" | "schedule" | "insight" | "qa" | "report" | "feedback";
 
 const STORAGE_KEY = "worky_usage_stats";
 

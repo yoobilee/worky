@@ -123,6 +123,8 @@ export default function Glossary() {
           }
           setTerms(inserted.length > 0 ? inserted : DEFAULT_TERMS);
         }
+      } else {
+        setTerms(DEFAULT_TERMS);
       }
       setHydrated(true);
     });
