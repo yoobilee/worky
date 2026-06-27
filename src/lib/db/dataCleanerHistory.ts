@@ -13,7 +13,8 @@ export async function getDataCleanerHistory(userId: string): Promise<DataCleaner
     .from("data_cleaner_history")
     .select("id, input_text, result_html, created_at")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
   return (data ?? []).map(d => ({ id: d.id, inputText: d.input_text, resultHtml: d.result_html, createdAt: d.created_at }));
 }
 

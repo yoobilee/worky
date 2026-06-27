@@ -11,7 +11,7 @@ import {
 } from "@tabler/icons-react";
 import { CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
-import { getEvents, addEvent, addEvents, updateEvent, deleteEvent } from "@/lib/db/calendar";
+import { getEvents, getEventsInRange, addEvent, addEvents, updateEvent, deleteEvent } from "@/lib/db/calendar";
 import { getHolidays } from "@/lib/holidays";
 import { useToast } from "@/contexts/ToastContext";
 import DatePickerInput from "./DatePickerInput";
@@ -445,13 +445,24 @@ export default function CalendarComponent() {
     supabase.auth.getUser().then(async ({ data }) => {
       const uid = data.user?.id ?? null;
       setUserId(uid);
-      if (uid) {
-        const rows = await getEvents(uid);
-        setEvents(rows.map((r) => ({ id: r.id, date: r.date, title: r.title, time: r.time ?? undefined, location: r.location ?? undefined, location_url: r.location_url ?? undefined })));
-      }
       setHydrated(true);
     });
   }, []);
+
+  // 월별 일정 로드
+  useEffect(() => {
+    if (!userId) return;
+    const startDate = toKey(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const endDate = toKey(year, month, lastDay);
+    getEventsInRange(userId, startDate, endDate).then((rows) => {
+      setEvents(rows.map((r) => ({
+        id: r.id, date: r.date, title: r.title,
+        time: r.time ?? undefined, location: r.location ?? undefined,
+        location_url: r.location_url ?? undefined,
+      })));
+    });
+  }, [year, month, userId]);
 
   // 패널에 표시할 날짜 — 접히는 애니메이션 동안에도 마지막 선택 날짜 내용을 유지
   useEffect(() => {

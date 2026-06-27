@@ -17,6 +17,21 @@ export async function getEvents(userId: string): Promise<DbEvent[]> {
     .from("calendar_events")
     .select(SELECT_COLS)
     .eq("user_id", userId)
+    .order("date")
+    .limit(500);
+  return (data ?? []) as DbEvent[];
+}
+
+export async function getEventsInRange(
+  userId: string, startDate: string, endDate: string
+): Promise<DbEvent[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("calendar_events")
+    .select(SELECT_COLS)
+    .eq("user_id", userId)
+    .gte("date", startDate)
+    .lte("date", endDate)
     .order("date");
   return (data ?? []) as DbEvent[];
 }

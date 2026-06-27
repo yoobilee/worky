@@ -235,11 +235,14 @@ export default function DataCleaner() {
             showHistory ? "w-80 opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-full overflow-hidden"
           }`}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">정리 히스토리</h3>
-            <button onClick={() => setShowHistory(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
-              <IconX className="w-4 h-4" />
-            </button>
+          <div className="border-b border-slate-200 dark:border-zinc-800 shrink-0">
+            <div className="flex items-center justify-between px-4 py-3">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">정리 히스토리</h3>
+              <button onClick={() => setShowHistory(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+                <IconX className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 dark:text-zinc-500 px-4 pb-3">최근 50개까지 표시됩니다</p>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
             {history.length === 0 ? (
