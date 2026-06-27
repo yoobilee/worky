@@ -42,8 +42,6 @@ export async function middleware(request: NextRequest) {
   // 세션 갱신 + 사용자 확인 (한 번에)
   const { data: { user }, error } = await supabase.auth.getUser();
 
-  console.log(`[middleware] pathname=${pathname} | user=${user?.email ?? "null"} | error=${error?.message ?? "none"}`);
-
   if (!user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";

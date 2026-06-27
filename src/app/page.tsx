@@ -353,7 +353,7 @@ export default function HomePage() {
 
       {/* ── 환영 카드 ── */}
       {(() => {
-        const FEATURES_FOR_BADGE = ["data","email","template","translate","summary","schedule","insight","qa"] as FeatureKey[];
+        const FEATURES_FOR_BADGE = ["data","email","template","translate","summary","schedule","insight","qa","feedback"] as FeatureKey[];
         const totalUsed = FEATURES_FOR_BADGE.reduce((a, k) => a + (weekStats[k] ?? 0), 0);
         const leaveRemaining = leaveData ? Math.max(0, leaveData.total - leaveData.used) : null;
         const WeatherIcon = weather?.Icon ?? null;
@@ -590,6 +590,7 @@ export default function HomePage() {
             { key: "schedule",  label: "일정 추출"     },
             { key: "insight",   label: "데이터 분석" },
             { key: "qa",        label: "Q&A"          },
+            { key: "feedback",  label: "피드백 정리"   },
           ];
           const counts = FEATURES.map((f) => weekStats[f.key] ?? 0);
           const maxCount = Math.max(...counts, 1);
