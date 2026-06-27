@@ -266,7 +266,16 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
           {results.map((p, i) => (
             <button key={i} type="button" onClick={() => handleSelect(p)}
               className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
-              <p className="text-xs font-medium text-slate-700 dark:text-zinc-200 truncate">{p.place_name}</p>
+              <p
+                className="text-xs font-medium text-slate-700 dark:text-zinc-200 truncate"
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  if (el.scrollWidth <= el.offsetWidth) return;
+                  const rect = el.getBoundingClientRect();
+                  setAddrTooltip({ x: rect.left, y: rect.top - 4, text: p.place_name });
+                }}
+                onMouseLeave={() => setAddrTooltip(null)}
+              >{p.place_name}</p>
               <p
                 className="text-[11px] text-slate-400 dark:text-zinc-500 truncate"
                 onMouseEnter={(e) => {
