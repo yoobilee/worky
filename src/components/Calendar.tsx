@@ -173,6 +173,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
 interface KakaoPlace {
   place_name:   string;
   address_name: string;
+  place_url:    string;
 }
 
 function LocationInput({ value, onChange, urlValue, onUrlChange }: {
@@ -183,6 +184,7 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
 }) {
   const [results, setResults]     = useState<KakaoPlace[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [addrTooltip, setAddrTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -218,7 +220,7 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
 
   const handleSelect = (place: KakaoPlace) => {
     onChange(place.place_name);
-    onUrlChange(`https://map.kakao.com/?q=${encodeURIComponent(place.place_name)}`);
+    onUrlChange(place.place_url);
     setResults([]);
     setShowResults(false);
   };
@@ -234,6 +236,14 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
 
   return (
     <div className="relative" ref={ref}>
+      {addrTooltip && (
+        <div
+          style={{ position: "fixed", left: addrTooltip.x, top: addrTooltip.y, transform: "translateY(-100%)" }}
+          className="z-[9999] text-xs px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none whitespace-nowrap bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          {addrTooltip.text}
+        </div>
+      )}
       <input
         value={value}
         onChange={e => handleChange(e.target.value)}
@@ -257,7 +267,16 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
             <button key={i} type="button" onClick={() => handleSelect(p)}
               className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
               <p className="text-xs font-medium text-slate-700 dark:text-zinc-200 truncate">{p.place_name}</p>
-              <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate">{p.address_name}</p>
+              <p
+                className="text-[11px] text-slate-400 dark:text-zinc-500 truncate"
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  if (el.scrollWidth <= el.offsetWidth) return;
+                  const rect = el.getBoundingClientRect();
+                  setAddrTooltip({ x: rect.left, y: rect.top - 4, text: p.address_name });
+                }}
+                onMouseLeave={() => setAddrTooltip(null)}
+              >{p.address_name}</p>
             </button>
           ))}
           </div>
