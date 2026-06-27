@@ -282,7 +282,7 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
                   const el = e.currentTarget;
                   if (el.scrollWidth <= el.offsetWidth) return;
                   const rect = el.getBoundingClientRect();
-                  setAddrTooltip({ x: rect.left, y: rect.top - 4, text: p.address_name });
+                  setAddrTooltip({ x: rect.left, y: rect.top - 4, text: p.place_name });
                 }}
                 onMouseLeave={() => setAddrTooltip(null)}
               >{p.address_name}</p>
