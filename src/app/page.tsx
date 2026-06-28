@@ -463,7 +463,8 @@ export default function HomePage() {
               <p className="text-sm text-white/70">등록된 할 일이 없습니다.</p>
               <Link
                 href="/todo"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all bg-white text-[#4D44CC]"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all text-[#4D44CC]"
+                style={{ backgroundColor: "#ffffff" }}
               >
                 <IconPlus className="w-3.5 h-3.5" /> 할 일 추가하러 가기
               </Link>
