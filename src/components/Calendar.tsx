@@ -740,14 +740,14 @@ export default function CalendarComponent() {
 
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-5">
-            <button onClick={prevMonth}
+            <button onClick={prevMonth} aria-label="이전 달"
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
               <IconChevronLeft className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
             </button>
             <span className="text-base font-semibold text-slate-800 dark:text-zinc-100">
               {year}년 {MONTH_NAMES[month]}
             </span>
-            <button onClick={nextMonth}
+            <button onClick={nextMonth} aria-label="다음 달"
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
               <IconChevronRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
             </button>

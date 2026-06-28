@@ -101,7 +101,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
               {step === 2 && "입사일을 입력해 주세요"}
             </h2>
           </div>
-          <button onClick={dismiss} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+          <button onClick={dismiss} aria-label="닫기" className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
             <IconX className="w-4 h-4" />
           </button>
         </div>

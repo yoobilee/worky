@@ -1098,7 +1098,7 @@ export default function ClientManager() {
             <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">
               {editingId ? "거래처 수정" : "새 거래처 추가"}
             </h3>
-            <button onClick={closeForm} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+            <button onClick={closeForm} aria-label="닫기" className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
               <IconX className="w-4 h-4" />
             </button>
           </div>

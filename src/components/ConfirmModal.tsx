@@ -22,7 +22,7 @@ export default function ConfirmModal({
             </div>
             <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">삭제 확인</p>
           </div>
-          <button onClick={onCancel} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+          <button onClick={onCancel} aria-label="닫기" className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
             <IconX className="w-4 h-4" />
           </button>
         </div>

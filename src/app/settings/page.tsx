@@ -362,6 +362,7 @@ export default function SettingsPage() {
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
         <button
           onClick={() => setCollapsed((v) => !v)}
+          aria-expanded={!collapsed}
           className="w-full flex items-center justify-between px-5 py-4 text-left"
         >
           <div className="flex items-center gap-3">

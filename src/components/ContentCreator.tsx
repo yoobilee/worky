@@ -237,12 +237,12 @@ export default function ContentCreator() {
     <div className="space-y-4 max-w-5xl mx-auto w-full self-start">
 
       {/* 탭 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
+      <div role="tablist" className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
         {[
           { id: "report"    as ContentTab, label: "보고 메시지",   Icon: IconSend           },
           { id: "instagram" as ContentTab, label: "인스타 게시글", Icon: IconBrandInstagram },
         ].map(({ id, label, Icon }) => (
-          <button key={id} onClick={() => setActiveTab(id)}
+          <button key={id} role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)}
             className={[
               "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
               activeTab === id

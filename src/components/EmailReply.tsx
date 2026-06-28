@@ -310,13 +310,15 @@ export default function EmailReply() {
       )}
 
       {/* 탭 */}
-      <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
+      <div role="tablist" className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
         {([
           { id: "new",   label: "새 이메일 작성", Icon: IconMailPlus },
           { id: "reply", label: "답장 작성",       Icon: IconMailForward },
         ] as const).map(({ id, label, Icon }) => (
           <button
             key={id}
+            role="tab"
+            aria-selected={activeTab === id}
             onClick={() => setActiveTab(id)}
             className={[
               "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",

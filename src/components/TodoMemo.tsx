@@ -451,6 +451,7 @@ export default function TodoMemo() {
                 <div className="flex items-center justify-between mb-2 px-1">
                   <button
                     onClick={prevPickerMonth}
+                    aria-label="이전 달"
                     className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
                   >
                     <IconChevronLeft className="w-3.5 h-3.5" />
@@ -460,6 +461,7 @@ export default function TodoMemo() {
                   </span>
                   <button
                     onClick={nextPickerMonth}
+                    aria-label="다음 달"
                     className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
                   >
                     <IconChevronRight className="w-3.5 h-3.5" />

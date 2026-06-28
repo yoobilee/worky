@@ -119,14 +119,14 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
           </div>
         ) : (
           <>
-            <button type="button" onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 transition">
+            <button type="button" onClick={prevMonth} aria-label="이전 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 transition">
               <IconChevronLeft className="w-3.5 h-3.5" />
             </button>
             <button type="button" onClick={() => setYearPickerOpen(true)}
               className="px-2 py-0.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-[#6C63FF]/10 hover:text-[#6C63FF] transition">
               {year}년 {PICKER_MONTHS[month]}
             </button>
-            <button type="button" onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 transition">
+            <button type="button" onClick={nextMonth} aria-label="다음 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 transition">
               <IconChevronRight className="w-3.5 h-3.5" />
             </button>
           </>
