@@ -46,10 +46,19 @@ function buildSystemPrompt(style: SummaryStyle): string {
 
 /* ───────── 마크다운 간이 렌더러 ───────── */
 
+function parseInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : part
+  );
+}
+
 function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split("\n");
   const nodes: React.ReactNode[] = [];
-  let listItems: string[] = [];
+  let listItems: React.ReactNode[] = [];
   let k = 0;
 
   const flushList = () => {
@@ -68,18 +77,18 @@ function renderMarkdown(text: string): React.ReactNode {
     const t = line.trim();
     if (t.startsWith("## ")) {
       flushList();
-      nodes.push(<p key={k++} className="text-[15px] font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1">{t.slice(3)}</p>);
+      nodes.push(<p key={k++} className="text-[15px] font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1">{parseInline(t.slice(3))}</p>);
     } else if (t.startsWith("### ")) {
       flushList();
-      nodes.push(<p key={k++} className="text-sm font-bold text-slate-800 dark:text-zinc-100 mt-2 mb-0.5">{t.slice(4)}</p>);
+      nodes.push(<p key={k++} className="text-sm font-bold text-slate-800 dark:text-zinc-100 mt-2 mb-0.5">{parseInline(t.slice(4))}</p>);
     } else if (/^[-•*] /.test(t)) {
-      listItems.push(t.slice(2));
+      listItems.push(parseInline(t.slice(2)));
     } else if (t === "") {
       flushList();
       nodes.push(<div key={k++} className="h-1.5" />);
     } else {
       flushList();
-      nodes.push(<p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{t}</p>);
+      nodes.push(<p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{parseInline(t)}</p>);
     }
   }
   flushList();
