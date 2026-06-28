@@ -355,12 +355,12 @@ export default function DataInsight() {
                   : "border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5",
               ].join(" ")}
             >
-              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#6C63FF]" : "text-slate-400 dark:text-zinc-500"}`} />
+              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`} />
               <div className="text-center px-4">
                 <p className={`text-sm font-medium ${file ? "text-[#6C63FF]" : "text-slate-600 dark:text-zinc-400"}`}>
                   {file ? file.name : "클릭해서 파일 선택"}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                   {file ? "클릭해서 파일 교체" : "CSV, Excel(.xlsx, .xls) 지원"}
                 </p>
               </div>
@@ -384,7 +384,7 @@ export default function DataInsight() {
                 <div className="max-h-[80px] overflow-hidden">
                   <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">{fileText}</p>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1.5">
                   총 {fileText.split("\n").length.toLocaleString()}행 추출됨
                 </p>
               </div>
@@ -444,7 +444,7 @@ export default function DataInsight() {
                 </div>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">{label}</p>
                 <p className="text-lg font-bold text-slate-800 dark:text-zinc-100 mt-0.5 leading-tight">{stat.value}</p>
-                <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 leading-snug">{stat.context}</p>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-snug">{stat.context}</p>
               </div>
             ))}
           </div>
@@ -549,7 +549,7 @@ export default function DataInsight() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconChartBar className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-400 dark:text-zinc-500">데이터를 입력하고 분석하면 인사이트가 여기에 표시됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">데이터를 입력하고 분석하면 인사이트가 여기에 표시됩니다.</p>
         </div>
       )}
       <HelpButton

@@ -53,7 +53,7 @@ export default function Toast({ toasts, onDismiss }: Props) {
             <p className={`flex-1 text-sm font-medium ${cfg.text}`}>{t.message}</p>
             <button
               onClick={() => onDismiss(t.id)}
-              className="shrink-0 text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
+              className="shrink-0 text-slate-500 hover:text-slate-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
               aria-label="닫기"
             >
               <IconX className="w-4 h-4" />

@@ -233,13 +233,13 @@ export default function Glossary() {
           <div className="grid grid-cols-2 gap-2">
             <div className="px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800">
               <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{terms.length}</p>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">전체 용어</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">전체 용어</p>
             </div>
             <div className="px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800">
               <p className="text-2xl font-bold text-[#6C63FF]">
                 {new Set(terms.map((t) => t.category)).size}
               </p>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">카테고리</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">카테고리</p>
             </div>
           </div>
           <button
@@ -291,7 +291,7 @@ export default function Glossary() {
             </EditableResult>
           )}
           {!aiResult && !aiError && (
-            <p className="text-xs text-slate-400 dark:text-zinc-500">
+            <p className="text-xs text-slate-500 dark:text-zinc-400">
               Enter 또는 버튼을 눌러 AI 설명을 받아보세요.
             </p>
           )}
@@ -303,7 +303,7 @@ export default function Glossary() {
         {/* 검색 + 필터 헤더 */}
         <div className="flex flex-col sm:flex-row gap-2 p-4 border-b border-slate-200 dark:border-zinc-800">
           <div className="relative flex-1">
-            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" />
+            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-zinc-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -336,7 +336,7 @@ export default function Glossary() {
             <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
               <IconBook className="w-6 h-6 text-slate-300 dark:text-zinc-600" />
             </div>
-            <p className="text-sm text-slate-400 dark:text-zinc-500">
+            <p className="text-sm text-slate-500 dark:text-zinc-400">
               {search || filterCat !== "전체" ? "검색 결과가 없습니다." : "등록된 용어가 없습니다."}
             </p>
             {!search && filterCat === "전체" && (
@@ -364,14 +364,14 @@ export default function Glossary() {
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => openEdit(t)}
-                    className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-[#6C63FF] transition-colors"
+                    className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-[#6C63FF] transition-colors"
                     aria-label="수정"
                   >
                     <IconPencil className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(t.id)}
-                    className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 transition-colors"
                     aria-label="삭제"
                   >
                     <IconTrash className="w-3.5 h-3.5" />
@@ -393,7 +393,7 @@ export default function Glossary() {
               </h3>
               <button
                 onClick={() => setShowForm(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 <IconX className="w-4 h-4" />
               </button>

@@ -379,16 +379,16 @@ export default function TodoMemo() {
       {/* Bento 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 shrink-0">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-          <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider">전체 할 일</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">전체 할 일</p>
           <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-slate-100">{total}</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-          <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider">완료</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">완료</p>
           <p className="text-3xl font-bold mt-2" style={{ color: "var(--primary)" }}>{completed}</p>
         </div>
         <div className="col-span-2 lg:col-span-1 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider">진행률</p>
+            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">진행률</p>
             <span className="text-sm font-bold" style={{ color: "var(--primary)" }}>{progress}%</span>
           </div>
           <div className="mt-3 h-2 bg-slate-100 dark:bg-zinc-700 rounded-full overflow-hidden">
@@ -397,7 +397,7 @@ export default function TodoMemo() {
               style={{ width: `${progress}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }}
             />
           </div>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2">{total - completed}개 남음</p>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2">{total - completed}개 남음</p>
         </div>
       </div>
 
@@ -413,7 +413,7 @@ export default function TodoMemo() {
           <div className="flex items-center justify-between relative" ref={pickerRef}>
             <button
               onClick={() => goToDate(shiftDate(selectedDate, -1))}
-              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 transition-colors"
               aria-label="이전 날짜"
             >
               <IconChevronLeft className="w-4 h-4" />
@@ -438,7 +438,7 @@ export default function TodoMemo() {
 
             <button
               onClick={() => goToDate(shiftDate(selectedDate, 1))}
-              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 transition-colors"
               aria-label="다음 날짜"
             >
               <IconChevronRight className="w-4 h-4" />
@@ -452,7 +452,7 @@ export default function TodoMemo() {
                   <button
                     onClick={prevPickerMonth}
                     aria-label="이전 달"
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 transition-colors"
                   >
                     <IconChevronLeft className="w-3.5 h-3.5" />
                   </button>
@@ -462,7 +462,7 @@ export default function TodoMemo() {
                   <button
                     onClick={nextPickerMonth}
                     aria-label="다음 달"
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-500 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 transition-colors"
                   >
                     <IconChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -472,7 +472,7 @@ export default function TodoMemo() {
                 <div className="grid grid-cols-7 mb-1">
                   {DAY_LABELS.map((d, i) => (
                     <div key={d} className={`text-center text-[10px] font-medium py-1 ${
-                      i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-slate-400 dark:text-zinc-500"
+                      i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-slate-500 dark:text-zinc-400"
                     }`}>{d}</div>
                   ))}
                 </div>
@@ -562,7 +562,7 @@ export default function TodoMemo() {
                     )}
                   </button>
                   <div className="flex-1 min-w-0">
-                    <span className={`text-sm ${todo.completed ? "line-through text-slate-400 dark:text-zinc-500" : "text-slate-700 dark:text-zinc-200"}`}>
+                    <span className={`text-sm ${todo.completed ? "line-through text-slate-500 dark:text-zinc-400" : "text-slate-700 dark:text-zinc-200"}`}>
                       {todo.text}
                     </span>
                     {todo.carriedOver && todo.originalDate && (
@@ -587,7 +587,7 @@ export default function TodoMemo() {
           {todos.some((t) => t.completed) && (
             <button
               onClick={() => setConfirmAction("completed")}
-              className="text-xs text-slate-400 hover:text-red-400 transition text-left whitespace-nowrap"
+              className="text-xs text-slate-500 hover:text-red-400 transition text-left whitespace-nowrap"
             >
               완료된 항목 모두 삭제
             </button>
@@ -617,7 +617,7 @@ export default function TodoMemo() {
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">메모</h2>
             <div className="flex items-center gap-2">
               {saveStatus === "saving" && (
-                <span className="text-xs text-slate-400 dark:text-zinc-500">저장 중...</span>
+                <span className="text-xs text-slate-500 dark:text-zinc-400">저장 중...</span>
               )}
               {saveStatus === "saved" && (
                 <span className="text-xs text-emerald-500 font-medium">방금 저장됨 ✓</span>
@@ -625,7 +625,7 @@ export default function TodoMemo() {
               <button
                 onClick={clearMemo}
                 aria-label="메모 전체 삭제"
-                className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-400 transition-colors"
+                className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-400 transition-colors"
               >
                 <IconTrash className="w-3.5 h-3.5" />
               </button>
@@ -656,7 +656,7 @@ export default function TodoMemo() {
             className="flex-1 min-h-[200px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
           />
 
-          <p className="text-xs text-slate-400 dark:text-zinc-500 text-right">
+          <p className="text-xs text-slate-500 dark:text-zinc-400 text-right">
             {memos[memoTab].length}자
           </p>
         </div>

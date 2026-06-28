@@ -242,7 +242,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
           <button
             onClick={toggleCollapse}
             aria-label="사이드바 펼치기"
-            className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors hidden lg:flex"
+            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors hidden lg:flex"
           >
             <IconLayoutSidebarLeftCollapse className="w-4 h-4 rotate-180" />
           </button>
@@ -259,7 +259,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               >
                 Worky
               </p>
-              <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 whitespace-nowrap opacity-100 transition-opacity duration-150 delay-[260ms]">
+              <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 whitespace-nowrap opacity-100 transition-opacity duration-150 delay-[260ms]">
                 AI 업무 보조
               </p>
             </div>
@@ -267,7 +267,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
           <button
             onClick={toggleCollapse}
             aria-label="사이드바 접기"
-            className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors shrink-0 hidden lg:flex"
+            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors shrink-0 hidden lg:flex"
           >
             <IconLayoutSidebarLeftCollapse className="w-4 h-4 transition-transform duration-300" />
           </button>
@@ -374,7 +374,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               {st.label}
             </p>
             {aiStatus === "connected" && (
-              <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 whitespace-nowrap">
+              <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 whitespace-nowrap">
                 llama-4-scout
               </p>
             )}
@@ -412,7 +412,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate whitespace-nowrap">
                 {user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자"}
               </p>
-              <p className="text-[10px] text-slate-400 dark:text-zinc-500 truncate whitespace-nowrap">
+              <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate whitespace-nowrap">
                 {user.email}
               </p>
             </div>
@@ -422,7 +422,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               disabled={loggingOut}
               aria-label="로그아웃"
               title="로그아웃"
-              className={`shrink-0 p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-40 ${labelCls}`}
+              className={`shrink-0 p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-40 ${labelCls}`}
             >
               <IconLogout className="w-3.5 h-3.5" />
             </button>

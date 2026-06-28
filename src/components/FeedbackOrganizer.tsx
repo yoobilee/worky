@@ -236,7 +236,7 @@ export default function FeedbackOrganizer() {
               <ul className="space-y-3">
                 {result.clarified.map(({ original, clarified }, i) => (
                   <li key={i} className="space-y-1">
-                    <p className="text-xs text-slate-400 dark:text-zinc-500 line-through">"{original}"</p>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 line-through">"{original}"</p>
                     <p className="flex gap-2 text-sm text-slate-700 dark:text-zinc-300">
                       <span className="text-[#6C63FF] shrink-0 mt-0.5">→</span>
                       <span>{clarified}</span>
@@ -250,7 +250,7 @@ export default function FeedbackOrganizer() {
           {/* 편집 가능한 전체 텍스트 */}
           {editableText && (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-              <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">편집 가능한 정리 결과</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">편집 가능한 정리 결과</p>
               <EditableResult value={editableText} onChange={setEditableText} rows={10}>
                 <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{editableText}</p>
               </EditableResult>
@@ -261,7 +261,7 @@ export default function FeedbackOrganizer() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconMessageCheck className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-400 dark:text-zinc-500">피드백 내용을 입력하고 정리하면 결과가 여기에 표시됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">피드백 내용을 입력하고 정리하면 결과가 여기에 표시됩니다.</p>
         </div>
       )}
       <HelpButton

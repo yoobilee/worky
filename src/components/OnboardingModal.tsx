@@ -101,7 +101,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
               {step === 2 && "입사일을 입력해 주세요"}
             </h2>
           </div>
-          <button onClick={dismiss} aria-label="닫기" className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+          <button onClick={dismiss} aria-label="닫기" className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
             <IconX className="w-4 h-4" />
           </button>
         </div>
@@ -129,7 +129,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
           {/* 1단계: 내 정보 */}
           {step === 0 && (
             <div className="space-y-3">
-              <p className="text-xs text-slate-400 dark:text-zinc-500">이메일·템플릿 서명에 자동으로 사용됩니다. 선택 사항입니다.</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">이메일·템플릿 서명에 자동으로 사용됩니다. 선택 사항입니다.</p>
               {(["org", "name", "title"] as const).map((field) => (
                 <div key={field}>
                   <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">
@@ -149,7 +149,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
           {/* 2단계: 직업군 */}
           {step === 1 && (
             <div className="space-y-2">
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mb-3">직업군에 맞는 메뉴가 자동으로 설정됩니다. 선택 사항입니다.</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mb-3">직업군에 맞는 메뉴가 자동으로 설정됩니다. 선택 사항입니다.</p>
               <div className="grid grid-cols-2 gap-2">
                 {JOB_PRESETS.map((preset) => {
                   const Icon = preset.icon;
@@ -166,10 +166,10 @@ export default function OnboardingModal({ userId, onClose }: Props) {
                           : "border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/40",
                       ].join(" ")}
                     >
-                      <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#6C63FF]" : "text-slate-400 dark:text-zinc-500"}`} />
+                      <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`} />
                       <div className="min-w-0">
                         <p className={`text-xs font-semibold truncate ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>{preset.label}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-zinc-500 truncate">{preset.desc}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">{preset.desc}</p>
                       </div>
                       {active && <IconCheck className="w-3.5 h-3.5 text-[#6C63FF] shrink-0 ml-auto" />}
                     </button>
@@ -182,7 +182,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
           {/* 3단계: 입사일 */}
           {step === 2 && (
             <div className="space-y-3">
-              <p className="text-xs text-slate-400 dark:text-zinc-500">입사일을 입력하면 잔여 연차를 자동으로 계산합니다. 선택 사항입니다.</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">입사일을 입력하면 잔여 연차를 자동으로 계산합니다. 선택 사항입니다.</p>
               <DatePickerInput value={joinDate} onChange={setJoinDate} />
             </div>
           )}
@@ -192,7 +192,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
         <div className="flex items-center justify-between px-6 py-5">
           <button
             onClick={dismiss}
-            className="text-xs text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition"
+            className="text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 transition"
           >
             건너뛰기
           </button>

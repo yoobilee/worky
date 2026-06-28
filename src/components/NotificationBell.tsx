@@ -178,7 +178,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
           </div>
           <div className="max-h-96 overflow-y-auto">
             {unifiedList.length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-zinc-500 text-center py-8">새로운 알림이 없습니다</p>
+              <p className="text-sm text-slate-500 dark:text-zinc-400 text-center py-8">새로운 알림이 없습니다</p>
             ) : (
               unifiedList.map((item) => {
                 const meta = TYPE_META[item.type] ?? TYPE_META.notice;
@@ -207,10 +207,10 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                       >
                         {item.content}
                       </p>
-                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">{formatDate(item.created_at)}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">{formatDate(item.created_at)}</p>
                     </div>
                     {overflowIds.has(item.id) && (
-                      <span className="shrink-0 mt-1 text-slate-400 dark:text-zinc-500">
+                      <span className="shrink-0 mt-1 text-slate-500 dark:text-zinc-400">
                         {isExpanded ? <IconChevronUp className="w-4 h-4" /> : <IconChevronDown className="w-4 h-4" />}
                       </span>
                     )}

@@ -243,7 +243,7 @@ export default function DocSummary() {
               className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             {textInput && (
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5 text-right">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1.5 text-right">
                 {textInput.length.toLocaleString()}자
               </p>
             )}
@@ -265,12 +265,12 @@ export default function DocSummary() {
                   : "border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5",
               ].join(" ")}
             >
-              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#6C63FF]" : "text-slate-400 dark:text-zinc-500"}`} />
+              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`} />
               <div className="text-center px-4">
                 <p className={`text-sm font-medium ${file ? "text-[#6C63FF]" : "text-slate-600 dark:text-zinc-400"}`}>
                   {file ? file.name : "클릭해서 파일 선택"}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                   {file ? "클릭해서 파일 교체" : "PDF, TXT 지원"}
                 </p>
               </div>
@@ -301,7 +301,7 @@ export default function DocSummary() {
                     {extractedText}
                   </p>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1.5">
                   총 {extractedText.length.toLocaleString()}자 추출됨
                 </p>
               </div>
@@ -330,7 +330,7 @@ export default function DocSummary() {
               >
                 <Icon className="w-5 h-5" />
                 <span>{id}</span>
-                <span className={`text-xs ${isActive ? "text-white/70" : "text-slate-400 dark:text-zinc-500"}`}>
+                <span className={`text-xs ${isActive ? "text-white/70" : "text-slate-500 dark:text-zinc-400"}`}>
                   {desc}
                 </span>
               </button>
@@ -404,7 +404,7 @@ export default function DocSummary() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconSparkles className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-400 dark:text-zinc-500">문서를 입력하고 요약하면 핵심 내용이 여기에 정리됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">문서를 입력하고 요약하면 핵심 내용이 여기에 정리됩니다.</p>
         </div>
       )}
       <HelpButton

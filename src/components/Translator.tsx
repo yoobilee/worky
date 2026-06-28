@@ -195,7 +195,7 @@ export default function Translator() {
           <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
 
             {/* 출발 언어 (5탭) */}
-            <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 mb-2">출발 언어</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">출발 언어</p>
             <div className="grid grid-cols-5 gap-1.5">
               {SOURCE_OPTIONS.map(({ code, label }) => {
                 const isActive = sourceLang === code;
@@ -220,7 +220,7 @@ export default function Translator() {
             {/* 방향 아이콘 + 방향 텍스트 */}
             <div className="flex flex-col items-center gap-1 my-3">
               <IconArrowDown className="w-4 h-4 text-slate-300 dark:text-zinc-600" />
-              <span className="text-[11px] text-slate-400 dark:text-zinc-500">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                 {sourceLang === "auto"
                   ? `자동 감지 → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`
                   : `${SOURCE_OPTIONS.find((s) => s.code === sourceLang)?.label} → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`}
@@ -228,7 +228,7 @@ export default function Translator() {
             </div>
 
             {/* 도착 언어 드롭다운 */}
-            <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 mb-2">도착 언어</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">도착 언어</p>
             <div className="relative">
               {/* 드롭다운 오버레이 (외부 클릭 닫기) */}
               {dropdownOpen && (
@@ -240,7 +240,7 @@ export default function Translator() {
               >
                 <span>{LANG_OPTIONS.find((l) => l.code === targetLang)?.label}</span>
                 <IconChevronDown
-                  className={`w-4 h-4 text-slate-400 dark:text-zinc-500 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+                  className={`w-4 h-4 text-slate-500 dark:text-zinc-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
@@ -324,7 +324,7 @@ export default function Translator() {
                     style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
                   >
                     <span>{id}</span>
-                    <span className={`text-[11px] ${isActive ? "text-white/70" : "text-slate-400 dark:text-zinc-500"}`}>
+                    <span className={`text-[11px] ${isActive ? "text-white/70" : "text-slate-500 dark:text-zinc-400"}`}>
                       {desc}
                     </span>
                   </button>
@@ -402,7 +402,7 @@ export default function Translator() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconSparkles className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-400 dark:text-zinc-500">텍스트를 입력하고 번역하거나 톤을 조정하면 결과가 여기에 표시됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">텍스트를 입력하고 번역하거나 톤을 조정하면 결과가 여기에 표시됩니다.</p>
         </div>
       )}
       <HelpButton

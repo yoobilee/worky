@@ -73,7 +73,7 @@ function EmailDomainPicker({ value, onChange, error }: { value: string; onChange
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center justify-between gap-1 transition",
           "bg-slate-50 dark:bg-zinc-800",
-          error ? "border-2 border-red-500 dark:border-red-500 text-red-600 dark:text-red-400 bg-red-50/60 dark:bg-red-950/20" : value ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500",
+          error ? "border-2 border-red-500 dark:border-red-500 text-red-600 dark:text-red-400 bg-red-50/60 dark:bg-red-950/20" : value ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
         ].join(" ")}
       >
         <span className="truncate">{label}</span>
@@ -272,7 +272,7 @@ export default function MemberManager() {
   const EmptyState = (
     <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-300 dark:text-zinc-600">
       <IconUsers className="w-12 h-12" />
-      <p className="text-sm text-slate-400 dark:text-zinc-500">구성원을 선택하거나 추가해보세요</p>
+      <p className="text-sm text-slate-500 dark:text-zinc-400">구성원을 선택하거나 추가해보세요</p>
     </div>
   );
 
@@ -289,7 +289,7 @@ export default function MemberManager() {
         <div className="flex-1 min-w-0">
           <p className="text-lg font-bold text-slate-800 dark:text-zinc-100 truncate">{selectedMember.name}</p>
           {(selectedMember.position || selectedMember.department) && (
-            <p className="text-sm text-slate-400 dark:text-zinc-500 truncate">
+            <p className="text-sm text-slate-500 dark:text-zinc-400 truncate">
               {[selectedMember.position, selectedMember.department].filter(Boolean).join(" · ")}
             </p>
           )}
@@ -309,30 +309,30 @@ export default function MemberManager() {
       <div className="border-t border-slate-100 dark:border-zinc-800 my-4" />
 
       {(!selectedMember.phone && !selectedMember.email && !selectedMember.kakaoId && !selectedMember.birthday && !selectedMember.memo) ? (
-        <p className="text-xs text-slate-400 dark:text-zinc-500 italic">등록된 추가 정보가 없습니다</p>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 italic">등록된 추가 정보가 없습니다</p>
       ) : (
         <div className="space-y-3">
           {selectedMember.phone && (
             <div className="flex items-center gap-3">
-              <IconPhone className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+              <IconPhone className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
               <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedMember.phone}</span>
             </div>
           )}
           {selectedMember.email && (
             <div className="flex items-center gap-3">
-              <IconMail className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+              <IconMail className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
               <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedMember.email}</span>
             </div>
           )}
           {selectedMember.kakaoId && (
             <div className="flex items-center gap-3">
-              <IconMessageCircle className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+              <IconMessageCircle className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
               <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedMember.kakaoId}</span>
             </div>
           )}
           {selectedMember.birthday && (
             <div className="flex items-center gap-3">
-              <IconCalendar className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
+              <IconCalendar className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
               <span className="text-sm text-slate-700 dark:text-zinc-200">{selectedMember.birthday}</span>
             </div>
           )}
@@ -385,7 +385,7 @@ export default function MemberManager() {
               placeholder="아이디"
               className={`flex-1 min-w-0 px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition ${errors.email ? "border-2 border-red-500 dark:border-red-500 bg-red-50/60 dark:bg-red-950/20 focus:ring-red-300/40" : "border-slate-200 dark:border-zinc-700 focus:ring-[#6C63FF]/40"}`}
             />
-            <span className="text-slate-400 dark:text-zinc-500 text-sm shrink-0">@</span>
+            <span className="text-slate-500 dark:text-zinc-400 text-sm shrink-0">@</span>
             <EmailDomainPicker
               value={emailDomain}
               onChange={(v) => { setEmailDomain(v); if (v !== CUSTOM_DOMAIN) setCustomDomain(""); setErrors(prev => ({ ...prev, email: undefined })); }}
@@ -454,7 +454,7 @@ export default function MemberManager() {
             {m.name}
           </p>
           {(m.position || m.department) && (
-            <p className="text-xs text-slate-400 dark:text-zinc-500 truncate">
+            <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">
               {[m.position, m.department].filter(Boolean).join(" · ")}
             </p>
           )}
@@ -466,19 +466,19 @@ export default function MemberManager() {
   const listContent = members.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-8 gap-1 text-slate-300 dark:text-zinc-600">
       <IconUser className="w-8 h-8" />
-      <p className="text-xs text-slate-400 dark:text-zinc-500">등록된 구성원이 없습니다</p>
+      <p className="text-xs text-slate-500 dark:text-zinc-400">등록된 구성원이 없습니다</p>
     </div>
   ) : filtered.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-8 gap-1 text-slate-300 dark:text-zinc-600">
       <IconSearch className="w-8 h-8" />
-      <p className="text-xs text-slate-400 dark:text-zinc-500">검색 결과가 없습니다</p>
+      <p className="text-xs text-slate-500 dark:text-zinc-400">검색 결과가 없습니다</p>
     </div>
   ) : groupByDept ? (
     <div className="space-y-3">
       {grouped.map(({ dept, items }) => (
         <div key={dept}>
           <div className="flex items-center gap-1.5 mb-1 px-2">
-            <IconUsersGroup className="w-3 h-3 text-slate-400 dark:text-zinc-500" />
+            <IconUsersGroup className="w-3 h-3 text-slate-500 dark:text-zinc-400" />
             <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">{dept}</span>
             <span className="text-[11px] text-slate-300 dark:text-zinc-600">{items.length}명</span>
           </div>
@@ -525,14 +525,14 @@ export default function MemberManager() {
           {/* 헤더 */}
           <div className="flex items-center gap-2 shrink-0">
             <h2 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">구성원 관리</h2>
-            <span className="text-xs text-slate-400 dark:text-zinc-500 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
               {members.length}명
             </span>
           </div>
 
           {/* 검색 */}
           <div className="relative shrink-0">
-            <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 pointer-events-none" />
+            <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 pointer-events-none" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -541,7 +541,7 @@ export default function MemberManager() {
             />
             {search && (
               <button onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-700 transition">
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-700 transition">
                 <IconX className="w-3 h-3" />
               </button>
             )}

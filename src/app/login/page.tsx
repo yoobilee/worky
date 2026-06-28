@@ -63,7 +63,7 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-medium text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
           >
             {loading ? (
-              <svg className="w-4 h-4 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 animate-spin text-slate-500" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
               </svg>
@@ -91,7 +91,7 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <p className="mt-5 text-center text-xs text-slate-400 dark:text-zinc-600">
+        <p className="mt-5 text-center text-xs text-slate-500 dark:text-zinc-600">
           로그인 시{" "}
           <span className="underline cursor-default">서비스 이용약관</span> 및{" "}
           <span className="underline cursor-default">개인정보 처리방침</span>에 동의하게 됩니다.

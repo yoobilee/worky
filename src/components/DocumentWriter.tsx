@@ -152,7 +152,7 @@ export default function DocumentWriter() {
               ].join(" ")}
               style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}>
               <span className={`text-sm font-semibold ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>{d.label}</span>
-              <span className="text-xs text-slate-400 dark:text-zinc-500">{d.desc}</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400">{d.desc}</span>
             </button>
           );
         })}
@@ -166,7 +166,7 @@ export default function DocumentWriter() {
             <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">
               {field.label}
               {field.optional
-                ? <span className="ml-1 text-slate-400">(선택)</span>
+                ? <span className="ml-1 text-slate-500">(선택)</span>
                 : <span className="text-red-400 ml-0.5">*</span>}
             </label>
             <input
@@ -229,7 +229,7 @@ export default function DocumentWriter() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconFileCertificate className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-400 dark:text-zinc-500">필요한 내용을 입력하고 작성하면 문서가 여기에 만들어집니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">필요한 내용을 입력하고 작성하면 문서가 여기에 만들어집니다.</p>
         </div>
       )}
       <HelpButton

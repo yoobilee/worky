@@ -38,7 +38,7 @@ export default function HelpButton({ title, steps }: Props) {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{title}</h3>
             <button onClick={() => setOpen(false)}
-              className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+              className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
               <IconX className="w-4 h-4" />
             </button>
           </div>

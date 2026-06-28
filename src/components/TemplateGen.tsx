@@ -327,7 +327,7 @@ export default function TemplateGen() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconNotes className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-400 dark:text-zinc-500">필요한 정보를 입력하고 생성하면 템플릿이 여기에 만들어집니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">필요한 정보를 입력하고 생성하면 템플릿이 여기에 만들어집니다.</p>
         </div>
       )}
       <HelpButton

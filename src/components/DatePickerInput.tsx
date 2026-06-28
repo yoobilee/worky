@@ -119,14 +119,14 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
           </div>
         ) : (
           <>
-            <button type="button" onClick={prevMonth} aria-label="이전 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 transition">
+            <button type="button" onClick={prevMonth} aria-label="이전 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 transition">
               <IconChevronLeft className="w-3.5 h-3.5" />
             </button>
             <button type="button" onClick={() => setYearPickerOpen(true)}
               className="px-2 py-0.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-[#6C63FF]/10 hover:text-[#6C63FF] transition">
               {year}년 {PICKER_MONTHS[month]}
             </button>
-            <button type="button" onClick={nextMonth} aria-label="다음 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 transition">
+            <button type="button" onClick={nextMonth} aria-label="다음 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 transition">
               <IconChevronRight className="w-3.5 h-3.5" />
             </button>
           </>
@@ -154,7 +154,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
         <>
           <div className="grid grid-cols-7 mb-1">
             {PICKER_DAYS.map((d, i) => (
-              <div key={d} className={`text-center text-[10px] font-medium py-1 ${i===0?"text-red-400":i===6?"text-blue-400":"text-slate-400 dark:text-zinc-500"}`}>{d}</div>
+              <div key={d} className={`text-center text-[10px] font-medium py-1 ${i===0?"text-red-400":i===6?"text-blue-400":"text-slate-500 dark:text-zinc-400"}`}>{d}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-0.5">
@@ -187,7 +187,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40",
           "border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800",
-          value ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500",
+          value ? "text-slate-800 dark:text-zinc-100" : "text-slate-500 dark:text-zinc-400",
         ].join(" ")}
       >{display}</button>
       {typeof document !== "undefined" && popover && createPortal(popover, document.body)}

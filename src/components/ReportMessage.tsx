@@ -166,12 +166,12 @@ export default function ReportMessage() {
               "text-[10px] font-semibold px-2 py-0.5 rounded-full",
               customToneSample.trim()
                 ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
-                : "bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500",
+                : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400",
             ].join(" ")}>
               {customToneSample.trim() ? "설정됨" : "미설정"}
             </span>
           </div>
-          <IconChevronDown className={`w-4 h-4 text-slate-400 dark:text-zinc-500 transition-transform duration-200 ${sampleOpen ? "rotate-180" : ""}`} />
+          <IconChevronDown className={`w-4 h-4 text-slate-500 dark:text-zinc-400 transition-transform duration-200 ${sampleOpen ? "rotate-180" : ""}`} />
         </button>
 
         {/* 접기/펼치기 본문 */}

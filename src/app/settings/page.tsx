@@ -372,18 +372,18 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">내 정보</p>
               {collapsed && (
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">{summary}</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{summary}</p>
               )}
               {!collapsed && (
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다.
                 </p>
               )}
             </div>
           </div>
           {collapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
         </button>
 
         {!collapsed && (
@@ -410,7 +410,7 @@ export default function SettingsPage() {
 
             {hasSender && (
               <div className="mt-4 px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 mb-1.5">서명 미리보기</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">서명 미리보기</p>
                 <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed">
                   {`감사합니다.\n${[info.org, info.name, info.title].filter(Boolean).join(" ")}`}
                 </p>
@@ -456,14 +456,14 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 {joinDate ? `입사일: ${joinDate}` : "입사일을 설정하면 연차를 자동 계산합니다"}
               </p>
             </div>
           </div>
           {leaveCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
         </button>
 
         {!leaveCollapsed && (
@@ -604,14 +604,14 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 홈 화면에 표시되는 인사말을 직접 설정합니다
               </p>
             </div>
           </div>
           {greetingCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
         </button>
 
         {!greetingCollapsed && (
@@ -620,7 +620,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
               <div>
                 <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">커스텀 인사말 사용</p>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   끄면 기본 인사말이 표시됩니다
                 </p>
               </div>
@@ -741,7 +741,7 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 {jobPreset
                   ? `현재: ${JOB_PRESETS.find((p) => p.id === jobPreset)?.label ?? ""}`
                   : "직업군에 맞는 메뉴를 자동으로 설정합니다"}
@@ -749,8 +749,8 @@ export default function SettingsPage() {
             </div>
           </div>
           {jobCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
         </button>
 
         {!jobCollapsed && (
@@ -782,13 +782,13 @@ export default function SettingsPage() {
                       <p className={`text-sm font-semibold leading-tight ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-200"}`}>
                         {preset.label}
                       </p>
-                      <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 leading-snug">{preset.desc}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-snug">{preset.desc}</p>
                     </div>
                   </button>
                 );
               })}
             </div>
-            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-3">
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-3">
               직업군을 선택하면 추천 메뉴가 자동으로 적용됩니다. 이후 메뉴 설정에서 개별 수정 가능합니다.
             </p>
           </div>
@@ -814,14 +814,14 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 사이드바에 표시할 메뉴를 선택하세요
               </p>
             </div>
           </div>
           {menuCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
         </button>
 
         {!menuCollapsed && (
@@ -829,7 +829,7 @@ export default function SettingsPage() {
 
             {/* 선택 메뉴 — 드래그&드롭 순서 변경 */}
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 선택 표시
               </p>
               {orderSaved && (
@@ -863,7 +863,7 @@ export default function SettingsPage() {
                       <IconGripVertical className="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" />
                       <div>
                         <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{item.label}</p>
-                        <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">{href}</p>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
                       </div>
                     </div>
                     <button
@@ -886,7 +886,7 @@ export default function SettingsPage() {
             </div>
 
             {/* 공통 메뉴 (항상 표시) */}
-            <p className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
+            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
               항상 표시
             </p>
             <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
@@ -894,9 +894,9 @@ export default function SettingsPage() {
                 <div key={href} className="flex items-center justify-between px-4 py-3 opacity-60">
                   <div>
                     <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{label}</p>
-                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">{href}</p>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
                   </div>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 font-medium shrink-0">
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 font-medium shrink-0">
                     항상 표시
                   </span>
                 </div>
@@ -915,7 +915,7 @@ export default function SettingsPage() {
               <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">직업군 설정 변경</h3>
               <button
                 onClick={() => setPendingPreset(null)}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
               >
                 <IconX className="w-4 h-4" />
               </button>
@@ -923,7 +923,7 @@ export default function SettingsPage() {
             <p className="text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
               <span className="font-semibold text-[#6C63FF]">{pendingPresetLabel}</span> 직군으로 메뉴를 설정하시겠습니까?
               <br />
-              <span className="text-slate-400 dark:text-zinc-500 text-xs">현재 메뉴 설정이 초기화됩니다.</span>
+              <span className="text-slate-500 dark:text-zinc-400 text-xs">현재 메뉴 설정이 초기화됩니다.</span>
             </p>
             <div className="flex gap-2 mt-5">
               <button
@@ -963,14 +963,14 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 페이지 도움말 버튼 표시 여부
               </p>
             </div>
           </div>
           {helpCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
         </button>
 
         {!helpCollapsed && (
@@ -978,7 +978,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
               <div>
                 <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">페이지 도움말 버튼 표시</p>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   각 페이지 우측 하단의 ? 버튼 (홈 AI 바로가기는 영향 없음)
                 </p>
               </div>
@@ -1014,14 +1014,14 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">알림 설정</p>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   {notifPermission === "granted" ? "알림 허용됨" : "브라우저 알림 권한 설정"}
                 </p>
               </div>
             </div>
             {notifCollapsed
-              ? <IconChevronDown className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-              : <IconChevronUp   className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />}
+              ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+              : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
           </button>
 
           {!notifCollapsed && (
@@ -1031,7 +1031,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                   <div>
                     <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">알림 권한</p>
-                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       {notifPermission === "denied"
                         ? "브라우저 설정에서 직접 허용해 주세요"
                         : "일정·계약 만료 알림을 받으려면 허용하세요"}
@@ -1058,7 +1058,7 @@ export default function SettingsPage() {
                     <IconCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                     <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">알림이 허용됐습니다</p>
                   </div>
-                  <p className="text-xs text-slate-400 dark:text-zinc-500 px-1">
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 px-1">
                     알림을 끄려면 브라우저 사이트 설정에서 직접 변경해 주세요.
                   </p>
                 </>
@@ -1068,7 +1068,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                 <div>
                   <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">일정 알림</p>
-                  <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">오늘 일정이 있으면 앱 열 때 알림</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">오늘 일정이 있으면 앱 열 때 알림</p>
                 </div>
                 <button
                   onClick={() => handleNotifToggle("eventNotif")}
@@ -1092,7 +1092,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                 <div>
                   <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">거래처 D-day 알림</p>
-                  <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">계약 만료 7일 이내 거래처 알림</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">계약 만료 7일 이내 거래처 알림</p>
                 </div>
                 <button
                   onClick={() => handleNotifToggle("ddayNotif")}

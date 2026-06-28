@@ -11,7 +11,7 @@ export default function NotFound() {
       </div>
       <div>
         <h1 className="text-lg font-bold text-slate-800 dark:text-zinc-100 mb-1">페이지를 찾을 수 없습니다</h1>
-        <p className="text-sm text-slate-400 dark:text-zinc-500">주소가 변경되었거나 삭제된 페이지일 수 있어요.</p>
+        <p className="text-sm text-slate-500 dark:text-zinc-400">주소가 변경되었거나 삭제된 페이지일 수 있어요.</p>
       </div>
       <Link href="/"
         className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition"

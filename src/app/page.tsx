@@ -362,7 +362,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between gap-4">
               {/* 왼쪽: 날짜·인사·연차 프로그레스바 */}
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 tracking-wide">{dateStr}</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 tracking-wide">{dateStr}</p>
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
                   {greeting}
                 </h2>
@@ -374,7 +374,7 @@ export default function HomePage() {
                   const usedPct = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
                   return (
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-medium text-slate-400 dark:text-zinc-500 shrink-0">연차</span>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 shrink-0">연차</span>
                       <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden max-w-[160px]">
                         <div style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }} className="h-full rounded-full" />
                       </div>
@@ -399,7 +399,7 @@ export default function HomePage() {
                     </div>
                   )}
                   {geoStatus === "denied" && (
-                    <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                    <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1">
                       <IconMapPin className="w-3 h-3" /> 없음
                     </span>
                   )}
@@ -528,7 +528,7 @@ export default function HomePage() {
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate">{label}</p>
-                      <p className="text-xs text-slate-400 dark:text-zinc-500 truncate">{desc}</p>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
                     </div>
                   </Link>
                 ))}
@@ -544,7 +544,7 @@ export default function HomePage() {
                       </span>
                       <div className="min-w-0 text-left">
                         <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">더보기</p>
-                        <p className="text-xs text-slate-400 dark:text-zinc-500">{rest.length}개</p>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400">{rest.length}개</p>
                       </div>
                     </button>
 
@@ -562,7 +562,7 @@ export default function HomePage() {
                             </span>
                             <div className="min-w-0">
                               <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{label}</p>
-                              <p className="text-xs text-slate-400 dark:text-zinc-500 truncate">{desc}</p>
+                              <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
                             </div>
                           </Link>
                         ))}
@@ -604,7 +604,7 @@ export default function HomePage() {
                   <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">이번 주 활동</span>
                 </div>
                 {totalUsed > 0 && (
-                  <span className="text-xs text-slate-400 dark:text-zinc-500">총 {totalUsed}회</span>
+                  <span className="text-xs text-slate-500 dark:text-zinc-400">총 {totalUsed}회</span>
                 )}
               </div>
 
@@ -619,7 +619,7 @@ export default function HomePage() {
                 </div>
               ) : totalUsed === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-                  <p className="text-sm text-slate-400 dark:text-zinc-500">이번 주 아직 사용 기록이 없습니다.</p>
+                  <p className="text-sm text-slate-500 dark:text-zinc-400">이번 주 아직 사용 기록이 없습니다.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -661,7 +661,7 @@ export default function HomePage() {
               <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">다가오는 일정</span>
             </div>
             <Link href="/calendar"
-              className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 hover:text-[#6C63FF] transition-colors">
+              className="flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-400 hover:text-[#6C63FF] transition-colors">
               전체 <IconArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -676,7 +676,7 @@ export default function HomePage() {
             </div>
           ) : upcomingEvents.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-              <p className="text-sm text-slate-400 dark:text-zinc-500">예정된 일정이 없습니다.</p>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">예정된 일정이 없습니다.</p>
               <Link href="/calendar"
                 className="mt-2 text-xs text-[#6C63FF] hover:underline">
                 일정 추가하러 가기
@@ -688,7 +688,7 @@ export default function HomePage() {
                 <div key={ev.id} className="flex items-start gap-2.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{ev.title}</p>
-                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
                       <span>{ev.date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, d) => `${Number(m)}/${Number(d)}`)}</span>
                       {ev.time && <><span className="opacity-40">·</span><span>{ev.time}</span></>}
                     </p>
@@ -717,7 +717,7 @@ export default function HomePage() {
                 {tipCategory}
               </span>
             )}
-            <p className="text-xs text-slate-400 dark:text-zinc-500 ml-auto">매일 새로운 팁</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 ml-auto">매일 새로운 팁</p>
           </div>
         </div>
 
@@ -1011,14 +1011,14 @@ function SpeedDial() {
       {/* 추가 버튼 (스크롤 영역 밖) */}
       {open && (
         <div className="flex items-center gap-2">
-          <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-400 dark:text-zinc-500 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
+          <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-500 dark:text-zinc-400 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
             추가
           </span>
           <button
             onClick={() => setShowModal(true)}
             className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] hover:bg-[#6C63FF]/5 bg-white/80 dark:bg-zinc-900/80 transition-all shadow-sm shrink-0"
           >
-            <IconPlus className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
+            <IconPlus className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
           </button>
         </div>
       )}
@@ -1040,7 +1040,7 @@ function SpeedDial() {
                 placeholder="https://example.com"
                 value={newUrl}
                 onChange={e => setNewUrl(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-700 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-[#6C63FF] transition-colors"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-700 dark:text-zinc-200 placeholder:text-slate-500 focus:outline-none focus:border-[#6C63FF] transition-colors"
               />
               <input
                 type="text"
@@ -1048,7 +1048,7 @@ function SpeedDial() {
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") addLink(); }}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-700 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-[#6C63FF] transition-colors"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-700 dark:text-zinc-200 placeholder:text-slate-500 focus:outline-none focus:border-[#6C63FF] transition-colors"
               />
             </div>
             {previewDomain && (

@@ -89,7 +89,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
           "bg-slate-50 dark:bg-zinc-800",
-          parsed ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500",
+          parsed ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
         ].join(" ")}
       >
         <IconClock className="w-3.5 h-3.5 shrink-0" />
@@ -101,7 +101,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">시간 설정</span>
             <button type="button" onClick={() => setOpen(false)}
-              className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+              className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
               <IconX className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -155,7 +155,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
 
           <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-zinc-800">
             <button type="button" onClick={() => { onChange(""); setOpen(false); }}
-              className="text-xs text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition">
+              className="text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 transition">
               초기화
             </button>
             <button type="button" onClick={() => setOpen(false)}
@@ -255,7 +255,7 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
       />
       {value && (
         <button type="button" onClick={handleClear}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 dark:text-zinc-500 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-500 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
           aria-label="장소 삭제">
           <IconX className="w-3.5 h-3.5" />
         </button>
@@ -277,7 +277,7 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
                 onMouseLeave={() => setAddrTooltip(null)}
               >{p.place_name}</p>
               <p
-                className="text-[11px] text-slate-400 dark:text-zinc-500 truncate"
+                className="text-[11px] text-slate-500 dark:text-zinc-400 truncate"
                 onMouseEnter={(e) => {
                   const el = e.currentTarget;
                   if (el.scrollWidth <= el.offsetWidth) return;
@@ -337,7 +337,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
           "bg-slate-50 dark:bg-zinc-800",
-          isActive ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500",
+          isActive ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
         ].join(" ")}
       >
         <IconRepeat className="w-3.5 h-3.5 shrink-0" />
@@ -351,7 +351,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">반복 설정</span>
             <button type="button" onClick={() => setOpen(false)}
-              className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+              className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
               <IconX className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -391,7 +391,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
               {useEndDate ? (
                 <DatePickerInput value={endDate} onChange={onEndDateChange} forceDown />
               ) : (
-                <p className="text-[11px] text-slate-400 dark:text-zinc-500">최대 1000개까지 자동으로 생성됩니다</p>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400">최대 1000개까지 자동으로 생성됩니다</p>
               )}
             </div>
           )}
@@ -399,7 +399,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
           <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800">
             <button type="button"
               onClick={() => { onValueChange("none"); onEndDateChange(""); setUseEndDate(false); setOpen(false); }}
-              className="text-xs text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition">
+              className="text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 transition">
               반복 안함
             </button>
             <button type="button" onClick={() => setOpen(false)}
@@ -590,7 +590,7 @@ export default function CalendarComponent() {
         </div>
         <button
           onClick={() => setSelected(null)}
-          className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
+          className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
           aria-label="닫기"
         >
           <IconX className="w-4 h-4" />
@@ -600,7 +600,7 @@ export default function CalendarComponent() {
       {/* 일정 목록 */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {selectedEvents.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-zinc-500 mb-4">등록된 일정이 없습니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400 mb-4">등록된 일정이 없습니다.</p>
         ) : (
           <div className="space-y-2 mb-4">
             {selectedEvents.map(ev => (
@@ -643,7 +643,7 @@ export default function CalendarComponent() {
                       {(ev.time || ev.location) && (
                         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                           {ev.time && (
-                            <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                            <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1">
                               <IconClock className="w-3 h-3" />{ev.time}
                             </span>
                           )}
@@ -656,7 +656,7 @@ export default function CalendarComponent() {
                                 <IconMapPin className="w-3 h-3" />{ev.location}
                               </span>
                             ) : (
-                              <span className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                              <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1">
                                 <IconMapPin className="w-3 h-3" />{ev.location}
                               </span>
                             )
@@ -757,7 +757,7 @@ export default function CalendarComponent() {
           <div className="grid grid-cols-7 mb-1">
             {DAY_LABELS.map((d, i) => (
               <div key={d} className={`text-center text-xs font-medium py-1.5 ${
-                i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-slate-400 dark:text-zinc-500"
+                i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-slate-500 dark:text-zinc-400"
               }`}>{d}</div>
             ))}
           </div>

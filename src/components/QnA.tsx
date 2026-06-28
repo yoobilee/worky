@@ -295,7 +295,7 @@ export default function QnA() {
             </div>
             <div className="bg-slate-50 dark:bg-zinc-800 rounded-2xl rounded-tl-sm">
               {loadingStage ? (
-                <p className="px-4 py-3 text-xs text-slate-400 dark:text-zinc-500">{loadingStage}</p>
+                <p className="px-4 py-3 text-xs text-slate-500 dark:text-zinc-400">{loadingStage}</p>
               ) : (
                 <LoadingDots />
               )}
@@ -353,7 +353,7 @@ export default function QnA() {
             </svg>
           </button>
         </div>
-        <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2 px-1">Enter로 전송 · Shift+Enter로 줄바꿈</p>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2 px-1">Enter로 전송 · Shift+Enter로 줄바꿈</p>
       </div>
       <HelpButton
         title="Q&A 사용법"
@@ -382,14 +382,14 @@ export default function QnA() {
               <button
                 onClick={() => setShowHistory(false)}
                 aria-label="닫기"
-                className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
               >
                 <IconX className="w-4 h-4" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
               {histories.length === 0 ? (
-                <p className="text-sm text-slate-400 dark:text-zinc-500 text-center mt-8">저장된 히스토리가 없습니다</p>
+                <p className="text-sm text-slate-500 dark:text-zinc-400 text-center mt-8">저장된 히스토리가 없습니다</p>
               ) : (
                 histories.map((h) => (
                   <button
@@ -398,7 +398,7 @@ export default function QnA() {
                     className="block w-full text-left px-4 py-3 border-b border-slate-100 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
                   >
                     <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 truncate">{h.title}</p>
-                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">{formatHistoryDate(h.created_at)}</p>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{formatHistoryDate(h.created_at)}</p>
                   </button>
                 ))
               )}
@@ -415,12 +415,12 @@ export default function QnA() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800 shrink-0">
               <div>
                 <p className="text-sm font-semibold text-slate-700 dark:text-zinc-200">{selectedHistory.title}</p>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">{formatHistoryDate(selectedHistory.created_at)}</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{formatHistoryDate(selectedHistory.created_at)}</p>
               </div>
               <button
                 onClick={() => setSelectedHistory(null)}
                 aria-label="닫기"
-                className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
               >
                 <IconX className="w-4 h-4" />
               </button>

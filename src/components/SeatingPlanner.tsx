@@ -126,7 +126,7 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400 dark:text-zinc-500">책상을 드래그해서 자유롭게 배치하세요</p>
+        <p className="text-sm text-slate-500 dark:text-zinc-400">책상을 드래그해서 자유롭게 배치하세요</p>
         <button onClick={handleAddDesk}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition"
           style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
@@ -183,7 +183,7 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
                   ) : (
                     <>
                       <IconUserPlus className="w-5 h-5 text-slate-300 dark:text-zinc-600 shrink-0" />
-                      <span className="text-xs text-slate-400 dark:text-zinc-500">배정</span>
+                      <span className="text-xs text-slate-500 dark:text-zinc-400">배정</span>
                     </>
                   )}
                 </button>
@@ -212,7 +212,7 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
                   <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-44 overflow-hidden">
                     <div className="max-h-52 overflow-y-auto">
                       <button onClick={(e) => { e.stopPropagation(); handleAssign(desk.id, null); }}
-                        className="w-full px-3 py-2 text-xs text-left text-slate-400 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                        className="w-full px-3 py-2 text-xs text-left text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
                         비우기
                       </button>
                       {members.map(m => (

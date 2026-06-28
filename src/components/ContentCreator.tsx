@@ -278,12 +278,12 @@ export default function ContentCreator() {
                   "text-[10px] font-semibold px-2 py-0.5 rounded-full",
                   customToneSample.trim()
                     ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
-                    : "bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500",
+                    : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400",
                 ].join(" ")}>
                   {customToneSample.trim() ? "설정됨" : "미설정"}
                 </span>
               </div>
-              <IconChevronDown className={`w-4 h-4 text-slate-400 dark:text-zinc-500 transition-transform duration-200 ${sampleOpen ? "rotate-180" : ""}`} />
+              <IconChevronDown className={`w-4 h-4 text-slate-500 dark:text-zinc-400 transition-transform duration-200 ${sampleOpen ? "rotate-180" : ""}`} />
             </button>
             <div style={{ maxHeight: sampleOpen ? "280px" : "0px", opacity: sampleOpen ? 1 : 0 }}
               className="overflow-hidden transition-all duration-300 ease-in-out">
@@ -372,7 +372,7 @@ export default function ContentCreator() {
           ) : (
             <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
               <IconSend className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-              <p className="text-sm text-slate-400 dark:text-zinc-500">내용을 입력하고 생성하면 보고서가 여기에 만들어집니다.</p>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">내용을 입력하고 생성하면 보고서가 여기에 만들어집니다.</p>
             </div>
           )}
         </>
@@ -389,10 +389,10 @@ export default function ContentCreator() {
               <div className="relative">
                 <button type="button" onClick={() => setInstaClientOpen((v) => !v)}
                   className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40">
-                  <span className={instaClientId ? "text-slate-800 dark:text-zinc-100" : "text-slate-400 dark:text-zinc-500"}>
+                  <span className={instaClientId ? "text-slate-800 dark:text-zinc-100" : "text-slate-500 dark:text-zinc-400"}>
                     {selectedClientName ?? "직접 입력 (거래처 없음)"}
                   </span>
-                  <IconChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${instaClientOpen ? "rotate-180" : ""}`} />
+                  <IconChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${instaClientOpen ? "rotate-180" : ""}`} />
                 </button>
                 {instaClientOpen && (
                   <div className="absolute left-0 top-full mt-1 z-30 w-full bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden max-h-48 overflow-y-auto">
@@ -401,14 +401,14 @@ export default function ContentCreator() {
                       직접 입력 (거래처 없음)
                     </button>
                     {instaClients.length === 0 ? (
-                      <div className="px-3 py-2.5 text-xs text-slate-400 dark:text-zinc-500">등록된 거래처가 없습니다</div>
+                      <div className="px-3 py-2.5 text-xs text-slate-500 dark:text-zinc-400">등록된 거래처가 없습니다</div>
                     ) : (
                       instaClients.map((c) => (
                         <button key={c.id} type="button" onClick={() => handleInstaClientSelect(c.id)}
                           className={`w-full px-3 py-2.5 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800 ${instaClientId === c.id ? "text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-200"}`}>
                           {c.name}
                           {c.tags.length > 0 && (
-                            <span className="ml-2 text-xs text-slate-400 dark:text-zinc-500">
+                            <span className="ml-2 text-xs text-slate-500 dark:text-zinc-400">
                               #{c.tags.slice(0, 3).join(" #")}{c.tags.length > 3 ? " ..." : ""}
                             </span>
                           )}
@@ -513,7 +513,7 @@ export default function ContentCreator() {
           ) : (
             <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
               <IconBrandInstagram className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-              <p className="text-sm text-slate-400 dark:text-zinc-500">거래처를 선택하고 생성하면 인스타그램 게시물 초안이 여기에 만들어집니다.</p>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">거래처를 선택하고 생성하면 인스타그램 게시물 초안이 여기에 만들어집니다.</p>
             </div>
           )}
         </>

@@ -15,7 +15,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
       </div>
       <div>
         <h1 className="text-lg font-bold text-slate-800 dark:text-zinc-100 mb-1">문제가 발생했습니다</h1>
-        <p className="text-sm text-slate-400 dark:text-zinc-500">잠시 후 다시 시도해 주세요.</p>
+        <p className="text-sm text-slate-500 dark:text-zinc-400">잠시 후 다시 시도해 주세요.</p>
       </div>
       <div className="flex items-center gap-2">
         <button onClick={() => reset()}
