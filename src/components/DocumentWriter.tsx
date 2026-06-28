@@ -9,6 +9,15 @@ import {
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
 
+function parseInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : part
+  );
+}
+
 type OfficialDocType = "approval" | "official_doc" | "expense" | "cooperation";
 
 interface OfficialField { key: string; label: string; placeholder: string; optional?: boolean; }
@@ -206,13 +215,13 @@ export default function DocumentWriter() {
           <EditableResult value={result} onChange={setResult} rows={16}>
             <div className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed space-y-1.5">
               {result.split("\n").map((line, i) => {
-                if (line.startsWith("### ")) return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-2 first:mt-0">{line.slice(4)}</p>;
-                if (line.startsWith("## "))  return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{line.slice(3)}</p>;
+                if (line.startsWith("### ")) return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-2 first:mt-0">{parseInline(line.slice(4))}</p>;
+                if (line.startsWith("## "))  return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{parseInline(line.slice(3))}</p>;
                 if (line.startsWith("* ") || line.startsWith("- ")) return (
-                  <p key={i} className="flex gap-1.5"><span className="text-[#6C63FF] shrink-0">•</span><span>{line.slice(2)}</span></p>
+                  <p key={i} className="flex gap-1.5"><span className="text-[#6C63FF] shrink-0">•</span><span>{parseInline(line.slice(2))}</span></p>
                 );
                 if (!line.trim()) return <div key={i} className="h-1" />;
-                return <p key={i}>{line}</p>;
+                return <p key={i}>{parseInline(line)}</p>;
               })}
             </div>
           </EditableResult>
