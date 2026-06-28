@@ -416,7 +416,7 @@ export default function EmailReply() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => openSendModal(newTo, newSubject, newResult)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#6C63FF]/40 text-[#6C63FF] hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#6C63FF]/40 text-[#4D44CC] dark:text-[#8B85FF] hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -543,7 +543,7 @@ export default function EmailReply() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => openSendModal("", "", draft)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#6C63FF]/40 text-[#6C63FF] hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#6C63FF]/40 text-[#4D44CC] dark:text-[#8B85FF] hover:bg-[#6C63FF]/5 dark:hover:bg-[#6C63FF]/10 transition"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

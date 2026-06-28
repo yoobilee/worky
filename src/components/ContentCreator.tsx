@@ -304,7 +304,7 @@ export default function ContentCreator() {
                     </span>
                     <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">사용자 설정 톤 사용</span>
                   </button>
-                  {useCustomTone && <p className="text-xs text-[#6C63FF]/70">위 샘플 스타일로 생성됩니다</p>}
+                  {useCustomTone && <p className="text-xs text-[#4D44CC] dark:text-[#8B85FF]/70">위 샘플 스타일로 생성됩니다</p>}
                 </div>
               </div>
             </div>
@@ -325,7 +325,7 @@ export default function ContentCreator() {
                         active ? "border-[#6C63FF] shadow-md" : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
                       ].join(" ")}
                       style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}>
-                      <span className={`text-sm font-semibold ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>{t.label}</span>
+                      <span className={`text-sm font-semibold ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>{t.label}</span>
                       <span className="text-xs text-slate-500 dark:text-zinc-400">{t.desc}</span>
                     </button>
                   );
@@ -397,7 +397,7 @@ export default function ContentCreator() {
                 {instaClientOpen && (
                   <div className="absolute left-0 top-full mt-1 z-30 w-full bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden max-h-48 overflow-y-auto">
                     <button type="button" onClick={() => handleInstaClientSelect("")}
-                      className={`w-full px-3 py-2.5 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800 ${!instaClientId ? "text-[#6C63FF] font-medium" : "text-slate-600 dark:text-zinc-300"}`}>
+                      className={`w-full px-3 py-2.5 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800 ${!instaClientId ? "text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-600 dark:text-zinc-300"}`}>
                       직접 입력 (거래처 없음)
                     </button>
                     {instaClients.length === 0 ? (
@@ -405,7 +405,7 @@ export default function ContentCreator() {
                     ) : (
                       instaClients.map((c) => (
                         <button key={c.id} type="button" onClick={() => handleInstaClientSelect(c.id)}
-                          className={`w-full px-3 py-2.5 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800 ${instaClientId === c.id ? "text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-200"}`}>
+                          className={`w-full px-3 py-2.5 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800 ${instaClientId === c.id ? "text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-700 dark:text-zinc-200"}`}>
                           {c.name}
                           {c.tags.length > 0 && (
                             <span className="ml-2 text-xs text-slate-500 dark:text-zinc-400">
@@ -435,7 +435,7 @@ export default function ContentCreator() {
               {instaHashtags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {instaHashtags.map((tag) => (
-                    <span key={tag} className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#6C63FF]/10 text-[#6C63FF]">
+                    <span key={tag} className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
                       #{tag}
                       <button type="button" onClick={() => setInstaHashtags((prev) => prev.filter((t) => t !== tag))}>
                         <IconX className="w-3 h-3" />
@@ -467,7 +467,7 @@ export default function ContentCreator() {
                       active ? "border-[#6C63FF] shadow-md" : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
                     ].join(" ")}
                     style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}>
-                    <span className={`text-sm font-semibold ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>{t.label}</span>
+                    <span className={`text-sm font-semibold ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>{t.label}</span>
                     <span className="text-xs text-slate-500 dark:text-zinc-400">{t.desc}</span>
                   </button>
                 );

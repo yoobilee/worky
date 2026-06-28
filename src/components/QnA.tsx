@@ -321,7 +321,7 @@ export default function QnA() {
           <button
             key={q}
             onClick={() => { setInput(q); inputRef.current?.focus(); }}
-            className="px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:border-[#6C63FF]/40 hover:text-[#6C63FF] transition-all"
+            className="px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:border-[#6C63FF]/40 hover:text-[#4D44CC] dark:text-[#8B85FF] transition-all"
           >
             {q}
           </button>

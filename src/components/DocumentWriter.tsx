@@ -151,7 +151,7 @@ export default function DocumentWriter() {
                 active ? "border-[#6C63FF] shadow-md" : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
               ].join(" ")}
               style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}>
-              <span className={`text-sm font-semibold ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>{d.label}</span>
+              <span className={`text-sm font-semibold ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>{d.label}</span>
               <span className="text-xs text-slate-500 dark:text-zinc-400">{d.desc}</span>
             </button>
           );
@@ -218,7 +218,7 @@ export default function DocumentWriter() {
                 if (line.startsWith("### ")) return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-2 first:mt-0">{parseInline(line.slice(4))}</p>;
                 if (line.startsWith("## "))  return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{parseInline(line.slice(3))}</p>;
                 if (line.startsWith("* ") || line.startsWith("- ")) return (
-                  <p key={i} className="flex gap-1.5"><span className="text-[#6C63FF] shrink-0">•</span><span>{parseInline(line.slice(2))}</span></p>
+                  <p key={i} className="flex gap-1.5"><span className="text-[#4D44CC] dark:text-[#8B85FF] shrink-0">•</span><span>{parseInline(line.slice(2))}</span></p>
                 );
                 if (!line.trim()) return <div key={i} className="h-1" />;
                 return <p key={i}>{parseInline(line)}</p>;

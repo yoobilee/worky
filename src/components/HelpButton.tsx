@@ -45,7 +45,7 @@ export default function HelpButton({ title, steps }: Props) {
           <ol className="space-y-3">
             {steps.map((s, i) => (
               <li key={i} className="flex gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-[#6C63FF]/10 text-[#6C63FF] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                <span className="w-5 h-5 rounded-full bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                   {i + 1}
                 </span>
                 <div>

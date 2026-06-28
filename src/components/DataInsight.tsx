@@ -355,9 +355,9 @@ export default function DataInsight() {
                   : "border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5",
               ].join(" ")}
             >
-              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`} />
+              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
               <div className="text-center px-4">
-                <p className={`text-sm font-medium ${file ? "text-[#6C63FF]" : "text-slate-600 dark:text-zinc-400"}`}>
+                <p className={`text-sm font-medium ${file ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-600 dark:text-zinc-400"}`}>
                   {file ? file.name : "클릭해서 파일 선택"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
@@ -374,7 +374,7 @@ export default function DataInsight() {
             />
             {extracting && (
               <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
-                <IconLoader2 className="w-4 h-4 animate-spin text-[#6C63FF] shrink-0" />
+                <IconLoader2 className="w-4 h-4 animate-spin text-[#4D44CC] dark:text-[#8B85FF] shrink-0" />
                 데이터 추출 중...
               </div>
             )}
@@ -475,7 +475,7 @@ export default function DataInsight() {
           {/* 핵심 인사이트 */}
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-2.5">
-              <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#6C63FF]/10 text-[#6C63FF]">
+              <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
                 <IconBulb className="w-4 h-4" />
               </div>
               <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">핵심 인사이트</p>
@@ -514,7 +514,7 @@ export default function DataInsight() {
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#6C63FF]/30 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#6C63FF]/10 text-[#6C63FF]">
+                  <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
                     <IconFileAnalytics className="w-4 h-4" />
                   </div>
                   <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 성과 보고서</p>
@@ -535,7 +535,7 @@ export default function DataInsight() {
                     <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{parseInline(line.slice(3))}</p>
                   );
                   if (line.startsWith("* ") || line.startsWith("- ")) return (
-                    <p key={i} className="flex gap-1.5"><span className="text-[#6C63FF] shrink-0">•</span><span>{parseInline(line.slice(2))}</span></p>
+                    <p key={i} className="flex gap-1.5"><span className="text-[#4D44CC] dark:text-[#8B85FF] shrink-0">•</span><span>{parseInline(line.slice(2))}</span></p>
                   );
                   if (!line.trim()) return <div key={i} className="h-1" />;
                   return <p key={i}>{parseInline(line)}</p>;

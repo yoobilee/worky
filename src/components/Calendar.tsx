@@ -89,7 +89,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
           "bg-slate-50 dark:bg-zinc-800",
-          parsed ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
+          parsed ? "border-[#6C63FF] text-[#4D44CC] dark:text-[#8B85FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
         ].join(" ")}
       >
         <IconClock className="w-3.5 h-3.5 shrink-0" />
@@ -121,7 +121,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                       <button key={h} type="button" onClick={() => { commit(h, minute); setHourOpen(false); }}
                         className={[
                           "w-full px-3 py-1.5 text-xs text-left transition",
-                          h === hour ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                          h === hour ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
                         ].join(" ")}
                       >{h}시</button>
                     ))}
@@ -143,7 +143,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                       <button key={m} type="button" onClick={() => { commit(hour, m); setMinuteOpen(false); }}
                         className={[
                           "w-full px-3 py-1.5 text-xs text-left transition",
-                          m === minute ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                          m === minute ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
                         ].join(" ")}
                       >{m}분</button>
                     ))}
@@ -337,7 +337,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
           "bg-slate-50 dark:bg-zinc-800",
-          isActive ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
+          isActive ? "border-[#6C63FF] text-[#4D44CC] dark:text-[#8B85FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
         ].join(" ")}
       >
         <IconRepeat className="w-3.5 h-3.5 shrink-0" />
@@ -583,7 +583,7 @@ export default function CalendarComponent() {
     <>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <IconCalendar className="w-4 h-4 text-[#6C63FF]" />
+          <IconCalendar className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
           <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
             {displayed ? formatKey(displayed) : ""}
           </h2>
@@ -651,7 +651,7 @@ export default function CalendarComponent() {
                             ev.location_url ? (
                               <span
                                 onClick={() => window.open(ev.location_url, "_blank")}
-                                className="text-xs text-[#6C63FF] underline cursor-pointer flex items-center gap-1"
+                                className="text-xs text-[#4D44CC] dark:text-[#8B85FF] underline cursor-pointer flex items-center gap-1"
                               >
                                 <IconMapPin className="w-3 h-3" />{ev.location}
                               </span>
@@ -666,7 +666,7 @@ export default function CalendarComponent() {
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
                       <button onClick={() => startEdit(ev)}
-                        className="p-1 rounded-lg hover:bg-[#6C63FF]/10 text-[#6C63FF] transition">
+                        className="p-1 rounded-lg hover:bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] transition">
                         <IconPencil className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => handleDelete(ev.id)}
@@ -790,7 +790,7 @@ export default function CalendarComponent() {
                       : !isSel && !isToday
                       ? "text-slate-700 dark:text-zinc-300"
                       : !isSel
-                      ? "text-[#6C63FF]"
+                      ? "text-[#4D44CC] dark:text-[#8B85FF]"
                       : "",
                   ].join(" ")}
                 >

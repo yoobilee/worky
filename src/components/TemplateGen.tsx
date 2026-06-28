@@ -217,7 +217,7 @@ export default function TemplateGen() {
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-6 w-full max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                <IconAlertTriangle className="w-5 h-5 text-[#6C63FF]" />
+                <IconAlertTriangle className="w-5 h-5 text-[#4D44CC] dark:text-[#8B85FF]" />
               </div>
               <h3 className="text-base font-semibold text-slate-800 dark:text-zinc-100">탭 이동 확인</h3>
             </div>
@@ -254,7 +254,7 @@ export default function TemplateGen() {
               : undefined}
           >
             <tpl.Icon className="w-6 h-6" />
-            <span className={`text-sm font-semibold ${selectedType === tpl.id ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>
+            <span className={`text-sm font-semibold ${selectedType === tpl.id ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>
               {tpl.label}
             </span>
           </button>

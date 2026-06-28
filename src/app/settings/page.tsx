@@ -367,7 +367,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconUser className="w-4 h-4 text-[#6C63FF]" />
+              <IconUser className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">내 정보</p>
@@ -445,7 +445,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconCalendarEvent className="w-4 h-4 text-[#6C63FF]" />
+              <IconCalendarEvent className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -593,7 +593,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconMessageCircle className="w-4 h-4 text-[#6C63FF]" />
+              <IconMessageCircle className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -730,7 +730,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconBriefcase className="w-4 h-4 text-[#6C63FF]" />
+              <IconBriefcase className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -776,10 +776,10 @@ export default function SettingsPage() {
                       "w-7 h-7 rounded-xl flex items-center justify-center shrink-0",
                       active ? "bg-[#6C63FF]/15" : "bg-slate-100 dark:bg-zinc-800",
                     ].join(" ")}>
-                      <Icon className={`w-4 h-4 ${active ? "text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`} />
+                      <Icon className={`w-4 h-4 ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
                     </div>
                     <div>
-                      <p className={`text-sm font-semibold leading-tight ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-200"}`}>
+                      <p className={`text-sm font-semibold leading-tight ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-200"}`}>
                         {preset.label}
                       </p>
                       <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-snug">{preset.desc}</p>
@@ -803,7 +803,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconApps className="w-4 h-4 text-[#6C63FF]" />
+              <IconApps className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -921,7 +921,7 @@ export default function SettingsPage() {
               </button>
             </div>
             <p className="text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
-              <span className="font-semibold text-[#6C63FF]">{pendingPresetLabel}</span> 직군으로 메뉴를 설정하시겠습니까?
+              <span className="font-semibold text-[#4D44CC] dark:text-[#8B85FF]">{pendingPresetLabel}</span> 직군으로 메뉴를 설정하시겠습니까?
               <br />
               <span className="text-slate-500 dark:text-zinc-400 text-xs">현재 메뉴 설정이 초기화됩니다.</span>
             </p>
@@ -952,7 +952,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconHelp className="w-4 h-4 text-[#6C63FF]" />
+              <IconHelp className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -1010,7 +1010,7 @@ export default function SettingsPage() {
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                <IconBell className="w-4 h-4 text-[#6C63FF]" />
+                <IconBell className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">알림 설정</p>

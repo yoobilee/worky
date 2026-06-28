@@ -196,7 +196,7 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
                       setDesks(prev => prev.map(d => d.id === desk.id ? { ...d, rotation: next } : d));
                       updateDeskRotation(desk.id, next);
                     }}
-                    className="w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm flex items-center justify-center text-[#6C63FF] hover:bg-[#6C63FF]/10 transition"
+                    className="w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm flex items-center justify-center text-[#4D44CC] dark:text-[#8B85FF] hover:bg-[#6C63FF]/10 transition"
                   >
                     <IconRotate className="w-3 h-3" />
                   </button>

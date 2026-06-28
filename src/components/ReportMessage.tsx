@@ -204,7 +204,7 @@ export default function ReportMessage() {
                 <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">사용자 설정 톤 사용</span>
               </button>
               {useCustomTone && (
-                <p className="text-xs text-[#6C63FF]/70">위 샘플 스타일로 생성됩니다</p>
+                <p className="text-xs text-[#4D44CC] dark:text-[#8B85FF]/70">위 샘플 스타일로 생성됩니다</p>
               )}
             </div>
           </div>
@@ -233,7 +233,7 @@ export default function ReportMessage() {
                   ].join(" ")}
                   style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}
                 >
-                  <span className={`text-sm font-semibold ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>
+                  <span className={`text-sm font-semibold ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>
                     {t.label}
                   </span>
                   <span className="text-xs text-slate-500 dark:text-zinc-400">{t.desc}</span>

@@ -74,7 +74,7 @@ export function MiniGrassGrid({
               key={date}
               className={[
                 "w-5 text-center text-[9px] leading-none",
-                isToday ? "text-[#6C63FF] dark:text-[#a99dff] font-bold" : "text-slate-500 dark:text-zinc-300",
+                isToday ? "text-[#4D44CC] dark:text-[#8B85FF] font-bold" : "text-slate-500 dark:text-zinc-300",
               ].join(" ")}
             >
               {m}/{d}
@@ -90,7 +90,7 @@ export function MiniGrassGrid({
           type="button"
           disabled={!canPrev}
           onClick={() => setWeekStart((w) => addDays(w, -7))}
-          className="w-4 h-4 p-0.5 shrink-0 text-slate-500 dark:text-zinc-300 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
+          className="w-4 h-4 p-0.5 shrink-0 text-slate-500 dark:text-zinc-300 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#4D44CC] transition-colors"
         >
           <IconChevronLeft className="w-full h-full" />
         </button>
@@ -126,7 +126,7 @@ export function MiniGrassGrid({
           type="button"
           disabled={!canNext}
           onClick={() => setWeekStart((w) => addDays(w, 7))}
-          className="w-4 h-4 p-0.5 shrink-0 text-slate-500 dark:text-zinc-300 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#6C63FF] transition-colors"
+          className="w-4 h-4 p-0.5 shrink-0 text-slate-500 dark:text-zinc-300 disabled:opacity-25 disabled:cursor-not-allowed hover:text-[#4D44CC] transition-colors"
         >
           <IconChevronRight className="w-full h-full" />
         </button>
@@ -239,7 +239,7 @@ export function GrassGrid({
 
           const labelCls = [
             "text-[9px] leading-none font-medium",
-            isToday ? "text-[#6C63FF] dark:text-[#a99dff] font-bold"
+            isToday ? "text-[#4D44CC] dark:text-[#8B85FF] font-bold"
             : off   ? "text-slate-500 dark:text-zinc-600"
             :         "text-slate-500 dark:text-zinc-300",
           ].join(" ");

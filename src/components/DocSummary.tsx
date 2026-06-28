@@ -265,9 +265,9 @@ export default function DocSummary() {
                   : "border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF]/60 hover:bg-[#6C63FF]/5",
               ].join(" ")}
             >
-              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`} />
+              <IconFileUpload className={`w-8 h-8 ${file ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
               <div className="text-center px-4">
-                <p className={`text-sm font-medium ${file ? "text-[#6C63FF]" : "text-slate-600 dark:text-zinc-400"}`}>
+                <p className={`text-sm font-medium ${file ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-600 dark:text-zinc-400"}`}>
                   {file ? file.name : "클릭해서 파일 선택"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
@@ -287,7 +287,7 @@ export default function DocSummary() {
             {/* 추출 중 */}
             {extracting && (
               <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
-                <IconLoader2 className="w-4 h-4 animate-spin text-[#6C63FF] shrink-0" />
+                <IconLoader2 className="w-4 h-4 animate-spin text-[#4D44CC] dark:text-[#8B85FF] shrink-0" />
                 텍스트 추출 중...
               </div>
             )}

@@ -27,7 +27,7 @@ const CONFIG = {
     icon: <IconInfoCircle className="w-4 h-4 shrink-0" />,
     bg:   "bg-[#6C63FF]/8 dark:bg-[#6C63FF]/20",
     border: "border-[#6C63FF]/30",
-    icon_color: "text-[#6C63FF]",
+    icon_color: "text-[#4D44CC] dark:text-[#8B85FF]",
     text: "text-slate-800 dark:text-zinc-100",
   },
 };

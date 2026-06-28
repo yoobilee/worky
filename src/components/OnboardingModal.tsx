@@ -94,7 +94,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div>
-            <p className="text-xs font-medium text-[#6C63FF] mb-0.5">Worky 시작하기</p>
+            <p className="text-xs font-medium text-[#4D44CC] dark:text-[#8B85FF] mb-0.5">Worky 시작하기</p>
             <h2 className="text-base font-bold text-slate-800 dark:text-zinc-100">
               {step === 0 && "내 정보를 입력해 주세요"}
               {step === 1 && "직업군을 선택해 주세요"}
@@ -166,12 +166,12 @@ export default function OnboardingModal({ userId, onClose }: Props) {
                           : "border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/40",
                       ].join(" ")}
                     >
-                      <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#6C63FF]" : "text-slate-500 dark:text-zinc-400"}`} />
+                      <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
                       <div className="min-w-0">
-                        <p className={`text-xs font-semibold truncate ${active ? "text-[#6C63FF]" : "text-slate-700 dark:text-zinc-300"}`}>{preset.label}</p>
+                        <p className={`text-xs font-semibold truncate ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>{preset.label}</p>
                         <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">{preset.desc}</p>
                       </div>
-                      {active && <IconCheck className="w-3.5 h-3.5 text-[#6C63FF] shrink-0 ml-auto" />}
+                      {active && <IconCheck className="w-3.5 h-3.5 text-[#4D44CC] dark:text-[#8B85FF] shrink-0 ml-auto" />}
                     </button>
                   );
                 })}

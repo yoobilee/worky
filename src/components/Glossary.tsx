@@ -227,7 +227,7 @@ export default function Glossary() {
         {/* 통계 카드 */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <IconBook className="w-4 h-4 text-[#6C63FF]" />
+            <IconBook className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">용어집 현황</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -236,7 +236,7 @@ export default function Glossary() {
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">전체 용어</p>
             </div>
             <div className="px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800">
-              <p className="text-2xl font-bold text-[#6C63FF]">
+              <p className="text-2xl font-bold text-[#4D44CC] dark:text-[#8B85FF]">
                 {new Set(terms.map((t) => t.category)).size}
               </p>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">카테고리</p>
@@ -255,7 +255,7 @@ export default function Glossary() {
         {/* AI 설명 카드 */}
         <div ref={aiResultRef} className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <IconSparkles className="w-4 h-4 text-[#6C63FF]" />
+            <IconSparkles className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">AI 용어 설명</span>
           </div>
           <div className="flex gap-2">
@@ -353,7 +353,7 @@ export default function Glossary() {
           <div className="divide-y divide-slate-100 dark:divide-zinc-800">
             {filtered.map((t) => (
               <div key={t.id} className="flex items-start gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors group">
-                <IconTag className="w-4 h-4 text-[#6C63FF] shrink-0 mt-0.5" />
+                <IconTag className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF] shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t.term}</span>
@@ -364,7 +364,7 @@ export default function Glossary() {
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => openEdit(t)}
-                    className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-[#6C63FF] transition-colors"
+                    className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-[#4D44CC] dark:text-[#8B85FF] transition-colors"
                     aria-label="수정"
                   >
                     <IconPencil className="w-3.5 h-3.5" />

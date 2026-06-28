@@ -73,7 +73,7 @@ function EmailDomainPicker({ value, onChange, error }: { value: string; onChange
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center justify-between gap-1 transition",
           "bg-slate-50 dark:bg-zinc-800",
-          error ? "border-2 border-red-500 dark:border-red-500 text-red-600 dark:text-red-400 bg-red-50/60 dark:bg-red-950/20" : value ? "border-[#6C63FF] text-[#6C63FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
+          error ? "border-2 border-red-500 dark:border-red-500 text-red-600 dark:text-red-400 bg-red-50/60 dark:bg-red-950/20" : value ? "border-[#6C63FF] text-[#4D44CC] dark:text-[#8B85FF]" : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400",
         ].join(" ")}
       >
         <span className="truncate">{label}</span>
@@ -84,12 +84,12 @@ function EmailDomainPicker({ value, onChange, error }: { value: string; onChange
           <div className="max-h-56 overflow-y-auto">
             {EMAIL_DOMAINS.map(d => (
               <button key={d} type="button" onClick={() => { onChange(d); setOpen(false); }}
-                className={`w-full px-3 py-2 text-sm text-left transition ${d === value ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+                className={`w-full px-3 py-2 text-sm text-left transition ${d === value ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
                 {d}
               </button>
             ))}
             <button type="button" onClick={() => { onChange(CUSTOM_DOMAIN); setOpen(false); }}
-              className={`w-full px-3 py-2 text-sm text-left border-t border-slate-100 dark:border-zinc-800 transition ${value === CUSTOM_DOMAIN ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
+              className={`w-full px-3 py-2 text-sm text-left border-t border-slate-100 dark:border-zinc-800 transition ${value === CUSTOM_DOMAIN ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
               직접 입력
             </button>
           </div>
@@ -296,7 +296,7 @@ export default function MemberManager() {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => openEdit(selectedMember)}
-            className="p-2 rounded-lg text-[#6C63FF] hover:bg-[#6C63FF]/10 transition">
+            className="p-2 rounded-lg text-[#4D44CC] dark:text-[#8B85FF] hover:bg-[#6C63FF]/10 transition">
             <IconPencil className="w-4 h-4" />
           </button>
           <button onClick={() => setConfirmDeleteId(selectedMember.id)}
@@ -450,7 +450,7 @@ export default function MemberManager() {
           {m.name.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-medium truncate ${isSelected ? "text-[#6C63FF]" : "text-slate-800 dark:text-zinc-100"}`}>
+          <p className={`text-sm font-medium truncate ${isSelected ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-800 dark:text-zinc-100"}`}>
             {m.name}
           </p>
           {(m.position || m.department) && (

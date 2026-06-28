@@ -113,7 +113,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
         {yearPickerOpen ? (
           <div className="flex-1 text-center">
             <button type="button" onClick={() => setYearPickerOpen(false)}
-              className="px-2 py-0.5 rounded-lg text-xs font-semibold text-[#6C63FF] hover:bg-[#6C63FF]/10 transition">
+              className="px-2 py-0.5 rounded-lg text-xs font-semibold text-[#4D44CC] dark:text-[#8B85FF] hover:bg-[#6C63FF]/10 transition">
               {year}년 ▲
             </button>
           </div>
@@ -123,7 +123,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
               <IconChevronLeft className="w-3.5 h-3.5" />
             </button>
             <button type="button" onClick={() => setYearPickerOpen(true)}
-              className="px-2 py-0.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-[#6C63FF]/10 hover:text-[#6C63FF] transition">
+              className="px-2 py-0.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-[#6C63FF]/10 hover:text-[#4D44CC] dark:text-[#8B85FF] transition">
               {year}년 {PICKER_MONTHS[month]}
             </button>
             <button type="button" onClick={nextMonth} aria-label="다음 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 transition">
@@ -143,7 +143,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
               className={[
                 "w-full px-3 py-1.5 text-xs text-left transition",
                 y === year
-                  ? "bg-[#6C63FF]/10 text-[#6C63FF] font-medium"
+                  ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium"
                   : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
               ].join(" ")}
             >{y}년</button>
@@ -168,7 +168,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
                 <button key={idx} type="button" onClick={() => { onChange(key); setOpen(false); }}
                   className={[
                     "h-7 w-full rounded-lg text-xs font-medium transition-all",
-                    isSel?"text-white shadow-sm":isToday?"bg-[#6C63FF]/10 text-[#6C63FF]":"hover:bg-slate-100 dark:hover:bg-zinc-800",
+                    isSel?"text-white shadow-sm":isToday?"bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]":"hover:bg-slate-100 dark:hover:bg-zinc-800",
                     !isSel&&dow===0?"text-red-400":!isSel&&dow===6?"text-blue-400":!isSel&&!isToday?"text-slate-700 dark:text-zinc-300":"",
                   ].join(" ")}
                   style={isSel?{background:"linear-gradient(135deg,#6C63FF,#8B85FF)"}:undefined}

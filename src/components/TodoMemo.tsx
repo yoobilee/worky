@@ -422,14 +422,14 @@ export default function TodoMemo() {
             <div className="flex items-center gap-2">
               <button
                 onClick={openPicker}
-                className="text-sm font-semibold text-slate-700 dark:text-zinc-200 hover:text-[#6C63FF] dark:hover:text-[#8B85FF] transition-colors whitespace-nowrap"
+                className="text-sm font-semibold text-slate-700 dark:text-zinc-200 hover:text-[#4D44CC] dark:hover:text-[#8B85FF] transition-colors whitespace-nowrap"
               >
                 {formatDateLabel(selectedDate)}
               </button>
               {!isToday && (
                 <button
                   onClick={() => goToDate(todayKey())}
-                  className="text-xs px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#6C63FF] hover:bg-[#6C63FF]/20 transition-colors font-medium whitespace-nowrap"
+                  className="text-xs px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#4D44CC] hover:bg-[#6C63FF]/20 transition-colors font-medium whitespace-nowrap"
                 >
                   오늘로
                 </button>
@@ -494,7 +494,7 @@ export default function TodoMemo() {
                           isSel
                             ? "text-white shadow-sm"
                             : isToday
-                            ? "bg-[#6C63FF]/10 text-[#6C63FF]"
+                            ? "bg-[#6C63FF]/10 text-[#4D44CC]"
                             : "hover:bg-slate-100 dark:hover:bg-zinc-800",
                           !isSel && dow === 0 ? "text-red-400"
                           : !isSel && dow === 6 ? "text-blue-400"
@@ -566,7 +566,7 @@ export default function TodoMemo() {
                       {todo.text}
                     </span>
                     {todo.carriedOver && todo.originalDate && (
-                      <p className="text-[10px] text-[#6C63FF]/60 dark:text-[#8B85FF]/60 mt-0.5">
+                      <p className="text-[10px] text-[#4D44CC]/60 dark:text-[#8B85FF]/60 mt-0.5">
                         {formatOriginalDate(todo.originalDate)}
                       </p>
                     )}

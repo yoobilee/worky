@@ -307,24 +307,24 @@ export default function ScheduleExtractor() {
                 <div className="space-y-2">
                   {s.date && (
                     <div className="flex items-start gap-2.5">
-                      <IconCalendarEvent className="w-4 h-4 text-[#6C63FF] shrink-0 mt-0.5" />
+                      <IconCalendarEvent className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF] shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700 dark:text-zinc-300">{s.date}</span>
                     </div>
                   )}
                   {s.time && (
                     <div className="flex items-start gap-2.5">
-                      <IconClock className="w-4 h-4 text-[#6C63FF] shrink-0 mt-0.5" />
+                      <IconClock className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF] shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700 dark:text-zinc-300">{s.time}</span>
                     </div>
                   )}
                   {s.location && (
                     <div className="flex items-start gap-2.5">
-                      <IconMapPin className="w-4 h-4 text-[#6C63FF] shrink-0 mt-0.5" />
+                      <IconMapPin className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF] shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700 dark:text-zinc-300">{s.location}</span>
                     </div>
                   )}
                   <div className="flex items-start gap-2.5">
-                    <IconNotes className="w-4 h-4 text-[#6C63FF] shrink-0 mt-0.5" />
+                    <IconNotes className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF] shrink-0 mt-0.5" />
                     <span className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed">{s.content}</span>
                   </div>
                 </div>

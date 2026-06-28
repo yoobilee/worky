@@ -116,7 +116,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-bold text-base flex-1" style={{ color: "var(--primary)" }}>Worky</span>
+          <span className="font-bold text-base flex-1 text-[#4D44CC] dark:text-[#8B85FF]">Worky</span>
           <NotificationBell userId={userId} />
         </header>
 

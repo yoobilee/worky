@@ -171,7 +171,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
             <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">알림</h3>
             <button
               onClick={handleMarkAllAsRead}
-              className="text-xs font-medium text-[#6C63FF] hover:underline"
+              className="text-xs font-medium text-[#4D44CC] dark:text-[#8B85FF] hover:underline"
             >
               모두 읽음
             </button>

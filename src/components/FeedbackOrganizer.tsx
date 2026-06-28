@@ -226,10 +226,10 @@ export default function FeedbackOrganizer() {
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#6C63FF]/30 p-5 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 rounded-lg bg-[#6C63FF]/10 flex items-center justify-center shrink-0">
-                  <IconBulb className="w-4 h-4 text-[#6C63FF]" />
+                  <IconBulb className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">구체화된 피드백</p>
-                <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#6C63FF]">
+                <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
                   {result.clarified.length}건
                 </span>
               </div>
@@ -238,7 +238,7 @@ export default function FeedbackOrganizer() {
                   <li key={i} className="space-y-1">
                     <p className="text-xs text-slate-500 dark:text-zinc-400 line-through">"{original}"</p>
                     <p className="flex gap-2 text-sm text-slate-700 dark:text-zinc-300">
-                      <span className="text-[#6C63FF] shrink-0 mt-0.5">→</span>
+                      <span className="text-[#4D44CC] dark:text-[#8B85FF] shrink-0 mt-0.5">→</span>
                       <span>{clarified}</span>
                     </p>
                   </li>
