@@ -136,7 +136,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 AI 처리
               </span>
             )}
-            <NotificationBell userId={userId} />
+            <div className="hidden lg:block"><NotificationBell userId={userId} /></div>
           </div>
         </div>
 
