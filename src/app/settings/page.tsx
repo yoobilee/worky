@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import HelpButton from "@/components/HelpButton";
 import { useToast } from "@/contexts/ToastContext";
 import {
-  IconUser, IconDeviceFloppy, IconCheck, IconChevronDown, IconChevronUp, IconApps,
+  IconUser, IconDeviceFloppy, IconCheck, IconChevronLeft, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
   IconGripVertical, IconHelp, IconMessageCircle, IconCalendarEvent,
   IconBell, IconBellOff,
@@ -29,6 +29,7 @@ const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
 
 type GreetingMode = "basic" | "time" | "day";
+type SettingsSection = "info" | "leave" | "greeting" | "job" | "menu" | "help" | "notif";
 
 const GREETING_TIME_PERIODS: { id: string; label: string }[] = [
   { id: "오전", label: "오전" },
@@ -71,7 +72,7 @@ interface JobPreset {
   label: string;
   icon:  React.ElementType;
   desc:  string;
-  on:    string[] | null; // null = 전체
+  on:    string[] | null;
 }
 
 const JOB_PRESETS: JobPreset[] = [
@@ -110,39 +111,34 @@ const JOB_PRESETS: JobPreset[] = [
 export default function SettingsPage() {
   const toast = useToast();
   const [info,          setInfo]          = useState<SenderInfo>({ org: "", name: "", title: "" });
-  const [collapsed,     setCollapsed]     = useState(false);
   const [saved,         setSaved]         = useState(false);
   const [hydrated,      setHydrated]      = useState(false);
   const [userId,        setUserId]        = useState<string | null>(null);
   const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
-  const [menuCollapsed, setMenuCollapsed] = useState(false);
   const [menuSaved,     setMenuSaved]     = useState(false);
   const [jobPreset,     setJobPreset]     = useState<string | null>(null);
   const [pendingPreset, setPendingPreset] = useState<string | null>(null);
   const [jobSaved,       setJobSaved]       = useState(false);
-  const [jobCollapsed,   setJobCollapsed]   = useState(false);
   const [menuOrder,      setMenuOrder]      = useState<string[]>([]);
   const [orderSaved,     setOrderSaved]     = useState(false);
   const [dragIdx,        setDragIdx]        = useState<number | null>(null);
   const [dropIdx,        setDropIdx]        = useState<number | null>(null);
   const [helpOn,         setHelpOn]         = useState(true);
   const [helpSaved,      setHelpSaved]      = useState(false);
-  const [helpCollapsed,  setHelpCollapsed]  = useState(false);
   const [greetingEnabled,  setGreetingEnabled]  = useState(false);
   const [greetingMode,     setGreetingMode]     = useState<GreetingMode>("basic");
   const [greetingValues,   setGreetingValues]   = useState<Record<string, string>>({});
   const [greetingSaved,    setGreetingSaved]    = useState(false);
-  const [greetingCollapsed, setGreetingCollapsed] = useState(false);
   const [joinDate,         setJoinDate]         = useState("");
   const [leaveStandard,    setLeaveStandard]    = useState<"join_date" | "fiscal_year">("fiscal_year");
   const [usedLeaves,       setUsedLeaves]       = useState(0);
   const [leaveSaved,       setLeaveSaved]       = useState(false);
-  const [leaveCollapsed,   setLeaveCollapsed]   = useState(false);
   const [employmentType,   setEmploymentType]   = useState<"new" | "career">("new");
   const [grantedLeaves,    setGrantedLeaves]    = useState(15);
   const [notifPermission,  setNotifPermission]  = useState<NotificationPermission | "unsupported">("default");
   const [notifSettings,    setNotifSettings]    = useState<NotificationSettings>({ eventNotif: true, ddayNotif: true });
-  const [notifCollapsed,   setNotifCollapsed]   = useState(false);
+  const [activeSection,    setActiveSection]    = useState<SettingsSection>("info");
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -150,7 +146,6 @@ export default function SettingsPage() {
       const uid = data.user?.id ?? null;
       setUserId(uid);
 
-      // Supabase에서 설정 로드 → localStorage에 반영 (캐시 동기화)
       if (uid) {
         const dbSettings = await getSettings(uid);
         if (dbSettings) {
@@ -158,7 +153,6 @@ export default function SettingsPage() {
             const si = dbSettings.sender_info as unknown as SenderInfo;
             setInfo(si);
             localStorage.setItem(SENDER_KEY, JSON.stringify(si));
-            if (si.org || si.name || si.title) setCollapsed(true);
           }
           if (dbSettings.menu_settings) {
             saveMenuSettings(dbSettings.menu_settings as MenuSettings);
@@ -186,13 +180,11 @@ export default function SettingsPage() {
           if (dbSettings.granted_leaves !== undefined) setGrantedLeaves(dbSettings.granted_leaves);
         }
       } else {
-        // localStorage fallback
         try {
           const raw = localStorage.getItem(SENDER_KEY);
           if (raw) {
             const parsed: SenderInfo = JSON.parse(raw);
             setInfo(parsed);
-            if (parsed.org || parsed.name || parsed.title) setCollapsed(true);
           }
         } catch {}
         setJobPreset(localStorage.getItem(JOB_KEY));
@@ -218,7 +210,6 @@ export default function SettingsPage() {
       .catch(() => toast.error("저장에 실패했습니다."));
     else toast.success("내 정보가 저장됐습니다.");
     setSaved(true);
-    if (info.org || info.name || info.title) setCollapsed(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -332,7 +323,7 @@ export default function SettingsPage() {
 
   if (!hydrated) {
     return (
-      <div className="max-w-2xl mx-auto w-full space-y-4">
+      <div className="max-w-5xl mx-auto w-full space-y-4">
         {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-14" />
         ))}
@@ -341,573 +332,24 @@ export default function SettingsPage() {
   }
 
   const hasSender = info.org || info.name || info.title;
-  const summary   = hasSender
-    ? [info.org, info.name, info.title].filter(Boolean).join(" · ")
-    : "미입력";
-
   const pendingPresetLabel = JOB_PRESETS.find((p) => p.id === pendingPreset)?.label ?? "";
 
+  const SECTIONS: { key: SettingsSection; label: string; icon: React.ElementType }[] = [
+    { key: "info",     label: "내 정보",       icon: IconUser },
+    { key: "leave",    label: "연차 설정",     icon: IconCalendarEvent },
+    { key: "greeting", label: "커스텀 인사말", icon: IconMessageCircle },
+    { key: "job",      label: "직업군 설정",   icon: IconBriefcase },
+    { key: "menu",     label: "메뉴 설정",     icon: IconApps },
+    { key: "help",     label: "도움말 설정",   icon: IconHelp },
+    ...(notifPermission !== "unsupported"
+      ? [{ key: "notif" as SettingsSection, label: "알림 설정", icon: IconBell }]
+      : []),
+  ];
+
   return (
-    <div className="max-w-2xl mx-auto w-full space-y-4">
+    <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
 
-      {/* 저장 완료 배너 */}
-      {saved && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm">
-          <IconCheck className="w-4 h-4 shrink-0" />
-          내 정보가 저장됐습니다.
-        </div>
-      )}
-
-      {/* 내 정보 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          aria-expanded={!collapsed}
-          className="w-full flex items-center justify-between px-5 py-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconUser className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">내 정보</p>
-              {collapsed && (
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{summary}</p>
-              )}
-              {!collapsed && (
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                  이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다.
-                </p>
-              )}
-            </div>
-          </div>
-          {collapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
-        </button>
-
-        {!collapsed && (
-          <div className="px-5 pb-5">
-            <div className="flex flex-col sm:flex-row gap-3">
-              {([
-                { field: "org",   label: "소속",  placeholder: "예: 개발팀" },
-                { field: "name",  label: "이름",  placeholder: "예: 홍길동" },
-                { field: "title", label: "직급",  placeholder: "예: 사원" },
-              ] as { field: keyof SenderInfo; label: string; placeholder: string }[]).map(({ field, label, placeholder }) => (
-                <div key={field} className="flex-1">
-                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">
-                    {label}
-                  </label>
-                  <input
-                    value={info[field]}
-                    onChange={(e) => handleChange(field, e.target.value)}
-                    placeholder={placeholder}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {hasSender && (
-              <div className="mt-4 px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">서명 미리보기</p>
-                <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed">
-                  {`감사합니다.\n${[info.org, info.name, info.title].filter(Boolean).join(" ")}`}
-                </p>
-              </div>
-            )}
-
-            <div className="flex items-center justify-end mt-4">
-              <button
-                onClick={handleSave}
-                className={[
-                  "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all",
-                  saved ? "bg-emerald-500" : "",
-                ].join(" ")}
-                style={saved ? undefined : { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                {saved ? (
-                  <><IconCheck className="w-4 h-4" />저장됐습니다</>
-                ) : (
-                  <><IconDeviceFloppy className="w-4 h-4" />저장</>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 연차 설정 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <button
-          onClick={() => setLeaveCollapsed((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconCalendarEvent className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">연차 설정</p>
-                {leaveSaved && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />저장됨
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                {joinDate ? `입사일: ${joinDate}` : "입사일을 설정하면 연차를 자동 계산합니다"}
-              </p>
-            </div>
-          </div>
-          {leaveCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
-        </button>
-
-        {!leaveCollapsed && (
-          <div className="px-5 pb-5 space-y-4">
-            {/* 입사 유형 토글 */}
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사 유형</label>
-              <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
-                {([
-                  { id: "new",    label: "신입" },
-                  { id: "career", label: "경력" },
-                ] as { id: "new" | "career"; label: string }[]).map(({ id, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => { setEmploymentType(id); setLeaveSaved(false); }}
-                    className={[
-                      "py-1.5 rounded-lg text-xs font-medium transition-colors",
-                      employmentType === id
-                        ? "bg-[#6C63FF] text-white shadow-sm"
-                        : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
-                    ].join(" ")}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 신입: 입사일 + 연차 기준 */}
-            {employmentType === "new" && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사일</label>
-                  <DatePickerInput value={joinDate} onChange={(v) => { setJoinDate(v); setLeaveSaved(false); }} />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">연차 기준</label>
-                  <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
-                    {([
-                      { id: "join_date",   label: "입사일 기준" },
-                      { id: "fiscal_year", label: "회계연도 기준" },
-                    ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
-                      <button
-                        key={id}
-                        onClick={() => { setLeaveStandard(id); setLeaveSaved(false); }}
-                        className={[
-                          "py-1.5 rounded-lg text-xs font-medium transition-colors",
-                          leaveStandard === id
-                            ? "bg-[#6C63FF] text-white shadow-sm"
-                            : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
-                        ].join(" ")}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* 경력: 부여 연차 stepper */}
-            {employmentType === "career" && (
-              <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">부여 연차 (일)</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => { setGrantedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
-                  >
-                    −
-                  </button>
-                  <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
-                    {grantedLeaves}일
-                  </span>
-                  <button
-                    onClick={() => { setGrantedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                    disabled={grantedLeaves >= 25}
-                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* 사용한 연차 */}
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">사용한 연차 (일)</label>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => { setUsedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
-                >
-                  −
-                </button>
-                <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
-                  {usedLeaves}일
-                </span>
-                <button
-                  onClick={() => { setUsedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                  disabled={usedLeaves >= 25}
-                  className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={handleLeaveSave}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
-              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-            >
-              <IconDeviceFloppy className="w-3.5 h-3.5" />
-              저장
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 커스텀 인사말 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <button
-          onClick={() => setGreetingCollapsed((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconMessageCircle className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">커스텀 인사말</p>
-                {greetingSaved && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />저장됨
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                홈 화면에 표시되는 인사말을 직접 설정합니다
-              </p>
-            </div>
-          </div>
-          {greetingCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
-        </button>
-
-        {!greetingCollapsed && (
-          <div className="px-5 pb-5 space-y-4">
-            {/* on/off 토글 */}
-            <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-              <div>
-                <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">커스텀 인사말 사용</p>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                  끄면 기본 인사말이 표시됩니다
-                </p>
-              </div>
-              <button
-                onClick={handleGreetingToggle}
-                role="switch"
-                aria-checked={greetingEnabled}
-                className={[
-                  "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
-                  greetingEnabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                ].join(" ")}
-              >
-                <span className={[
-                  "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                  greetingEnabled ? "translate-x-5" : "translate-x-1",
-                ].join(" ")} />
-              </button>
-            </div>
-
-            {greetingEnabled && (
-              <>
-                {/* 모드 선택 탭 */}
-                <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
-                  {([
-                    { id: "basic", label: "기본" },
-                    { id: "time",  label: "시간대별" },
-                    { id: "day",   label: "요일별" },
-                  ] as { id: GreetingMode; label: string }[]).map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => { setGreetingMode(id); setGreetingSaved(false); }}
-                      className={[
-                        "py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
-                        greetingMode === id
-                          ? "bg-[#6C63FF] text-white shadow-sm"
-                          : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
-                      ].join(" ")}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* 기본 모드 */}
-                {greetingMode === "basic" && (
-                  <input
-                    value={greetingValues.default ?? ""}
-                    onChange={(e) => handleGreetingValueChange("default", e.target.value)}
-                    placeholder={GREETING_PLACEHOLDERS.default}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                  />
-                )}
-
-                {/* 시간대별 모드 */}
-                {greetingMode === "time" && (
-                  <div className="space-y-2">
-                    {GREETING_TIME_PERIODS.map(({ id, label }) => (
-                      <div key={id} className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
-                        <input
-                          value={greetingValues[id] ?? ""}
-                          onChange={(e) => handleGreetingValueChange(id, e.target.value)}
-                          placeholder={GREETING_PLACEHOLDERS.time[id]}
-                          className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* 요일별 모드 */}
-                {greetingMode === "day" && (
-                  <div className="space-y-2">
-                    {GREETING_DAY_LABELS.map((label, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
-                        <input
-                          value={greetingValues[String(idx)] ?? ""}
-                          onChange={(e) => handleGreetingValueChange(String(idx), e.target.value)}
-                          placeholder={GREETING_PLACEHOLDERS.day[idx]}
-                          className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            <button
-              onClick={handleGreetingSave}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
-              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-            >
-              <IconDeviceFloppy className="w-3.5 h-3.5" />
-              저장
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 직업군 설정 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <button
-          onClick={() => setJobCollapsed((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconBriefcase className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">직업군 설정</p>
-                {jobSaved && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />저장됨
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                {jobPreset
-                  ? `현재: ${JOB_PRESETS.find((p) => p.id === jobPreset)?.label ?? ""}`
-                  : "직업군에 맞는 메뉴를 자동으로 설정합니다"}
-              </p>
-            </div>
-          </div>
-          {jobCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
-        </button>
-
-        {!jobCollapsed && (
-          <div className="px-5 pb-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {JOB_PRESETS.map((preset) => {
-                const Icon   = preset.icon;
-                const active = jobPreset === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setPendingPreset(preset.id)}
-                    className={[
-                      "flex flex-col gap-2 p-3.5 rounded-2xl border text-left transition-all",
-                      active
-                        ? "border-[#6C63FF] shadow-md"
-                        : "border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/40 hover:shadow-sm",
-                    ].join(" ")}
-                    style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}
-                  >
-                    <div className={[
-                      "w-7 h-7 rounded-xl flex items-center justify-center shrink-0",
-                      active ? "bg-[#6C63FF]/15" : "bg-slate-100 dark:bg-zinc-800",
-                    ].join(" ")}>
-                      <Icon className={`w-4 h-4 ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
-                    </div>
-                    <div>
-                      <p className={`text-sm font-semibold leading-tight ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-200"}`}>
-                        {preset.label}
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-snug">{preset.desc}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-3">
-              직업군을 선택하면 추천 메뉴가 자동으로 적용됩니다. 이후 메뉴 설정에서 개별 수정 가능합니다.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* 메뉴 설정 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <button
-          onClick={() => setMenuCollapsed((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconApps className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">메뉴 설정</p>
-                {menuSaved && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />저장됨
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                사이드바에 표시할 메뉴를 선택하세요
-              </p>
-            </div>
-          </div>
-          {menuCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
-        </button>
-
-        {!menuCollapsed && (
-          <div className="px-5 pb-5">
-
-            {/* 선택 메뉴 — 드래그&드롭 순서 변경 */}
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                선택 표시
-              </p>
-              {orderSaved && (
-                <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                  <IconCheck className="w-3.5 h-3.5" />순서 저장됨
-                </span>
-              )}
-            </div>
-            <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800 mb-4">
-              {menuOrder.map((href, idx) => {
-                const item = OPTIONAL_MENU_ITEMS.find((m) => m.href === href);
-                if (!item) return null;
-                const enabled   = isRouteEnabled(menuSettings, href);
-                const isDragging = dragIdx === idx;
-                const isOver     = dropIdx === idx;
-                return (
-                  <div
-                    key={href}
-                    draggable
-                    onDragStart={() => handleDragStart(idx)}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={(e) => handleDragOver(e, idx)}
-                    onDrop={(e) => handleDrop(e, idx)}
-                    className={[
-                      "flex items-center justify-between px-3 py-3 transition-colors cursor-grab active:cursor-grabbing",
-                      isDragging ? "opacity-40 bg-slate-50 dark:bg-zinc-800" : "",
-                      isOver && !isDragging ? "bg-[#6C63FF]/5 border-t-2 border-t-[#6C63FF]/40" : "",
-                    ].join(" ")}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <IconGripVertical className="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{item.label}</p>
-                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleMenuToggle(href)}
-                      role="switch"
-                      aria-checked={enabled}
-                      className={[
-                        "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-2",
-                        enabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                      ].join(" ")}
-                    >
-                      <span className={[
-                        "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                        enabled ? "translate-x-5" : "translate-x-1",
-                      ].join(" ")} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* 공통 메뉴 (항상 표시) */}
-            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-              항상 표시
-            </p>
-            <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
-              {ALWAYS_VISIBLE_ITEMS.map(({ href, label }) => (
-                <div key={href} className="flex items-center justify-between px-4 py-3 opacity-60">
-                  <div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{label}</p>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
-                  </div>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 font-medium shrink-0">
-                    항상 표시
-                  </span>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        )}
-      </div>
-
-      {/* 확인 모달 */}
+      {/* 직업군 변경 확인 모달 */}
       {pendingPreset && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-6 w-full max-w-sm">
@@ -944,88 +386,575 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* 도움말 설정 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <button
-          onClick={() => setHelpCollapsed((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-              <IconHelp className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+      <div className="flex gap-4 items-start">
+
+        {/* 좌측: 섹션 목록 */}
+        <div className={[
+          "w-full sm:w-[220px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-2",
+          mobileShowDetail ? "hidden sm:block" : "block",
+        ].join(" ")}>
+          {SECTIONS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => { setActiveSection(key); setMobileShowDetail(true); }}
+              className={[
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition",
+                activeSection === key ? "bg-[#6C63FF]/10" : "hover:bg-slate-50 dark:hover:bg-zinc-800",
+              ].join(" ")}
+            >
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                <Icon className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+              </div>
+              <span className={`text-sm font-medium ${activeSection === key ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* 우측: 선택된 섹션 내용 */}
+        <div className={[
+          "flex-1 min-w-0 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-5",
+          mobileShowDetail ? "block" : "hidden sm:block",
+        ].join(" ")}>
+          <button
+            onClick={() => setMobileShowDetail(false)}
+            className="sm:hidden flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-400 mb-3"
+          >
+            <IconChevronLeft className="w-3.5 h-3.5" /> 설정 목록
+          </button>
+
+          {/* 내 정보 */}
+          {activeSection === "info" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconUser className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">내 정보</p>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다.</p>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {([
+                  { field: "org",   label: "소속",  placeholder: "예: 개발팀" },
+                  { field: "name",  label: "이름",  placeholder: "예: 홍길동" },
+                  { field: "title", label: "직급",  placeholder: "예: 사원" },
+                ] as { field: keyof SenderInfo; label: string; placeholder: string }[]).map(({ field, label, placeholder }) => (
+                  <div key={field} className="flex-1">
+                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">
+                      {label}
+                    </label>
+                    <input
+                      value={info[field]}
+                      onChange={(e) => handleChange(field, e.target.value)}
+                      placeholder={placeholder}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {hasSender && (
+                <div className="mt-4 px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+                  <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">서명 미리보기</p>
+                  <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed">
+                    {`감사합니다.\n${[info.org, info.name, info.title].filter(Boolean).join(" ")}`}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end mt-4">
+                <button
+                  onClick={handleSave}
+                  className={[
+                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all",
+                    saved ? "bg-emerald-500" : "",
+                  ].join(" ")}
+                  style={saved ? undefined : { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                >
+                  {saved ? (
+                    <><IconCheck className="w-4 h-4" />저장됐습니다</>
+                  ) : (
+                    <><IconDeviceFloppy className="w-4 h-4" />저장</>
+                  )}
+                </button>
+              </div>
             </div>
+          )}
+
+          {/* 연차 설정 */}
+          {activeSection === "leave" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconCalendarEvent className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">연차 설정</p>
+                  {leaveSaved && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
+                {joinDate ? `입사일: ${joinDate}` : "입사일을 설정하면 연차를 자동 계산합니다"}
+              </p>
+
+              {/* 입사 유형 토글 */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사 유형</label>
+                <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
+                  {([
+                    { id: "new",    label: "신입" },
+                    { id: "career", label: "경력" },
+                  ] as { id: "new" | "career"; label: string }[]).map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => { setEmploymentType(id); setLeaveSaved(false); }}
+                      className={[
+                        "py-1.5 rounded-lg text-xs font-medium transition-colors",
+                        employmentType === id
+                          ? "bg-[#6C63FF] text-white shadow-sm"
+                          : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 신입: 입사일 + 연차 기준 */}
+              {employmentType === "new" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사일</label>
+                    <DatePickerInput value={joinDate} onChange={(v) => { setJoinDate(v); setLeaveSaved(false); }} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">연차 기준</label>
+                    <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
+                      {([
+                        { id: "join_date",   label: "입사일 기준" },
+                        { id: "fiscal_year", label: "회계연도 기준" },
+                      ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
+                        <button
+                          key={id}
+                          onClick={() => { setLeaveStandard(id); setLeaveSaved(false); }}
+                          className={[
+                            "py-1.5 rounded-lg text-xs font-medium transition-colors",
+                            leaveStandard === id
+                              ? "bg-[#6C63FF] text-white shadow-sm"
+                              : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                          ].join(" ")}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 경력: 부여 연차 stepper */}
+              {employmentType === "career" && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">부여 연차 (일)</label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { setGrantedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                      className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
+                    >
+                      −
+                    </button>
+                    <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
+                      {grantedLeaves}일
+                    </span>
+                    <button
+                      onClick={() => { setGrantedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                      disabled={grantedLeaves >= 25}
+                      className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 사용한 연차 */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">사용한 연차 (일)</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setUsedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
+                  >
+                    −
+                  </button>
+                  <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
+                    {usedLeaves}일
+                  </span>
+                  <button
+                    onClick={() => { setUsedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
+                    disabled={usedLeaves >= 25}
+                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLeaveSave}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                <IconDeviceFloppy className="w-3.5 h-3.5" />
+                저장
+              </button>
+            </div>
+          )}
+
+          {/* 커스텀 인사말 */}
+          {activeSection === "greeting" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconMessageCircle className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">커스텀 인사말</p>
+                  {greetingSaved && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">홈 화면에 표시되는 인사말을 직접 설정합니다</p>
+
+              {/* on/off 토글 */}
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">커스텀 인사말 사용</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    끄면 기본 인사말이 표시됩니다
+                  </p>
+                </div>
+                <button
+                  onClick={handleGreetingToggle}
+                  role="switch"
+                  aria-checked={greetingEnabled}
+                  className={[
+                    "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
+                    greetingEnabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                  ].join(" ")}
+                >
+                  <span className={[
+                    "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                    greetingEnabled ? "translate-x-5" : "translate-x-1",
+                  ].join(" ")} />
+                </button>
+              </div>
+
+              {greetingEnabled && (
+                <>
+                  {/* 모드 선택 탭 */}
+                  <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
+                    {([
+                      { id: "basic", label: "기본" },
+                      { id: "time",  label: "시간대별" },
+                      { id: "day",   label: "요일별" },
+                    ] as { id: GreetingMode; label: string }[]).map(({ id, label }) => (
+                      <button
+                        key={id}
+                        onClick={() => { setGreetingMode(id); setGreetingSaved(false); }}
+                        className={[
+                          "py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
+                          greetingMode === id
+                            ? "bg-[#6C63FF] text-white shadow-sm"
+                            : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
+                        ].join(" ")}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 기본 모드 */}
+                  {greetingMode === "basic" && (
+                    <input
+                      value={greetingValues.default ?? ""}
+                      onChange={(e) => handleGreetingValueChange("default", e.target.value)}
+                      placeholder={GREETING_PLACEHOLDERS.default}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                    />
+                  )}
+
+                  {/* 시간대별 모드 */}
+                  {greetingMode === "time" && (
+                    <div className="space-y-2">
+                      {GREETING_TIME_PERIODS.map(({ id, label }) => (
+                        <div key={id} className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
+                          <input
+                            value={greetingValues[id] ?? ""}
+                            onChange={(e) => handleGreetingValueChange(id, e.target.value)}
+                            placeholder={GREETING_PLACEHOLDERS.time[id]}
+                            className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 요일별 모드 */}
+                  {greetingMode === "day" && (
+                    <div className="space-y-2">
+                      {GREETING_DAY_LABELS.map((label, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
+                          <input
+                            value={greetingValues[String(idx)] ?? ""}
+                            onChange={(e) => handleGreetingValueChange(String(idx), e.target.value)}
+                            placeholder={GREETING_PLACEHOLDERS.day[idx]}
+                            className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <button
+                onClick={handleGreetingSave}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+              >
+                <IconDeviceFloppy className="w-3.5 h-3.5" />
+                저장
+              </button>
+            </div>
+          )}
+
+          {/* 직업군 설정 */}
+          {activeSection === "job" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconBriefcase className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">직업군 설정</p>
+                  {jobSaved && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
+                {jobPreset
+                  ? `현재: ${JOB_PRESETS.find((p) => p.id === jobPreset)?.label ?? ""}`
+                  : "직업군에 맞는 메뉴를 자동으로 설정합니다"}
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {JOB_PRESETS.map((preset) => {
+                  const Icon   = preset.icon;
+                  const active = jobPreset === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setPendingPreset(preset.id)}
+                      className={[
+                        "flex flex-col gap-2 p-3.5 rounded-2xl border text-left transition-all",
+                        active
+                          ? "border-[#6C63FF] shadow-md"
+                          : "border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/40 hover:shadow-sm",
+                      ].join(" ")}
+                      style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}
+                    >
+                      <div className={[
+                        "w-7 h-7 rounded-xl flex items-center justify-center shrink-0",
+                        active ? "bg-[#6C63FF]/15" : "bg-slate-100 dark:bg-zinc-800",
+                      ].join(" ")}>
+                        <Icon className={`w-4 h-4 ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
+                      </div>
+                      <div>
+                        <p className={`text-sm font-semibold leading-tight ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-200"}`}>
+                          {preset.label}
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-snug">{preset.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-3">
+                직업군을 선택하면 추천 메뉴가 자동으로 적용됩니다. 이후 메뉴 설정에서 개별 수정 가능합니다.
+              </p>
+            </div>
+          )}
+
+          {/* 메뉴 설정 */}
+          {activeSection === "menu" && (
             <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">도움말 설정</p>
-                {helpSaved && (
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconApps className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">메뉴 설정</p>
+                  {menuSaved && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">사이드바에 표시할 메뉴를 선택하세요</p>
+
+              {/* 선택 메뉴 — 드래그&드롭 순서 변경 */}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                  선택 표시
+                </p>
+                {orderSaved && (
                   <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />저장됨
+                    <IconCheck className="w-3.5 h-3.5" />순서 저장됨
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                페이지 도움말 버튼 표시 여부
+              <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800 mb-4">
+                {menuOrder.map((href, idx) => {
+                  const item = OPTIONAL_MENU_ITEMS.find((m) => m.href === href);
+                  if (!item) return null;
+                  const enabled    = isRouteEnabled(menuSettings, href);
+                  const isDragging = dragIdx === idx;
+                  const isOver     = dropIdx === idx;
+                  return (
+                    <div
+                      key={href}
+                      draggable
+                      onDragStart={() => handleDragStart(idx)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDrop={(e) => handleDrop(e, idx)}
+                      className={[
+                        "flex items-center justify-between px-3 py-3 transition-colors cursor-grab active:cursor-grabbing",
+                        isDragging ? "opacity-40 bg-slate-50 dark:bg-zinc-800" : "",
+                        isOver && !isDragging ? "bg-[#6C63FF]/5 border-t-2 border-t-[#6C63FF]/40" : "",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <IconGripVertical className="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{item.label}</p>
+                          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleMenuToggle(href)}
+                        role="switch"
+                        aria-checked={enabled}
+                        className={[
+                          "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-2",
+                          enabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                        ].join(" ")}
+                      >
+                        <span className={[
+                          "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                          enabled ? "translate-x-5" : "translate-x-1",
+                        ].join(" ")} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 공통 메뉴 (항상 표시) */}
+              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                항상 표시
               </p>
-            </div>
-          </div>
-          {helpCollapsed
-            ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
-            : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
-        </button>
-
-        {!helpCollapsed && (
-          <div className="px-5 pb-5">
-            <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-              <div>
-                <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">페이지 도움말 버튼 표시</p>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                  각 페이지 우측 하단의 ? 버튼 (홈 AI 바로가기는 영향 없음)
-                </p>
+              <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
+                {ALWAYS_VISIBLE_ITEMS.map(({ href, label }) => (
+                  <div key={href} className="flex items-center justify-between px-4 py-3 opacity-60">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{label}</p>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
+                    </div>
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 font-medium shrink-0">
+                      항상 표시
+                    </span>
+                  </div>
+                ))}
               </div>
-              <button
-                onClick={handleHelpToggle}
-                role="switch"
-                aria-checked={helpOn}
-                className={[
-                  "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
-                  helpOn ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                ].join(" ")}
-              >
-                <span className={[
-                  "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                  helpOn ? "translate-x-5" : "translate-x-1",
-                ].join(" ")} />
-              </button>
             </div>
-          </div>
-        )}
-      </div>
+          )}
 
-      {/* 알림 설정 카드 */}
-      {notifPermission !== "unsupported" && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
-          <button
-            onClick={() => setNotifCollapsed((v) => !v)}
-            className="w-full flex items-center justify-between px-5 py-4 text-left"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                <IconBell className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+          {/* 도움말 설정 */}
+          {activeSection === "help" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconHelp className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">도움말 설정</p>
+                  {helpSaved && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                    </span>
+                  )}
+                </div>
               </div>
-              <div>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">페이지 도움말 버튼 표시 여부</p>
+
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">페이지 도움말 버튼 표시</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    각 페이지 우측 하단의 ? 버튼 (홈 AI 바로가기는 영향 없음)
+                  </p>
+                </div>
+                <button
+                  onClick={handleHelpToggle}
+                  role="switch"
+                  aria-checked={helpOn}
+                  className={[
+                    "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
+                    helpOn ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
+                  ].join(" ")}
+                >
+                  <span className={[
+                    "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                    helpOn ? "translate-x-5" : "translate-x-1",
+                  ].join(" ")} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 알림 설정 */}
+          {activeSection === "notif" && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconBell className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">알림 설정</p>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                  {notifPermission === "granted" ? "알림 허용됨" : "브라우저 알림 권한 설정"}
-                </p>
               </div>
-            </div>
-            {notifCollapsed
-              ? <IconChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
-              : <IconChevronUp   className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />}
-          </button>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
+                {notifPermission === "granted" ? "알림 허용됨" : "브라우저 알림 권한 설정"}
+              </p>
 
-          {!notifCollapsed && (
-            <div className="px-5 pb-5 space-y-3">
               {/* 권한 상태 */}
               {notifPermission !== "granted" ? (
                 <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
@@ -1113,8 +1042,9 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+
         </div>
-      )}
+      </div>
 
       <HelpButton
         title="설정 사용법"
