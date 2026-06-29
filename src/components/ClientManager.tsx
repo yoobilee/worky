@@ -813,8 +813,8 @@ export default function ClientManager() {
       )}
 
       {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowImportModal(false)}>
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowImportModal(false)}>
+          <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">엑셀 가져오기</h3>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mb-3 shrink-0">
               가져올 거래처를 선택하세요{importSkipped > 0 && ` (이름 없는 ${importSkipped}개 행은 제외됨)`}
@@ -858,8 +858,8 @@ export default function ClientManager() {
       )}
 
       {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowExportModal(false)}>
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowExportModal(false)}>
+          <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">엑셀 내보내기</h3>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mb-3 shrink-0">내보낼 거래처를 선택하세요</p>
 
