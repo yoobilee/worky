@@ -227,11 +227,19 @@ export default function EmailReply() {
         body: JSON.stringify({
           messages: [{ role: "user", content: `받은 이메일:\n${emailInput}\n\n답장 톤: ${selectedTone}` }],
           systemPrompt: buildReplySystemPrompt(sender),
+          stream: true,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-      const parsed = parseDrafts(data.result);
+      if (!res.ok || !res.body) throw new Error("알 수 없는 오류");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+      }
+      const parsed = parseDrafts(acc);
       if (parsed.length === 0) throw new Error("AI 응답이 비어 있습니다. 다시 시도해주세요.");
       setDrafts(parsed);
       trackUsage("email");

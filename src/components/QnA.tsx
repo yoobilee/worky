@@ -220,20 +220,28 @@ export default function QnA() {
         systemPrompt = `당신은 Worky 업무 도우미입니다.\n[사용자 데이터]\n${workData}\n위 데이터를 참고해서 답변하세요.\n\n${SYSTEM_PROMPT}`;
       }
 
+      const assistantId = crypto.randomUUID();
       const res = await fetch("/api/groq", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, systemPrompt }),
+        body: JSON.stringify({ messages: history, systemPrompt, stream: true }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
+      if (!res.ok || !res.body) throw new Error("알 수 없는 오류");
 
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: data.result },
-      ]);
+      setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: acc } : m));
+      }
       trackUsage("qa");
     } catch (e) {
+      setMessages((prev) => prev.filter((m) => m.role !== "assistant" || m.content !== ""));
       setError(e instanceof Error ? e.message : "응답을 가져오는 데 실패했습니다.");
     } finally {
       setLoading(false);

@@ -208,11 +208,19 @@ export default function DataInsight() {
         body: JSON.stringify({
           messages: [{ role: "user", content: sourceText }],
           systemPrompt: SYSTEM_PROMPT,
+          stream: true,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-      setResult(parseResult(data.result));
+      if (!res.ok || !res.body) throw new Error("알 수 없는 오류");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+      }
+      setResult(parseResult(acc));
       trackUsage("insight");
     } catch (e) {
       setError(e instanceof Error ? e.message : "분석 중 오류가 발생했습니다.");
