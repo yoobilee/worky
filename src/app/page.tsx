@@ -1027,11 +1027,11 @@ function SpeedDial() {
       {/* 커스텀 추가 모달 */}
       {showModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20"
           onClick={() => { setShowModal(false); setNewUrl(""); setNewName(""); }}
         >
           <div
-            className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/10 shadow-2xl p-6 w-full max-w-sm mx-4"
+            className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/10 shadow-2xl p-6 w-full max-w-sm mx-4"
             onClick={e => e.stopPropagation()}
           >
             <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">바로가기 추가</h3>

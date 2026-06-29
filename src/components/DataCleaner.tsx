@@ -227,11 +227,11 @@ export default function DataCleaner() {
       {/* 히스토리 패널 */}
       <div className={`fixed inset-0 z-50 ${showHistory ? "" : "pointer-events-none"}`}>
         <div
-          className={`absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${showHistory ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 bg-black/15 transition-opacity duration-300 ease-in-out ${showHistory ? "opacity-100" : "opacity-0"}`}
           onClick={() => setShowHistory(false)}
         />
         <div
-          className={`absolute right-0 top-0 h-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border-l border-white/40 dark:border-white/10 shadow-xl flex flex-col transition-all duration-300 ease-in-out ${
+          className={`absolute right-0 top-0 h-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-l border-white/40 dark:border-white/10 shadow-xl flex flex-col transition-all duration-300 ease-in-out ${
             showHistory ? "w-80 opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-full overflow-hidden"
           }`}
         >
