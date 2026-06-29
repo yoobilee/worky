@@ -2,6 +2,7 @@
 
 import HelpButton from "./HelpButton";
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { IconLoader2, IconSparkles, IconHistory, IconTrash, IconX } from "@tabler/icons-react";
 import { trackUsage } from "@/lib/usageStats";
 import { createClient } from "@/lib/supabase/client";
@@ -225,6 +226,7 @@ export default function DataCleaner() {
       </div>
 
       {/* 히스토리 패널 */}
+      {typeof document !== "undefined" && createPortal(
       <div className={`fixed inset-0 z-50 ${showHistory ? "" : "pointer-events-none"}`}>
         <div
           className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ease-in-out ${showHistory ? "opacity-100" : "opacity-0"}`}
@@ -265,7 +267,9 @@ export default function DataCleaner() {
             )}
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
+      )}
 
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">

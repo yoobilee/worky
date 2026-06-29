@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   IconX, IconArrowRight, IconCheck,
   IconBriefcase, IconCode, IconBuildingSkyscraper,
@@ -87,7 +88,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
 
   const TOTAL = 3;
 
-  return (
+  return typeof document !== "undefined" ? createPortal(
     <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl w-full max-w-md overflow-hidden">
 
@@ -226,6 +227,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
         </div>
 
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 }

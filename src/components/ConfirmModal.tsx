@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { IconAlertTriangle, IconX } from "@tabler/icons-react";
 
 interface ConfirmModalProps {
@@ -12,7 +13,7 @@ interface ConfirmModalProps {
 export default function ConfirmModal({
   message, confirmLabel = "삭제", onConfirm, onCancel,
 }: ConfirmModalProps) {
-  return (
+  return typeof document !== "undefined" ? createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-6 w-full max-w-sm">
         <div className="flex items-start justify-between mb-4">
@@ -38,6 +39,7 @@ export default function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 }

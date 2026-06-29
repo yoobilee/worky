@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   IconTable, IconMail, IconFileDescription, IconCalendarEvent,
@@ -1025,7 +1026,7 @@ function SpeedDial() {
       )}
 
       {/* 커스텀 추가 모달 */}
-      {showModal && (
+      {showModal && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           onClick={() => { setShowModal(false); setNewUrl(""); setNewName(""); }}
@@ -1077,7 +1078,8 @@ function SpeedDial() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 메인 토글 버튼 */}

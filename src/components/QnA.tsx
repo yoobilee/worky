@@ -3,6 +3,7 @@
 
 import HelpButton from "./HelpButton";
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { IconHistory, IconX } from "@tabler/icons-react";
 import { trackUsage } from "@/lib/usageStats";
 import { createClient } from "@/lib/supabase/client";
@@ -366,6 +367,7 @@ export default function QnA() {
       />
 
       {/* 히스토리 패널 */}
+      {typeof document !== "undefined" && createPortal(
       <div className={`fixed inset-0 z-50 ${showHistory ? "" : "pointer-events-none"}`}>
         <div
           className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ease-in-out ${showHistory ? "opacity-100" : "opacity-0"}`}
@@ -405,10 +407,12 @@ export default function QnA() {
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
+      )}
 
       {/* 히스토리 상세 보기 모달 */}
-      {selectedHistory && (
+      {selectedHistory && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedHistory(null)} />
           <div className="relative bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
@@ -431,7 +435,8 @@ export default function QnA() {
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

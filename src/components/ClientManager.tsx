@@ -5,6 +5,7 @@ import HelpButton from "./HelpButton";
 import DatePickerInput from "./DatePickerInput";
 import { GrassGrid, MiniGrassGrid } from "./GrassGrid";
 import { Fragment, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import ConfirmModal from "./ConfirmModal";
 import {
   IconBuilding, IconPlus, IconPencil, IconTrash,
@@ -812,7 +813,7 @@ export default function ClientManager() {
         </div>
       )}
 
-      {showImportModal && (
+      {showImportModal && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowImportModal(false)}>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">엑셀 가져오기</h3>
@@ -854,10 +855,11 @@ export default function ClientManager() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showExportModal && (
+      {showExportModal && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowExportModal(false)}>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">엑셀 내보내기</h3>
@@ -936,7 +938,8 @@ export default function ClientManager() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {confirmBulkDelete && (
