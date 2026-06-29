@@ -372,7 +372,7 @@ export default function QnA() {
           onClick={() => setShowHistory(false)}
         />
         <div
-          className={`absolute right-0 top-0 h-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border-l border-white/40 dark:border-white/10 shadow-xl flex flex-col transition-all duration-300 ease-in-out ${
+          className={`absolute right-0 top-0 h-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-l border-slate-200 dark:border-zinc-800 shadow-lg flex flex-col transition-all duration-300 ease-in-out ${
             showHistory ? "w-72 opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-full overflow-hidden"
           }`}
         >
@@ -411,7 +411,7 @@ export default function QnA() {
       {selectedHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedHistory(null)} />
-          <div className="relative bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/10 shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+          <div className="relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800 shrink-0">
               <div>
                 <p className="text-sm font-semibold text-slate-700 dark:text-zinc-200">{selectedHistory.title}</p>
