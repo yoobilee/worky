@@ -166,7 +166,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/10 shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">알림</h3>
             <button
