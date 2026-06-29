@@ -141,11 +141,23 @@ export default function Translator() {
         body: JSON.stringify({
           messages: [{ role: "user", content: input }],
           systemPrompt,
+          stream: true,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-      setResult(data.result);
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "알 수 없는 오류");
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      setResult("");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        setResult(acc);
+      }
       trackUsage("translate");
     } catch (e) {
       setError(e instanceof Error ? e.message : "처리 중 오류가 발생했습니다.");

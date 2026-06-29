@@ -192,11 +192,23 @@ export default function EmailReply() {
         body: JSON.stringify({
           messages: [{ role: "user", content: `이메일 목적: ${newSubject || "업무 연락"}\n내용: ${newContent}` }],
           systemPrompt: buildNewEmailSystemPrompt(sender),
+          stream: true,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-      setNewResult(data.result);
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "알 수 없는 오류");
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      setNewResult("");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        setNewResult(acc);
+      }
       trackUsage("email");
     } catch (e) {
       setNewError(e instanceof Error ? e.message : "이메일 생성 중 오류가 발생했습니다.");

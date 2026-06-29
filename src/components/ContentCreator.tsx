@@ -189,11 +189,23 @@ export default function ContentCreator() {
         body: JSON.stringify({
           messages: [{ role: "user", content: workInput.trim() }],
           systemPrompt: buildReportSystemPrompt(tone, useCustomTone ? customToneSample : undefined),
+          stream: true,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-      setReportResult(data.result);
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "알 수 없는 오류");
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      setReportResult("");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        setReportResult(acc);
+      }
       trackUsage("report");
     } catch (e) {
       setReportError(e instanceof Error ? e.message : "메시지 생성 중 오류가 발생했습니다.");
@@ -216,11 +228,23 @@ export default function ContentCreator() {
         body: JSON.stringify({
           messages: [{ role: "user", content: userMsg }],
           systemPrompt: buildInstaSystemPrompt(instaTone, instaHashtags),
+          stream: true,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-      setInstaResult(data.result);
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "알 수 없는 오류");
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      setInstaResult("");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        setInstaResult(acc);
+      }
       trackUsage("template");
     } catch (e) {
       setInstaError(e instanceof Error ? e.message : "게시글 생성 중 오류가 발생했습니다.");
