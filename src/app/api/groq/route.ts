@@ -12,6 +12,7 @@ interface RequestBody {
   systemPrompt?: string;
   max_tokens?: number;
   model?: string;
+  stream?: boolean;
 }
 
 const KOREAN_RULES = `
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: RequestBody = await req.json();
-    const { messages, systemPrompt, max_tokens, model } = body;
+    const { messages, systemPrompt, max_tokens, model, stream } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -46,6 +47,31 @@ export async function POST(req: NextRequest) {
     const fullMessages: Message[] = systemPrompt
       ? [{ role: "system", content: systemPrompt + KOREAN_RULES }, ...messages]
       : messages;
+
+    if (stream === true) {
+      const completionStream = await groq.chat.completions.create({
+        model: model ?? "meta-llama/llama-4-scout-17b-16e-instruct",
+        messages: fullMessages,
+        stream: true,
+        ...(max_tokens ? { max_tokens } : {}),
+      });
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of completionStream) {
+              const delta = chunk.choices[0]?.delta?.content || "";
+              if (delta) controller.enqueue(encoder.encode(delta));
+            }
+          } catch (e) {
+            console.error("스트리밍 오류:", e);
+          } finally {
+            controller.close();
+          }
+        },
+      });
+      return new Response(readable, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    }
 
     const completion = await groq.chat.completions.create({
       model: model ?? "meta-llama/llama-4-scout-17b-16e-instruct",
