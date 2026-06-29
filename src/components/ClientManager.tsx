@@ -282,11 +282,9 @@ export default function ClientManager() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const getRowBg = (idx: number, isHovered: boolean) => isHovered
+  const getRowBg = (_idx: number, isHovered: boolean) => isHovered
     ? "rgba(108,99,255,0.05)"
-    : idx % 2 === 0
-      ? (isDark ? "#18181b" : "#ffffff")
-      : (isDark ? "#27272a" : "#f8fafc");
+    : (isDark ? "#18181b" : "#ffffff");
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const customPopoverRef = useRef<HTMLDivElement>(null);
 
