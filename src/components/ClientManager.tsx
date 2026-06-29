@@ -507,6 +507,12 @@ export default function ClientManager() {
     });
   };
 
+  const toggleSelectAll = () => {
+    const allIds = filtered.map((c) => c.id);
+    const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+    setSelectedIds(allSelected ? new Set() : new Set(allIds));
+  };
+
   const doBulkDelete = async () => {
     const ids = [...selectedIds];
     await Promise.all(ids.map((id) => deleteDbClient(id)));
@@ -1644,7 +1650,27 @@ export default function ClientManager() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="text-left text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800">
-                <th className="px-2 py-3 whitespace-nowrap"></th>
+                <th className="px-2 py-3 whitespace-nowrap">
+                  {listEditMode === "edit" && (
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      aria-label="전체 선택"
+                      className={[
+                        "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
+                        filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id))
+                          ? "bg-[#6C63FF] border-[#6C63FF]"
+                          : "border-slate-300 dark:border-zinc-600",
+                      ].join(" ")}
+                    >
+                      {filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id)) && (
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </th>
                 <th className="px-4 py-3 whitespace-nowrap text-center">거래처명</th>
                 {visibleColumns.has("contact") && <th className="px-4 py-3 whitespace-nowrap text-center">담당자</th>}
                 {visibleColumns.has("phone") && <th className="px-4 py-3 whitespace-nowrap text-center">담당자 연락처</th>}
