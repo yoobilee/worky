@@ -14,7 +14,7 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4">
-      <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/10 shadow-xl p-6 w-full max-w-sm">
+      <div className="bg-white/[0.82] dark:bg-zinc-900/[0.82] backdrop-blur-xl backdrop-saturate-150 rounded-2xl border border-white/60 dark:border-white/10 shadow-xl p-6 w-full max-w-sm">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-red-50 dark:bg-red-950/30 shrink-0">

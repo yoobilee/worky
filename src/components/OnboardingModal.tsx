@@ -89,7 +89,7 @@ export default function OnboardingModal({ userId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/25 px-4">
-      <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/10 shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-white/[0.82] dark:bg-zinc-900/[0.82] backdrop-blur-xl backdrop-saturate-150 rounded-2xl border border-white/60 dark:border-white/10 shadow-2xl w-full max-w-md overflow-hidden">
 
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
