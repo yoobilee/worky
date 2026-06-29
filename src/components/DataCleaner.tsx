@@ -231,7 +231,7 @@ export default function DataCleaner() {
           onClick={() => setShowHistory(false)}
         />
         <div
-          className={`absolute right-0 top-0 h-full bg-white/[0.82] dark:bg-zinc-900/[0.82] backdrop-blur-xl backdrop-saturate-150 border-l border-white/60 dark:border-white/10 shadow-xl flex flex-col transition-all duration-300 ease-in-out ${
+          className={`absolute right-0 top-0 h-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-l border-white/40 dark:border-white/10 shadow-xl flex flex-col transition-all duration-300 ease-in-out ${
             showHistory ? "w-80 opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-full overflow-hidden"
           }`}
         >
