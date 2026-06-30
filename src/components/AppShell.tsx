@@ -5,30 +5,55 @@ import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import NotificationBell from "./NotificationBell";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { MENU_LOCALE_MAP } from "@/lib/menuSettings";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
-const routeMeta: Record<string, { title: string; desc: string; aiChip: boolean }> = {
-  "/":         { title: "Home",         desc: "오늘의 업무 현황을 한눈에 확인하세요",                 aiChip: false },
-  "/data":     { title: "데이터 정리",  desc: "지저분한 텍스트를 AI가 표로 정리합니다",              aiChip: true  },
-  "/todo":     { title: "할 일 / 메모", desc: "할 일을 추가하고 메모를 자유롭게 기록하세요",          aiChip: false },
-  "/template": { title: "템플릿 생성",  desc: "업무 문서를 AI가 즉시 작성해드립니다",                aiChip: true  },
-  "/qa":       { title: "Q&A",          desc: "업무 관련 질문을 AI에게 자유롭게 물어보세요",          aiChip: true  },
-  "/email":    { title: "이메일 작성",  desc: "받은 이메일에 톤에 맞는 답장 초안을 생성합니다",        aiChip: true  },
-  "/summary":  { title: "문서 요약",    desc: "텍스트나 PDF를 붙여넣으면 AI가 요약해드립니다",        aiChip: true  },
-  "/schedule":  { title: "일정 추출",   desc: "이메일·공지·메시지에서 일정 정보를 자동으로 추출합니다",  aiChip: true  },
-  "/translate": { title: "번역·다듬기", desc: "텍스트를 번역하거나 비즈니스 톤으로 다듬어드립니다",        aiChip: true  },
-  "/calendar":  { title: "일정 관리",   desc: "월별 캘린더로 일정을 관리하세요",                              aiChip: false },
-  "/insight":   { title: "데이터 분석", desc: "숫자 데이터를 붙여넣으면 AI가 핵심 수치와 트렌드를 분석합니다", aiChip: true  },
-  "/glossary":  { title: "용어집",      desc: "사내 용어를 등록하고 AI로 뜻을 설명받아 보세요",            aiChip: true  },
-  "/feedback":  { title: "피드백 정리",  desc: "클라이언트 피드백을 필수/선택/구체화로 자동 정리합니다",        aiChip: true  },
-  "/content":   { title: "메시지 작성",  desc: "업무 보고 메시지와 SNS 게시글을 AI로 빠르게 작성합니다",       aiChip: true  },
-  "/document":  { title: "공문서 작성",  desc: "품의서·공문·지출결의서·업무협조 요청서를 AI로 작성합니다",         aiChip: true  },
-  "/clients":   { title: "거래처 관리",  desc: "거래처별 보고 현황과 담당자 정보를 관리하세요",               aiChip: false },
-  "/members":   { title: "구성원 관리",  desc: "팀원 정보와 자리 배치를 관리하세요",                        aiChip: false },
-  "/settings":  { title: "설정",        desc: "내 정보와 앱 환경설정을 관리하세요",                        aiChip: false },
+const ROUTE_DESC_MAP: Record<string, TranslationKey> = {
+  "/":          "desc_home",
+  "/data":      "desc_data",
+  "/todo":      "desc_todo",
+  "/template":  "desc_template",
+  "/qa":        "desc_qa",
+  "/email":     "desc_email",
+  "/summary":   "desc_summary",
+  "/schedule":  "desc_schedule",
+  "/translate": "desc_translate",
+  "/calendar":  "desc_calendar",
+  "/insight":   "desc_insight",
+  "/glossary":  "desc_glossary",
+  "/feedback":  "desc_feedback",
+  "/content":   "desc_content",
+  "/document":  "desc_document",
+  "/clients":   "desc_clients",
+  "/members":   "desc_members",
+  "/settings":  "desc_settings",
+};
+
+const ROUTE_AI_CHIP: Record<string, boolean> = {
+  "/":          false,
+  "/data":      true,
+  "/todo":      false,
+  "/template":  true,
+  "/qa":        true,
+  "/email":     true,
+  "/summary":   true,
+  "/schedule":  true,
+  "/translate": true,
+  "/calendar":  false,
+  "/insight":   true,
+  "/glossary":  true,
+  "/feedback":  true,
+  "/content":   true,
+  "/document":  true,
+  "/clients":   false,
+  "/members":   false,
+  "/settings":  false,
 };
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLocale();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState<"checking" | "connected" | "error">("checking");
   const [userId, setUserId] = useState<string | null>(null);
@@ -81,7 +106,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .catch(() => setAiStatus("error"));
   }, []);
 
-  const meta = routeMeta[pathname] ?? routeMeta["/"];
+  const titleKey = MENU_LOCALE_MAP[pathname];
+  const title    = titleKey ? t(titleKey) : pathname === "/settings" ? t("sidebar_settings") : "Worky";
+  const desc     = ROUTE_DESC_MAP[pathname] ? t(ROUTE_DESC_MAP[pathname]) : "";
+  const aiChip   = ROUTE_AI_CHIP[pathname] ?? false;
 
   // 로그인 페이지는 레이아웃 없이 children만 렌더링
   if (pathname === "/login") {
@@ -123,11 +151,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Topbar */}
         <div className="flex items-center justify-between px-5 py-3 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 shrink-0">
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-tight">{meta.title}</h1>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{meta.desc}</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-tight">{title}</h1>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{desc}</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            {meta.aiChip && (
+            {aiChip && (
               <span
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
