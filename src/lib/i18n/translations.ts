@@ -298,6 +298,10 @@ export const translations = {
     month_short_1: "1월", month_short_2: "2월", month_short_3: "3월", month_short_4: "4월",
     month_short_5: "5월", month_short_6: "6월", month_short_7: "7월", month_short_8: "8월",
     month_short_9: "9월", month_short_10: "10월", month_short_11: "11월", month_short_12: "12월",
+    notif_bell_label: "알림",
+    notif_panel_title: "알림",
+    notif_mark_all_read: "모두 읽음",
+    notif_empty: "새로운 알림이 없습니다",
   },
   en: {
     home: "Home",
@@ -596,6 +600,10 @@ export const translations = {
     month_short_1: "Jan", month_short_2: "Feb", month_short_3: "Mar", month_short_4: "Apr",
     month_short_5: "May", month_short_6: "Jun", month_short_7: "Jul", month_short_8: "Aug",
     month_short_9: "Sep", month_short_10: "Oct", month_short_11: "Nov", month_short_12: "Dec",
+    notif_bell_label: "Notifications",
+    notif_panel_title: "Notifications",
+    notif_mark_all_read: "Mark all as read",
+    notif_empty: "No new notifications",
   },
 } as const;
 

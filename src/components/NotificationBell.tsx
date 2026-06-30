@@ -16,13 +16,17 @@ import {
   markAllUserNotificationsRead,
   type UserNotification,
 } from "@/lib/db/user_notifications";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 interface NotificationBellProps {
   userId: string | null;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   const d = new Date(iso);
+  if (locale === "en") {
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
 }
@@ -44,6 +48,7 @@ type UnifiedItem = {
 };
 
 export default function NotificationBell({ userId }: NotificationBellProps) {
+  const { t, locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
@@ -153,7 +158,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     <div ref={containerRef} className="relative">
       <button
         onClick={() => setOpen((prev) => !prev)}
-        aria-label="알림"
+        aria-label={t("notif_bell_label")}
         className="group relative p-2 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
       >
         <IconBell className="w-5 h-5 group-hover:animate-[bell-ring_0.5s_ease-in-out]" />
@@ -168,17 +173,17 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">알림</h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">{t("notif_panel_title")}</h3>
             <button
               onClick={handleMarkAllAsRead}
               className="text-xs font-medium text-[#4D44CC] dark:text-[#8B85FF] hover:underline"
             >
-              모두 읽음
+              {t("notif_mark_all_read")}
             </button>
           </div>
           <div className="max-h-96 overflow-y-auto">
             {unifiedList.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-zinc-400 text-center py-8">새로운 알림이 없습니다</p>
+              <p className="text-sm text-slate-500 dark:text-zinc-400 text-center py-8">{t("notif_empty")}</p>
             ) : (
               unifiedList.map((item) => {
                 const meta = TYPE_META[item.type] ?? TYPE_META.notice;
@@ -207,7 +212,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                       >
                         {item.content}
                       </p>
-                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">{formatDate(item.created_at)}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">{formatDate(item.created_at, locale)}</p>
                     </div>
                     {overflowIds.has(item.id) && (
                       <span className="shrink-0 mt-1 text-slate-500 dark:text-zinc-400">
