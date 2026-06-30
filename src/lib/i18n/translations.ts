@@ -21,7 +21,7 @@ export const translations = {
     add_event: "일정 추가하러 가기",
     view_all: "전체",
     manage: "관리",
-    settings_language: "언어",
+    settings_language: "언어 설정",
     settings_language_desc: "앱에서 사용할 언어를 선택하세요",
   },
   en: {
@@ -44,7 +44,7 @@ export const translations = {
     add_event: "Add an event",
     view_all: "View All",
     manage: "Manage",
-    settings_language: "Language",
+    settings_language: "Language Settings",
     settings_language_desc: "Choose the language used in the app",
   },
 } as const;
