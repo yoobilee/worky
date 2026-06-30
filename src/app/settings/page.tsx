@@ -24,6 +24,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { getSettings, upsertSettings, type CustomGreeting } from "@/lib/db/settings";
 import DatePickerInput from "@/components/DatePickerInput";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
@@ -110,6 +111,7 @@ const JOB_PRESETS: JobPreset[] = [
 
 export default function SettingsPage() {
   const toast = useToast();
+  const { locale, setLocale, t } = useLocale();
   const [info,          setInfo]          = useState<SenderInfo>({ org: "", name: "", title: "" });
   const [saved,         setSaved]         = useState(false);
   const [hydrated,      setHydrated]      = useState(false);
@@ -479,6 +481,29 @@ export default function SettingsPage() {
                     <><IconDeviceFloppy className="w-4 h-4" />저장</>
                   )}
                 </button>
+              </div>
+
+              {/* 언어 선택 */}
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 mb-0.5">{t("settings_language")}</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mb-3">{t("settings_language_desc")}</p>
+                <div className="flex gap-2">
+                  {(["ko", "en"] as const).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setLocale(l)}
+                      className={[
+                        "px-5 py-2 rounded-xl text-sm font-semibold border transition-all",
+                        locale === l
+                          ? "text-white border-transparent"
+                          : "text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50",
+                      ].join(" ")}
+                      style={locale === l ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+                    >
+                      {l === "ko" ? "한국어" : "English"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

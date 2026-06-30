@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconAddressBook, IconEdit, IconFileText, IconMessageCheck, IconLogout } from "@tabler/icons-react";
 import { loadMenuOrder, MENU_ORDER_EVENT } from "@/lib/menuSettings";
 import { useTheme } from "./ThemeProvider";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import type { TranslationKey } from "@/lib/i18n/translations";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
 } from "@/lib/menuSettings";
@@ -164,10 +166,20 @@ const statusConfig = {
 
 const COLLAPSED_KEY = "worky-sidebar-collapsed";
 
+const FIXED_LOCALE_MAP: Partial<Record<string, TranslationKey>> = {
+  "/":         "home",
+  "/todo":     "sidebar_todo",
+  "/qa":       "sidebar_qa",
+  "/email":    "sidebar_email",
+  "/schedule": "sidebar_schedule",
+  "/calendar": "sidebar_calendar",
+};
+
 export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const pathname = usePathname();
   const router   = useRouter();
   const { theme, toggle: toggleTheme } = useTheme();
+  const { t } = useLocale();
   const st = statusConfig[aiStatus];
 
   const [collapsed,     setCollapsed]     = useState(false);
@@ -306,7 +318,9 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
               <span className={`shrink-0 ${active ? "opacity-90" : "opacity-60"}`}>
                 {item.icon}
               </span>
-              <span className={`inline-block ${labelCls}`}>{item.label}</span>
+              <span className={`inline-block ${labelCls}`}>
+                {FIXED_LOCALE_MAP[item.href] ? t(FIXED_LOCALE_MAP[item.href]!) : item.label}
+              </span>
             </Link>
           );
           });
@@ -320,7 +334,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
         <Link
           href="/settings"
           onClick={onClose}
-          title={isCollapsed ? "설정" : undefined}
+          title={isCollapsed ? t("sidebar_settings") : undefined}
           className={[
             "w-full flex items-center px-2.5 py-2 rounded-xl text-sm",
             "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
@@ -330,7 +344,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
           ].join(" ")}
         >
           <span className="shrink-0"><IconSettings className="w-4 h-4" /></span>
-          <span className={`inline-block ${labelCls}`}>설정</span>
+          <span className={`inline-block ${labelCls}`}>{t("sidebar_settings")}</span>
         </Link>
 
         {/* 다크모드 토글 */}

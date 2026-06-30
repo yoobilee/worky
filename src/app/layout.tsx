@@ -4,6 +4,7 @@ import "./globals.css";
 import AppShell from "@/components/AppShell";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { LocaleProvider } from "@/lib/i18n/LocaleContext";
 
 const dmMono = DM_Mono({
   weight: ["400", "500"],
@@ -49,9 +50,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="h-full text-slate-900 dark:text-slate-100">
         <ThemeProvider>
-          <ToastProvider>
-            <AppShell>{children}</AppShell>
-          </ToastProvider>
+          <LocaleProvider>
+            <ToastProvider>
+              <AppShell>{children}</AppShell>
+            </ToastProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>
