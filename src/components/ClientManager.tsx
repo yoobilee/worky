@@ -19,6 +19,8 @@ import {
 import * as XLSX from "xlsx";
 import { useTheme } from "./ThemeProvider";
 import { useToast } from "@/contexts/ToastContext";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
 import { createClient } from "@/lib/supabase/client";
 import {
   getClients as getDbClients, addClient as addDbClient, addClients as addDbClients,
@@ -30,7 +32,7 @@ import {
   type ReportStatus, type DayStatus, type SortOrder,
   type HistoryEntry, type CustomField, type Client, type FormState,
   type ColumnKey, type ViewMode,
-  ALL_COLUMNS, CONTRACT_UNIT_LABELS, EMPTY_FORM, STATUS_CONFIG,
+  ALL_COLUMNS, EMPTY_FORM, STATUS_CONFIG,
 } from "@/types/client";
 
 const STATUS_LABEL_TO_KEY: Record<string, ReportStatus> = Object.fromEntries(
@@ -212,6 +214,7 @@ function clientToDb(c: Omit<Client, "id" | "createdAt">): Omit<DbClient, "id" | 
 /* ── 메인 컴포넌트 ── */
 export default function ClientManager() {
   const toast = useToast();
+  const { t } = useLocale();
   const [clients,           setClients]           = useState<Client[]>([]);
   const [hydrated,          setHydrated]          = useState(false);
   const [userId,            setUserId]            = useState<string | null>(null);
@@ -405,7 +408,7 @@ export default function ClientManager() {
       setImportSkipped(skipped);
       setShowImportModal(true);
     } catch {
-      toast.error("엑셀 파일을 읽는 중 오류가 발생했습니다");
+      toast.error(t("toast_excel_read_fail"));
     }
   };
 
@@ -432,10 +435,10 @@ export default function ClientManager() {
         mask_company_phone: false,
         custom_fields:      [] as unknown as import("@/types/supabase").Json,
       }));
-    if (toInsert.length === 0) { toast.error("가져올 거래처를 선택해주세요"); return; }
+    if (toInsert.length === 0) { toast.error(t("toast_select_import")); return; }
     const inserted = await addDbClients(userId, toInsert);
     setClients(prev => [...prev, ...inserted.map(dbToClient)]);
-    toast.success(`${inserted.length}개 거래처를 가져왔습니다`);
+    toast.success(tFormat(t("toast_import_success"), { n: inserted.length }));
     setShowImportModal(false);
     setImportRows([]);
     setImportSelected(new Set());
@@ -472,15 +475,15 @@ export default function ClientManager() {
         "보고 톤": c.reportTone,
         "메모": c.memo,
       }));
-    if (rows.length === 0) { toast.error("내보낼 거래처가 없습니다"); return; }
+    if (rows.length === 0) { toast.error(t("toast_no_export")); return; }
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "거래처");
     const today = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `worky_거래처_${today}.xlsx`);
     const exportMsg = searchQuery.trim()
-      ? `검색 결과 ${rows.length}개를 내보냈습니다`
-      : `${rows.length}개 거래처를 내보냈습니다`;
+      ? tFormat(t("toast_export_search_success"), { n: rows.length })
+      : tFormat(t("toast_export_success"), { n: rows.length });
     toast.success(exportMsg);
     setShowExportModal(false);
   };
@@ -550,7 +553,7 @@ export default function ClientManager() {
         }
       );
       const c = updated.find((x) => x.id === id);
-      if (c) updateDbClient(id, { status: newStatus, history: c.statusHistory as unknown as import("@/types/supabase").Json }).catch(() => { toast.error("상태 저장에 실패했습니다."); });
+      if (c) updateDbClient(id, { status: newStatus, history: c.statusHistory as unknown as import("@/types/supabase").Json }).catch(() => { toast.error(t("toast_status_fail")); });
       return updated;
     });
     setOpenStatusId(null);
@@ -564,7 +567,7 @@ export default function ClientManager() {
         if (!log[date])                log[date] = "done";
         else if (log[date] === "done") log[date] = "failed";
         else                           delete log[date];
-        updateDbClient(clientId, { progress: log as Record<string, string> }).catch(() => { toast.error("진행 현황 저장에 실패했습니다."); });
+        updateDbClient(clientId, { progress: log as Record<string, string> }).catch(() => { toast.error(t("toast_progress_fail")); });
         return { ...c, dailyLog: log };
       });
       return updated;
@@ -606,7 +609,7 @@ export default function ClientManager() {
     if (newKeys.length > 0) {
       const updatedKeys = [...savedCustomKeys, ...newKeys];
       setSavedCustomKeys(updatedKeys);
-      upsertSettings(userId, { custom_field_keys: updatedKeys }).catch(() => { toast.error("설정 저장에 실패했습니다."); });
+      upsertSettings(userId, { custom_field_keys: updatedKeys }).catch(() => { toast.error(t("toast_settings_fail")); });
     }
 
     if (editingId) {
@@ -616,14 +619,14 @@ export default function ClientManager() {
       await updateDbClient(editingId, clientToDb(updated));
       setClients((prev) => prev.map((c) => c.id !== editingId ? c : updated));
       setListEditMode("none");
-      toast.success("거래처가 수정됐습니다.");
+      toast.success(t("toast_client_updated"));
     } else {
       const dbRow = await addDbClient(userId, {
         ...clientToDb({ ...base, statusHistory: [], dailyLog: {} }),
       });
       if (dbRow) {
         setClients((prev) => [...prev, dbToClient(dbRow)]);
-        toast.success("거래처가 추가됐습니다.");
+        toast.success(t("toast_client_added"));
       }
     }
     closeForm();
@@ -652,7 +655,7 @@ export default function ClientManager() {
     await deleteDbClient(confirmDeleteId);
     setClients((prev) => prev.filter((c) => c.id !== confirmDeleteId));
     setConfirmDeleteId(null);
-    toast.success("거래처가 삭제됐습니다.");
+    toast.success(t("toast_client_deleted"));
   };
 
   const closeForm = () => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); };
@@ -754,14 +757,40 @@ export default function ClientManager() {
   }
 
   const SORT_LABELS: Record<SortOrder, string> = {
-    status:             "상태순",
-    expiry:             "만료 임박순",
-    contractStart_asc:  "계약 시작일 ↑",
-    contractStart_desc: "계약 시작일 ↓",
-    name_asc:           "거래처명 ↑",
-    name_desc:          "거래처명 ↓",
-    contact_asc:        "담당자 ↑",
-    contact_desc:       "담당자 ↓",
+    status:             t("sort_status"),
+    expiry:             t("sort_expiry"),
+    contractStart_asc:  t("sort_contractStart_asc"),
+    contractStart_desc: t("sort_contractStart_desc"),
+    name_asc:           t("sort_name_asc"),
+    name_desc:          t("sort_name_desc"),
+    contact_asc:        t("sort_contact_asc"),
+    contact_desc:       t("sort_contact_desc"),
+  };
+
+  const STATUS_LABEL: Record<ReportStatus, string> = {
+    pending:    t("status_pending"),
+    inprogress: t("status_inprogress"),
+    complete:   t("status_complete"),
+    stopped:    t("status_stopped"),
+  };
+
+  const COL_LABEL: Partial<Record<string, string>> = {
+    contact:       t("col_contact"),
+    phone:         t("col_phone"),
+    companyPhone:  t("col_company_phone"),
+    tags:          t("col_tags"),
+    contractStart: t("col_contract_start"),
+    contractEnd:   t("col_contract_end"),
+    dday:          "D-day",
+    memo:          t("col_memo"),
+    reportTone:    t("col_report_tone"),
+  };
+
+  const UNIT_LABELS: Record<FormState["contractDaysUnit"], string> = {
+    days:   t("unit_days"),
+    weeks:  t("unit_weeks"),
+    months: t("unit_months"),
+    years:  t("unit_years"),
   };
 
   const confirmDeleteName = clients.find((c) => c.id === confirmDeleteId)?.name ?? "";
@@ -771,7 +800,7 @@ export default function ClientManager() {
 
       {confirmDeleteId && (
         <ConfirmModal
-          message={`'${confirmDeleteName}'을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+          message={tFormat(t("confirm_delete_single"), { name: confirmDeleteName ?? "" })}
           onConfirm={doDelete}
           onCancel={() => setConfirmDeleteId(null)}
         />
@@ -816,13 +845,13 @@ export default function ClientManager() {
       {showImportModal && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowImportModal(false)}>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">엑셀 가져오기</h3>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">{t("import_title")}</h3>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mb-3 shrink-0">
-              가져올 거래처를 선택하세요{importSkipped > 0 && ` (이름 없는 ${importSkipped}개 행은 제외됨)`}
+              {t("import_select")}{importSkipped > 0 && ` ${tFormat(t("import_skipped"), { n: importSkipped })}`}
             </p>
             <div className="flex-1 overflow-y-auto rounded-xl border border-slate-100 dark:border-zinc-800 min-h-0">
               {importRows.length === 0 ? (
-                <p className="text-xs text-slate-500 dark:text-zinc-400 text-center py-6">가져올 거래처가 없습니다</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 text-center py-6">{t("import_empty")}</p>
               ) : (
                 importRows.map((r, i) => {
                   const checked = importSelected.has(i);
@@ -834,23 +863,23 @@ export default function ClientManager() {
                         {checked && <IconCheck className="w-3 h-3 text-white" />}
                       </div>
                       <span className="text-sm text-slate-700 dark:text-zinc-200 truncate flex-1 min-w-0">{r.name}</span>
-                      <span className={`text-xs font-medium shrink-0 ${STATUS_CONFIG[r.status].textCls}`}>{STATUS_CONFIG[r.status].label}</span>
+                      <span className={`text-xs font-medium shrink-0 ${STATUS_CONFIG[r.status].textCls}`}>{STATUS_LABEL[r.status]}</span>
                     </button>
                   );
                 })
               )}
             </div>
             <div className="flex items-center justify-between mt-4 shrink-0">
-              <span className="text-xs text-slate-500 dark:text-zinc-400">{importSelected.size}개 선택됨</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("n_selected"), { n: importSelected.size })}</span>
               <div className="flex gap-2">
                 <button onClick={() => setShowImportModal(false)}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-sm text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-                  취소
+                  {t("cancel2")}
                 </button>
                 <button onClick={handleConfirmImport} disabled={importSelected.size === 0}
                   className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition"
                   style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-                  가져오기
+                  {t("import_btn")}
                 </button>
               </div>
             </div>
@@ -862,8 +891,8 @@ export default function ClientManager() {
       {showExportModal && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowExportModal(false)}>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">엑셀 내보내기</h3>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mb-3 shrink-0">내보낼 거래처를 선택하세요</p>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 shrink-0">{t("export_title")}</h3>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mb-3 shrink-0">{t("export_select")}</p>
 
             <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
               {(() => {
@@ -875,7 +904,7 @@ export default function ClientManager() {
                         ? "border-[#6C63FF] bg-[#6C63FF]/10 text-[#4D44CC]"
                         : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800"
                     }`}>
-                    전체 {allChecked ? "해제" : "선택"}
+                    {allChecked ? t("deselect_all_btn") : t("select_all_btn")}
                   </button>
                 );
               })()}
@@ -889,7 +918,7 @@ export default function ClientManager() {
                         ? `border-[#6C63FF] bg-[#6C63FF]/10 ${STATUS_CONFIG[status].textCls}`
                         : `border-slate-200 dark:border-zinc-700 ${STATUS_CONFIG[status].textCls} hover:bg-slate-50 dark:hover:bg-zinc-800`
                     }`}>
-                    {STATUS_CONFIG[status].label}
+                    {STATUS_LABEL[status]}
                   </button>
                 );
               })}
@@ -897,7 +926,7 @@ export default function ClientManager() {
 
             <div className="flex-1 overflow-y-auto rounded-xl border border-slate-100 dark:border-zinc-800 min-h-0">
               {filtered.length === 0 ? (
-                <p className="text-xs text-slate-500 dark:text-zinc-400 text-center py-6">표시할 거래처가 없습니다</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 text-center py-6">{t("export_empty")}</p>
               ) : (
                 filtered.map(c => {
                   const checked = exportSelectedIds.has(c.id);
@@ -916,7 +945,7 @@ export default function ClientManager() {
                         {checked && <IconCheck className="w-3 h-3 text-white" />}
                       </div>
                       <span className="text-sm text-slate-700 dark:text-zinc-200 truncate flex-1 min-w-0">{c.name}</span>
-                      <span className={`text-xs font-medium shrink-0 ${STATUS_CONFIG[c.status].textCls}`}>{STATUS_CONFIG[c.status].label}</span>
+                      <span className={`text-xs font-medium shrink-0 ${STATUS_CONFIG[c.status].textCls}`}>{STATUS_LABEL[c.status]}</span>
                     </button>
                   );
                 })
@@ -924,16 +953,16 @@ export default function ClientManager() {
             </div>
 
             <div className="flex items-center justify-between mt-4 shrink-0">
-              <span className="text-xs text-slate-500 dark:text-zinc-400">{exportSelectedIds.size}개 선택됨</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("n_selected"), { n: exportSelectedIds.size })}</span>
               <div className="flex gap-2">
                 <button onClick={() => setShowExportModal(false)}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-sm text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-                  취소
+                  {t("cancel2")}
                 </button>
                 <button onClick={handleExport} disabled={exportSelectedIds.size === 0}
                   className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition"
                   style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-                  내보내기
+                  {t("export_btn")}
                 </button>
               </div>
             </div>
@@ -944,7 +973,7 @@ export default function ClientManager() {
 
       {confirmBulkDelete && (
         <ConfirmModal
-          message={`${selectedIds.size}개 거래처를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+          message={tFormat(t("confirm_delete_bulk"), { n: selectedIds.size })}
           onConfirm={doBulkDelete}
           onCancel={() => setConfirmBulkDelete(false)}
         />
@@ -969,7 +998,7 @@ export default function ClientManager() {
                     dc.status === s ? `${sc.bgCls} ${sc.textCls}` : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
                   ].join(" ")}
                 >
-                  {STATUS_ICONS[s]}{sc.label}
+                  {STATUS_ICONS[s]}{STATUS_LABEL[s]}
                 </button>
               );
             })}
@@ -987,7 +1016,7 @@ export default function ClientManager() {
             style={{ position: "fixed", left: customPopover.x, top: customPopover.y }}
             className="z-[9999] bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-xl p-3 min-w-[180px] max-w-[280px]"
           >
-            <p className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">커스텀 속성</p>
+            <p className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">{t("custom_attrs")}</p>
             <div className="space-y-1.5">
               {client.customFields.map((f) => {
                 const fieldKey = `${client.id}:${f.key}`;
@@ -1022,15 +1051,15 @@ export default function ClientManager() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">거래처 목록</h2>
-          <span className="text-xs text-slate-500 dark:text-zinc-400">총 {total}개</span>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("client_list")}</h2>
+          <span className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("client_total"), { n: total })}</span>
         </div>
         <div className="flex items-center gap-2">
           {/* 뷰 모드 토글 */}
           <div className="flex items-center gap-0.5 p-0.5 rounded-xl border border-slate-200 dark:border-zinc-700">
             <button
               onClick={() => handleViewModeChange("grid")}
-              aria-label="박스형 보기"
+              aria-label={t("view_grid")}
               className={[
                 "p-1.5 rounded-lg transition-colors",
                 viewMode === "grid"
@@ -1042,7 +1071,7 @@ export default function ClientManager() {
             </button>
             <button
               onClick={() => handleViewModeChange("list")}
-              aria-label="목록형 보기"
+              aria-label={t("view_list")}
               className={[
                 "p-1.5 rounded-lg transition-colors",
                 viewMode === "list"
@@ -1059,7 +1088,7 @@ export default function ClientManager() {
                 localStorage.setItem(GRASS_PANEL_KEY, String(!showGrassPanel));
                 setShowGrassPanel((v) => !v);
               }}
-              aria-label="진행현황 패널"
+              aria-label={t("view_progress_panel")}
               className={[
                 "p-1.5 rounded-xl border transition-colors",
                 showGrassPanel
@@ -1071,19 +1100,19 @@ export default function ClientManager() {
             </button>
           )}
           <button onClick={() => fileInputRef.current?.click()}
-            onMouseEnter={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setIconTooltip({ x: rect.left + rect.width / 2, y: rect.bottom + 6, text: "엑셀 가져오기" }); }}
+            onMouseEnter={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setIconTooltip({ x: rect.left + rect.width / 2, y: rect.bottom + 6, text: t("excel_import") }); }}
             onMouseLeave={() => setIconTooltip(null)}
             className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-            aria-label="엑셀 가져오기">
+            aria-label={t("excel_import")}>
             <IconFileImport className="w-4 h-4" />
           </button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileSelect} />
           <button onClick={() => { setExportSelectedIds(new Set(filtered.map(c => c.id))); setShowExportModal(true); }}
             className="p-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-            aria-label="엑셀 내보내기"
+            aria-label={t("excel_export")}
             onMouseEnter={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
-              setIconTooltip({ x: rect.left + rect.width / 2, y: rect.bottom + 6, text: "엑셀 내보내기" });
+              setIconTooltip({ x: rect.left + rect.width / 2, y: rect.bottom + 6, text: t("excel_export") });
             }}
             onMouseLeave={() => setIconTooltip(null)}>
             <IconFileExport className="w-4 h-4" />
@@ -1093,7 +1122,7 @@ export default function ClientManager() {
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
           >
-            <IconPlus className="w-4 h-4" />거래처 추가
+            <IconPlus className="w-4 h-4" />{t("client_add")}
           </button>
         </div>
       </div>
@@ -1103,9 +1132,9 @@ export default function ClientManager() {
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#6C63FF]/40 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">
-              {editingId ? "거래처 수정" : "새 거래처 추가"}
+              {editingId ? t("client_edit_title") : t("client_add_title")}
             </h3>
-            <button onClick={closeForm} aria-label="닫기" className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+            <button onClick={closeForm} aria-label={t("close")} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
               <IconX className="w-4 h-4" />
             </button>
           </div>
@@ -1114,12 +1143,12 @@ export default function ClientManager() {
             {/* 거래처명 */}
             <div>
               <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">
-                거래처명 <span className="text-red-400">*</span>
+                {t("field_client_name")} <span className="text-red-400">*</span>
               </label>
               <input autoFocus value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 onKeyDown={(e) => e.key === "Enter" && handleSave()}
-                placeholder="(주)워키코퍼레이션"
+                placeholder={t("ph_client_name")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
             </div>
@@ -1127,7 +1156,7 @@ export default function ClientManager() {
             {/* 거래처 연락처 */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">거래처 연락처</label>
+                <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">{t("field_company_phone")}</label>
                 <button
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, maskCompanyPhone: !f.maskCompanyPhone }))}
@@ -1143,11 +1172,11 @@ export default function ClientManager() {
                       </svg>
                     )}
                   </span>
-                  <span className="text-slate-500 dark:text-zinc-400">연락처 숨김</span>
+                  <span className="text-slate-500 dark:text-zinc-400">{t("hide_contact")}</span>
                 </button>
               </div>
               <input value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: e.target.value }))}
-                placeholder="02-0000-0000"
+                placeholder={t("ph_company_phone")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
             </div>
@@ -1155,7 +1184,7 @@ export default function ClientManager() {
             {/* 상태 */}
             <div>
               <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">
-                보고/업무 상태 <span className="text-red-400">*</span>
+                {t("field_status")} <span className="text-red-400">*</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {(["pending","inprogress","complete","stopped"] as ReportStatus[]).map((s) => {
@@ -1170,7 +1199,7 @@ export default function ClientManager() {
                           : "border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
                       ].join(" ")}
                     >
-                      {STATUS_ICONS[s]}{cfg.label}
+                      {STATUS_ICONS[s]}{STATUS_LABEL[s]}
                     </button>
                   );
                 })}
@@ -1180,15 +1209,15 @@ export default function ClientManager() {
             {/* 담당자 + 연락처 */}
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">담당자명</label>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">{t("field_contact")}</label>
                 <input value={form.contact} onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))}
-                  placeholder="홍길동 과장"
+                  placeholder={t("ph_contact")}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                 />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">담당자 연락처</label>
+                  <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">{t("field_phone")}</label>
                   <button
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, maskPhone: !f.maskPhone }))}
@@ -1204,11 +1233,11 @@ export default function ClientManager() {
                         </svg>
                       )}
                     </span>
-                    <span className="text-slate-500 dark:text-zinc-400">연락처 숨김</span>
+                    <span className="text-slate-500 dark:text-zinc-400">{t("hide_contact")}</span>
                   </button>
                 </div>
                 <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  placeholder="010-0000-0000"
+                  placeholder={t("ph_phone")}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                 />
               </div>
@@ -1216,16 +1245,16 @@ export default function ClientManager() {
 
             {/* 링크 */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">링크 (URL)</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">{t("field_link")}</label>
               <input value={form.link} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))}
-                placeholder="https://example.com"
+                placeholder={t("ph_link")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
             </div>
 
             {/* 태그 */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">태그/키워드</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">{t("field_tags")}</label>
               {form.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {form.tags.map((t) => (
@@ -1242,7 +1271,7 @@ export default function ClientManager() {
                 onChange={(e) => setForm((f) => ({ ...f, tagInput: e.target.value }))}
                 onKeyDown={(e) => { if (e.key==="Enter"||e.key===",") { e.preventDefault(); commitTag(); } }}
                 onBlur={commitTag}
-                placeholder="태그 입력 후 Enter (예: 신규, VIP)"
+                placeholder={t("ph_tags")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
             </div>
@@ -1250,7 +1279,7 @@ export default function ClientManager() {
             {/* 계약 시작일 + 기간 + 잔디밭 체크박스 */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">계약 정보</label>
+                <label className="text-xs font-medium text-slate-500 dark:text-zinc-400">{t("field_contract")}</label>
                 {/* 진행 현황 체크박스 */}
                 <button
                   type="button"
@@ -1268,7 +1297,7 @@ export default function ClientManager() {
                       </svg>
                     )}
                   </span>
-                  <span className="text-slate-500 dark:text-zinc-400">진행 현황</span>
+                  <span className="text-slate-500 dark:text-zinc-400">{t("show_progress")}</span>
                 </button>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -1281,7 +1310,7 @@ export default function ClientManager() {
                 <div className="flex gap-1.5">
                   <input type="number" min="1" value={form.contractDays}
                     onChange={(e) => handleContractChange("contractDays", e.target.value)}
-                    placeholder="계약 기간 (영업일, 예: 30)"
+                    placeholder={t("ph_contract_days")}
                     className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                   />
                   <div className="relative" ref={contractUnitDropdownRef}>
@@ -1290,12 +1319,12 @@ export default function ClientManager() {
                       onClick={() => setContractUnitDropdownOpen((v) => !v)}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                     >
-                      {CONTRACT_UNIT_LABELS[form.contractDaysUnit]}
+                      {UNIT_LABELS[form.contractDaysUnit]}
                       {contractUnitDropdownOpen ? <IconChevronUp className="w-3.5 h-3.5" /> : <IconChevronDown className="w-3.5 h-3.5" />}
                     </button>
                     {contractUnitDropdownOpen && (
                       <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[80px]">
-                        {(Object.keys(CONTRACT_UNIT_LABELS) as FormState["contractDaysUnit"][]).map((key) => (
+                        {(Object.keys(UNIT_LABELS) as FormState["contractDaysUnit"][]).map((key) => (
                           <button
                             key={key}
                             type="button"
@@ -1308,7 +1337,7 @@ export default function ClientManager() {
                             ].join(" ")}
                           >
                             {form.contractDaysUnit === key ? <IconCheck className="w-3 h-3" /> : <span className="w-3 h-3" />}
-                            {CONTRACT_UNIT_LABELS[key]}
+                            {UNIT_LABELS[key]}
                           </button>
                         ))}
                       </div>
@@ -1318,32 +1347,32 @@ export default function ClientManager() {
               </div>
               {contractEndPreview && (
                 <p className="text-xs text-[#4D44CC] mt-1.5">
-                  만료 예정일: {formatDate(contractEndPreview)}
+                  {tFormat(t("expiry_preview"), { date: formatDate(contractEndPreview) })}
                 </p>
               )}
             </div>
 
             {/* 보고 메시지 톤 */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">보고 메시지 톤/선호사항</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">{t("field_report_tone")}</label>
               <input value={form.reportTone} onChange={(e) => setForm((f) => ({ ...f, reportTone: e.target.value }))}
-                placeholder="예: 간결하게, 수치 중심, 정중한 어투"
+                placeholder={t("ph_report_tone")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
             </div>
 
             {/* 메모 */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">메모</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">{t("field_memo")}</label>
               <textarea value={form.memo} onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
-                rows={2} placeholder="주요 관심사, 특이사항 등"
+                rows={2} placeholder={t("ph_memo")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
             </div>
 
             {/* 커스텀 속성 */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">커스텀 속성</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">{t("field_custom")}</label>
               <div className="space-y-2">
                 {form.customFields.map((field, idx) => (
                   <div key={idx} className="flex items-center gap-2">
@@ -1355,7 +1384,7 @@ export default function ClientManager() {
                         }))}
                         onFocus={() => setFocusedCustomKeyIdx(idx)}
                         onBlur={() => setFocusedCustomKeyIdx((cur) => cur === idx ? null : cur)}
-                        placeholder="속성명"
+                        placeholder={t("ph_custom_key")}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                       />
                       {focusedCustomKeyIdx === idx && savedCustomKeys.length > 0 && (
@@ -1387,7 +1416,7 @@ export default function ClientManager() {
                         ...f,
                         customFields: f.customFields.map((cf, i) => i === idx ? { ...cf, value: e.target.value } : cf),
                       }))}
-                      placeholder="값"
+                      placeholder={t("ph_custom_value")}
                       className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
                     />
                     <button
@@ -1408,7 +1437,7 @@ export default function ClientManager() {
                           </svg>
                         )}
                       </span>
-                      <span className="text-slate-500 dark:text-zinc-400">숨김</span>
+                      <span className="text-slate-500 dark:text-zinc-400">{t("hide_field")}</span>
                     </button>
                     <button
                       type="button"
@@ -1416,7 +1445,7 @@ export default function ClientManager() {
                         ...f,
                         customFields: f.customFields.filter((_, i) => i !== idx),
                       }))}
-                      aria-label="속성 삭제"
+                      aria-label={t("delete_attribute")}
                       className="text-slate-500 hover:text-red-500 transition shrink-0"
                     >
                       <IconX className="w-4 h-4" />
@@ -1432,7 +1461,7 @@ export default function ClientManager() {
                 }))}
                 className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[#6C63FF]/40 text-[#4D44CC] hover:bg-[#6C63FF]/10 transition"
               >
-                <IconPlus className="w-3.5 h-3.5" />속성 추가
+                <IconPlus className="w-3.5 h-3.5" />{t("add_attribute")}
               </button>
             </div>
           </div>
@@ -1440,12 +1469,12 @@ export default function ClientManager() {
           <div className="flex justify-end gap-2 mt-4">
             <button onClick={closeForm}
               className="px-4 py-2 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-              취소
+              {t("cancel2")}
             </button>
             <button onClick={handleSave} disabled={!form.name.trim()}
               className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition disabled:opacity-40"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-              {editingId ? "수정 완료" : "추가"}
+              {editingId ? t("edit_done") : t("add")}
             </button>
           </div>
         </div>
@@ -1455,10 +1484,10 @@ export default function ClientManager() {
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm px-1 py-1">
         <div className="grid grid-cols-4 divide-x divide-slate-100 dark:divide-zinc-800">
           {[
-            { label: "전체",   value: total,       cls: "text-slate-800 dark:text-slate-100" },
-            { label: "진행 중", value: cInprogress, cls: "text-blue-500" },
-            { label: "완료",   value: cComplete,   cls: "text-emerald-500" },
-            { label: "중단",   value: cStopped,    cls: "text-red-400" },
+            { label: t("stat_total"),      value: total,       cls: "text-slate-800 dark:text-slate-100" },
+            { label: t("stat_inprogress"), value: cInprogress, cls: "text-blue-500" },
+            { label: t("stat_complete"),   value: cComplete,   cls: "text-emerald-500" },
+            { label: t("stat_stopped"),    value: cStopped,    cls: "text-red-400" },
           ].map(({ label, value, cls }) => (
             <div key={label} className="px-5 py-4">
               <p className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">{label}</p>
@@ -1487,13 +1516,13 @@ export default function ClientManager() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="전체 검색..."
+            placeholder={t("search_all")}
             className="w-full pl-9 pr-9 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              aria-label="검색어 지우기"
+              aria-label={t("clear_search")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600 dark:hover:text-zinc-300"
             >
               <IconX className="w-3.5 h-3.5" />
@@ -1509,7 +1538,7 @@ export default function ClientManager() {
                 onClick={() => setListEditMode("edit")}
                 className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
               >
-                편집
+                {t("edit_mode")}
               </button>
             ) : (
               <>
@@ -1527,7 +1556,7 @@ export default function ClientManager() {
                       : "bg-transparent text-slate-300 dark:text-zinc-600 border-slate-200 dark:border-zinc-700 opacity-100 cursor-not-allowed",
                   ].join(" ")}
                 >
-                  수정
+                  {t("modify")}
                 </button>
                 <button
                   disabled={selectedIds.size === 0}
@@ -1539,13 +1568,13 @@ export default function ClientManager() {
                       : "bg-transparent text-slate-300 dark:text-zinc-600 border-slate-200 dark:border-zinc-700 opacity-100 cursor-not-allowed",
                   ].join(" ")}
                 >
-                  {selectedIds.size > 0 ? `${selectedIds.size}개 삭제` : "삭제"}
+                  {selectedIds.size > 0 ? tFormat(t("delete_n"), { n: selectedIds.size }) : t("delete")}
                 </button>
                 <button
                   onClick={() => { setListEditMode("none"); setSelectedIds(new Set()); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-600 text-slate-500 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700 transition-colors"
                 >
-                  취소
+                  {t("cancel2")}
                 </button>
               </>
             )
@@ -1558,7 +1587,7 @@ export default function ClientManager() {
                 onClick={() => setColumnSettingOpen(v => !v)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
               >
-                <IconLayoutColumns className="w-3.5 h-3.5" />표시 항목
+                <IconLayoutColumns className="w-3.5 h-3.5" />{t("show_columns")}
               </button>
               {columnSettingOpen && (
                 <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg p-2 min-w-[160px]">
@@ -1575,7 +1604,7 @@ export default function ClientManager() {
                           </svg>
                         )}
                       </span>
-                      {col.label}
+                      {COL_LABEL[col.key] ?? col.label}
                     </button>
                   ))}
                 </div>
@@ -1621,11 +1650,11 @@ export default function ClientManager() {
           <IconBuilding className="w-12 h-12 mb-3" />
           {clients.length === 0 ? (
             <>
-              <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">등록된 거래처가 없습니다</p>
-              <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">위 버튼을 눌러 거래처를 추가하세요</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">{t("empty_no_clients")}</p>
+              <p className="text-xs text-slate-300 dark:text-zinc-600 mt-1">{t("empty_no_clients_sub")}</p>
             </>
           ) : (
-            <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">검색 결과가 없습니다</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">{t("empty_no_search")}</p>
           )}
         </div>
       ) : viewMode === "list" ? (
@@ -1656,7 +1685,7 @@ export default function ClientManager() {
                     <button
                       type="button"
                       onClick={toggleSelectAll}
-                      aria-label="전체 선택"
+                      aria-label={t("select_all")}
                       className={[
                         "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
                         filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id))
@@ -1672,17 +1701,17 @@ export default function ClientManager() {
                     </button>
                   )}
                 </th>
-                <th className="px-4 py-3 whitespace-nowrap text-center">거래처명</th>
-                {visibleColumns.has("contact") && <th className="px-4 py-3 whitespace-nowrap text-center">담당자</th>}
-                {visibleColumns.has("phone") && <th className="px-4 py-3 whitespace-nowrap text-center">담당자 연락처</th>}
-                {visibleColumns.has("companyPhone") && <th className="px-4 py-3 whitespace-nowrap text-center">거래처 연락처</th>}
-                {visibleColumns.has("tags") && <th className="px-4 py-3 whitespace-nowrap text-center">태그</th>}
-                {visibleColumns.has("contractStart") && <th className="px-4 py-3 whitespace-nowrap text-center">계약 시작일</th>}
-                {visibleColumns.has("contractEnd") && <th className="px-4 py-3 whitespace-nowrap text-center">계약 만료일</th>}
+                <th className="px-4 py-3 whitespace-nowrap text-center">{t("col_client_name")}</th>
+                {visibleColumns.has("contact") && <th className="px-4 py-3 whitespace-nowrap text-center">{COL_LABEL["contact"]}</th>}
+                {visibleColumns.has("phone") && <th className="px-4 py-3 whitespace-nowrap text-center">{COL_LABEL["phone"]}</th>}
+                {visibleColumns.has("companyPhone") && <th className="px-4 py-3 whitespace-nowrap text-center">{COL_LABEL["companyPhone"]}</th>}
+                {visibleColumns.has("tags") && <th className="px-4 py-3 whitespace-nowrap text-center">{COL_LABEL["tags"]}</th>}
+                {visibleColumns.has("contractStart") && <th className="px-4 py-3 whitespace-nowrap text-center">{COL_LABEL["contractStart"]}</th>}
+                {visibleColumns.has("contractEnd") && <th className="px-4 py-3 whitespace-nowrap text-center">{t("col_contract_end")}</th>}
                 {visibleColumns.has("dday") && <th className="px-4 py-3 whitespace-nowrap text-center">D-day</th>}
-                {visibleColumns.has("memo") && <th className="px-4 py-3 whitespace-nowrap text-center">메모</th>}
-                {visibleColumns.has("reportTone") && <th className="px-4 py-3 whitespace-nowrap text-center">보고 톤</th>}
-                <th className="px-4 py-3 whitespace-nowrap text-center">상태</th>
+                {visibleColumns.has("memo") && <th className="px-4 py-3 whitespace-nowrap text-center">{COL_LABEL["memo"]}</th>}
+                {visibleColumns.has("reportTone") && <th className="px-4 py-3 whitespace-nowrap text-center">{COL_LABEL["reportTone"]}</th>}
+                <th className="px-4 py-3 whitespace-nowrap text-center">{t("col_status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1711,7 +1740,7 @@ export default function ClientManager() {
                           type="button"
                           onClick={() => toggleSelected(c.id)}
                           onMouseDown={(e) => e.stopPropagation()}
-                          aria-label="선택"
+                          aria-label={t("select_one")}
                           className={[
                             "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0",
                             isSelected ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
@@ -1748,7 +1777,7 @@ export default function ClientManager() {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setCustomPopover((prev) => prev?.id === c.id ? null : { id: c.id, x: rect.left, y: rect.bottom + 4 });
                             }}
-                            aria-label="커스텀 속성 보기"
+                            aria-label={t("view_custom_attrs")}
                             className="shrink-0"
                           >
                             <IconTag className={["w-3.5 h-3.5", customPopover?.id === c.id ? "text-[#4D44CC]" : "text-slate-500"].join(" ")} />
@@ -1769,7 +1798,7 @@ export default function ClientManager() {
                               onMouseDown={() => setRevealingPhoneId(c.id)}
                               onMouseUp={() => setRevealingPhoneId(null)}
                               onMouseLeave={() => setRevealingPhoneId(null)}
-                              aria-label="연락처 임시 표시"
+                              aria-label={t("temp_show_contact")}
                               className="text-slate-500 hover:text-[#4D44CC] transition"
                             >
                               {revealingPhoneId === c.id
@@ -1792,7 +1821,7 @@ export default function ClientManager() {
                               onMouseDown={() => setRevealingCompanyPhoneId(c.id)}
                               onMouseUp={() => setRevealingCompanyPhoneId(null)}
                               onMouseLeave={() => setRevealingCompanyPhoneId(null)}
-                              aria-label="거래처 연락처 임시 표시"
+                              aria-label={t("temp_show_company_phone")}
                               className="text-slate-500 hover:text-[#4D44CC] transition"
                             >
                               {revealingCompanyPhoneId === c.id
@@ -1888,7 +1917,7 @@ export default function ClientManager() {
                             cfg.bgCls, cfg.borderCls, cfg.textCls, cfg.hoverCls,
                           ].join(" ")}
                         >
-                          {STATUS_ICONS[c.status]}{cfg.label}
+                          {STATUS_ICONS[c.status]}{STATUS_LABEL[c.status]}
                         </button>
                       </div>
                     </td>
@@ -1915,7 +1944,7 @@ export default function ClientManager() {
               className="h-9 px-2 flex items-center justify-center text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider"
               style={{ backgroundColor: isDark ? "#27272a" : "#f8fafc" }}
             >
-              진행 현황
+              {t("progress_title")}
             </div>
             {filtered.map((c, idx) => {
               const cEnd = getContractEnd(c);
@@ -1980,7 +2009,7 @@ export default function ClientManager() {
                             onMouseDown={() => setRevealingCompanyPhoneId(c.id)}
                             onMouseUp={() => setRevealingCompanyPhoneId(null)}
                             onMouseLeave={() => setRevealingCompanyPhoneId(null)}
-                            aria-label="거래처 연락처 임시 표시"
+                            aria-label={t("temp_show_company_phone")}
                             className="text-slate-500 hover:text-[#4D44CC] transition"
                           >
                             {revealingCompanyPhoneId === c.id
@@ -2008,7 +2037,7 @@ export default function ClientManager() {
                             onMouseDown={() => setRevealingPhoneId(c.id)}
                             onMouseUp={() => setRevealingPhoneId(null)}
                             onMouseLeave={() => setRevealingPhoneId(null)}
-                            aria-label="연락처 임시 표시"
+                            aria-label={t("temp_show_contact")}
                             className="text-slate-500 hover:text-[#4D44CC] transition"
                           >
                             {revealingPhoneId === c.id
@@ -2027,7 +2056,7 @@ export default function ClientManager() {
                         cfg.bgCls, cfg.borderCls, cfg.textCls, cfg.hoverCls,
                       ].join(" ")}
                     >
-                      {STATUS_ICONS[c.status]}{cfg.label}
+                      {STATUS_ICONS[c.status]}{STATUS_LABEL[c.status]}
                     </button>
                     {openStatusId === c.id && (
                       <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden min-w-[110px]">
@@ -2040,7 +2069,7 @@ export default function ClientManager() {
                                 c.status === s ? `${sc.bgCls} ${sc.textCls}` : "text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
                               ].join(" ")}
                             >
-                              {STATUS_ICONS[s]}{sc.label}
+                              {STATUS_ICONS[s]}{STATUS_LABEL[s]}
                             </button>
                           );
                         })}
@@ -2153,7 +2182,7 @@ export default function ClientManager() {
                         })}
                         className="group/grass flex items-center gap-1.5 w-full mb-1 cursor-pointer"
                       >
-                        <p className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider transition-colors group-hover/grass:text-[#4D44CC]">진행 현황</p>
+                        <p className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider transition-colors group-hover/grass:text-[#4D44CC]">{t("progress_title")}</p>
                         {grassOpen
                           ? <IconChevronUp   className="w-3 h-3 text-slate-500 dark:text-zinc-400 transition-colors group-hover/grass:text-[#4D44CC]" />
                           : <IconChevronDown className="w-3 h-3 text-slate-500 dark:text-zinc-400 transition-colors group-hover/grass:text-[#4D44CC]" />}
@@ -2193,7 +2222,7 @@ export default function ClientManager() {
                                 next.has(fieldKey) ? next.delete(fieldKey) : next.add(fieldKey);
                                 return next;
                               })}
-                              aria-label="속성 표시 전환"
+                              aria-label={t("toggle_attr_display")}
                               className={`transition shrink-0 ${isRevealed ? "text-[#4D44CC]" : "text-slate-500 hover:text-[#4D44CC]"}`}
                             >
                               {isRevealed
@@ -2210,11 +2239,11 @@ export default function ClientManager() {
                 <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                   <button onClick={() => startEdit(c)}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-                    <IconPencil className="w-3.5 h-3.5" />수정
+                    <IconPencil className="w-3.5 h-3.5" />{t("modify")}
                   </button>
                   <button onClick={() => handleDelete(c.id)}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-400 border border-red-200 dark:border-red-900/40 hover:bg-red-50 dark:hover:bg-red-950/30 transition">
-                    <IconTrash className="w-3.5 h-3.5" />삭제
+                    <IconTrash className="w-3.5 h-3.5" />{t("delete")}
                   </button>
                 </div>
               </div>
@@ -2223,16 +2252,16 @@ export default function ClientManager() {
         </div>
       )}
       <HelpButton
-        title="거래처 관리 사용법"
+        title={t("help_client_title")}
         steps={[
-          { step: "거래처 추가", desc: "우측 상단 버튼으로 거래처를 추가합니다." },
-          { step: "보기 방식", desc: "카드형/목록형 두 가지 방식으로 볼 수 있습니다." },
-          { step: "검색 및 정렬", desc: "검색창으로 원하는 거래처를 찾고, 정렬 버튼으로 순서를 바꿀 수 있습니다." },
-          { step: "상태 변경", desc: "상태 배지를 클릭해 진행 상태를 변경합니다." },
-          { step: "수정/삭제", desc: "편집 버튼으로 거래처를 수정하거나 여러 개를 한 번에 삭제할 수 있습니다." },
-          { step: "항목 표시 설정", desc: "목록형에서 보고 싶은 항목만 선택해 화면에 표시할 수 있습니다." },
-          { step: "정보 숨김", desc: "연락처나 커스텀 속성을 숨김 처리하면 눈 아이콘으로 잠깐 확인할 수 있습니다." },
-          { step: "진행 현황", desc: "날짜 셀을 클릭해 매일의 업무 진행 여부를 기록할 수 있습니다." },
+          { step: t("client_add"),      desc: t("help_client_1") },
+          { step: t("view_grid"),       desc: t("help_client_2") },
+          { step: t("search_all"),      desc: t("help_client_3") },
+          { step: t("field_status"),    desc: t("help_client_4") },
+          { step: t("modify"),          desc: t("help_client_5") },
+          { step: t("show_columns"),    desc: t("help_client_6") },
+          { step: t("hide_contact"),    desc: t("help_client_7") },
+          { step: t("progress_title"),  desc: t("help_client_8") },
         ]}
       />
     </div>
