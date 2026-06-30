@@ -337,15 +337,15 @@ export default function SettingsPage() {
   const pendingPresetLabel = JOB_PRESETS.find((p) => p.id === pendingPreset)?.label ?? "";
 
   const SECTIONS: { key: SettingsSection; label: string; icon: React.ElementType }[] = [
-    { key: "info",     label: "내 정보",       icon: IconUser },
-    { key: "leave",    label: "연차 설정",     icon: IconCalendarEvent },
-    { key: "greeting", label: "커스텀 인사말", icon: IconMessageCircle },
-    { key: "job",      label: "직업군 설정",   icon: IconBriefcase },
-    { key: "menu",     label: "메뉴 설정",     icon: IconApps },
-    { key: "help",     label: "도움말 설정",   icon: IconHelp },
-    { key: "language", label: t("settings_language"), icon: IconWorld },
+    { key: "info",     label: t("settings_section_info"),     icon: IconUser },
+    { key: "leave",    label: t("settings_section_leave"),    icon: IconCalendarEvent },
+    { key: "greeting", label: t("settings_section_greeting"), icon: IconMessageCircle },
+    { key: "job",      label: t("settings_section_job"),      icon: IconBriefcase },
+    { key: "menu",     label: t("settings_section_menu"),     icon: IconApps },
+    { key: "help",     label: t("settings_section_help"),     icon: IconHelp },
+    { key: "language", label: t("settings_language"),         icon: IconWorld },
     ...(notifPermission !== "unsupported"
-      ? [{ key: "notif" as SettingsSection, label: "알림 설정", icon: IconBell }]
+      ? [{ key: "notif" as SettingsSection, label: t("settings_section_notif"), icon: IconBell }]
       : []),
   ];
 
@@ -357,7 +357,7 @@ export default function SettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-6 w-full max-w-sm">
             <div className="flex items-start justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">직업군 설정 변경</h3>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("job_change_modal_title")}</h3>
               <button
                 onClick={() => setPendingPreset(null)}
                 className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
@@ -368,21 +368,21 @@ export default function SettingsPage() {
             <p className="text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
               <span className="font-semibold text-[#4D44CC] dark:text-[#8B85FF]">{pendingPresetLabel}</span> 직군으로 메뉴를 설정하시겠습니까?
               <br />
-              <span className="text-slate-500 dark:text-zinc-400 text-xs">현재 메뉴 설정이 초기화됩니다.</span>
+              <span className="text-slate-500 dark:text-zinc-400 text-xs">{t("job_change_modal_warning")}</span>
             </p>
             <div className="flex gap-2 mt-5">
               <button
                 onClick={() => setPendingPreset(null)}
                 className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
               >
-                취소
+                {t("cancel")}
               </button>
               <button
                 onClick={handlePresetConfirm}
                 className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition"
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
-                확인
+                {t("confirm")}
               </button>
             </div>
           </div>
@@ -424,7 +424,7 @@ export default function SettingsPage() {
             onClick={() => setMobileShowDetail(false)}
             className="sm:hidden flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-400 mb-3"
           >
-            <IconChevronLeft className="w-3.5 h-3.5" /> 설정 목록
+            <IconChevronLeft className="w-3.5 h-3.5" /> {t("settings_mobile_back")}
           </button>
 
           {/* 내 정보 */}
@@ -434,15 +434,15 @@ export default function SettingsPage() {
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
                   <IconUser className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">내 정보</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_info")}</p>
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다.</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("info_desc")}</p>
 
               <div className="flex flex-col sm:flex-row gap-3">
                 {([
-                  { field: "org",   label: "소속",  placeholder: "예: 개발팀" },
-                  { field: "name",  label: "이름",  placeholder: "예: 홍길동" },
-                  { field: "title", label: "직급",  placeholder: "예: 사원" },
+                  { field: "org",   label: t("info_label_org"),   placeholder: t("info_placeholder_org") },
+                  { field: "name",  label: t("info_label_name"),  placeholder: t("info_placeholder_name") },
+                  { field: "title", label: t("info_label_title"), placeholder: t("info_placeholder_title") },
                 ] as { field: keyof SenderInfo; label: string; placeholder: string }[]).map(({ field, label, placeholder }) => (
                   <div key={field} className="flex-1">
                     <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">
@@ -460,9 +460,9 @@ export default function SettingsPage() {
 
               {hasSender && (
                 <div className="mt-4 px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                  <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">서명 미리보기</p>
+                  <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("info_signature_preview")}</p>
                   <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed">
-                    {`감사합니다.\n${[info.org, info.name, info.title].filter(Boolean).join(" ")}`}
+                    {`${t("info_signature_thanks")}\n${[info.org, info.name, info.title].filter(Boolean).join(" ")}`}
                   </p>
                 </div>
               )}
@@ -477,9 +477,9 @@ export default function SettingsPage() {
                   style={saved ? undefined : { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
                 >
                   {saved ? (
-                    <><IconCheck className="w-4 h-4" />저장됐습니다</>
+                    <><IconCheck className="w-4 h-4" />{t("save_done")}</>
                   ) : (
-                    <><IconDeviceFloppy className="w-4 h-4" />저장</>
+                    <><IconDeviceFloppy className="w-4 h-4" />{t("save")}</>
                   )}
                 </button>
               </div>
@@ -495,25 +495,25 @@ export default function SettingsPage() {
                   <IconCalendarEvent className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">연차 설정</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_leave")}</p>
                   {leaveSaved && (
                     <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
                     </span>
                   )}
                 </div>
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
-                {joinDate ? `입사일: ${joinDate}` : "입사일을 설정하면 연차를 자동 계산합니다"}
+                {joinDate ? `입사일: ${joinDate}` : t("leave_desc_empty")}
               </p>
 
               {/* 입사 유형 토글 */}
               <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사 유형</label>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_employment_type")}</label>
                 <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
                   {([
-                    { id: "new",    label: "신입" },
-                    { id: "career", label: "경력" },
+                    { id: "new",    label: t("leave_new") },
+                    { id: "career", label: t("leave_career") },
                   ] as { id: "new" | "career"; label: string }[]).map(({ id, label }) => (
                     <button
                       key={id}
@@ -535,16 +535,16 @@ export default function SettingsPage() {
               {employmentType === "new" && (
                 <>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">입사일</label>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_join_date")}</label>
                     <DatePickerInput value={joinDate} onChange={(v) => { setJoinDate(v); setLeaveSaved(false); }} />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">연차 기준</label>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_standard")}</label>
                     <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
                       {([
-                        { id: "join_date",   label: "입사일 기준" },
-                        { id: "fiscal_year", label: "회계연도 기준" },
+                        { id: "join_date",   label: t("leave_standard_join") },
+                        { id: "fiscal_year", label: t("leave_standard_fiscal") },
                       ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
                         <button
                           key={id}
@@ -567,7 +567,7 @@ export default function SettingsPage() {
               {/* 경력: 부여 연차 stepper */}
               {employmentType === "career" && (
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">부여 연차 (일)</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_granted")}</label>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => { setGrantedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
@@ -576,7 +576,7 @@ export default function SettingsPage() {
                       −
                     </button>
                     <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
-                      {grantedLeaves}일
+                      {grantedLeaves}{t("leave_unit_day")}
                     </span>
                     <button
                       onClick={() => { setGrantedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
@@ -591,7 +591,7 @@ export default function SettingsPage() {
 
               {/* 사용한 연차 */}
               <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">사용한 연차 (일)</label>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_used")}</label>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => { setUsedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
@@ -600,7 +600,7 @@ export default function SettingsPage() {
                     −
                   </button>
                   <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
-                    {usedLeaves}일
+                    {usedLeaves}{t("leave_unit_day")}
                   </span>
                   <button
                     onClick={() => { setUsedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
@@ -618,7 +618,7 @@ export default function SettingsPage() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 <IconDeviceFloppy className="w-3.5 h-3.5" />
-                저장
+                {t("save")}
               </button>
             </div>
           )}
@@ -631,22 +631,22 @@ export default function SettingsPage() {
                   <IconMessageCircle className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">커스텀 인사말</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_greeting")}</p>
                   {greetingSaved && (
                     <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
                     </span>
                   )}
                 </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">홈 화면에 표시되는 인사말을 직접 설정합니다</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("greeting_desc")}</p>
 
               {/* on/off 토글 */}
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                 <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">커스텀 인사말 사용</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("greeting_toggle")}</p>
                   <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                    끄면 기본 인사말이 표시됩니다
+                    {t("greeting_toggle_desc")}
                   </p>
                 </div>
                 <button
@@ -670,9 +670,9 @@ export default function SettingsPage() {
                   {/* 모드 선택 탭 */}
                   <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
                     {([
-                      { id: "basic", label: "기본" },
-                      { id: "time",  label: "시간대별" },
-                      { id: "day",   label: "요일별" },
+                      { id: "basic", label: t("greeting_mode_basic") },
+                      { id: "time",  label: t("greeting_mode_time") },
+                      { id: "day",   label: t("greeting_mode_day") },
                     ] as { id: GreetingMode; label: string }[]).map(({ id, label }) => (
                       <button
                         key={id}
@@ -741,7 +741,7 @@ export default function SettingsPage() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 <IconDeviceFloppy className="w-3.5 h-3.5" />
-                저장
+                {t("save")}
               </button>
             </div>
           )}
@@ -754,10 +754,10 @@ export default function SettingsPage() {
                   <IconBriefcase className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">직업군 설정</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_job")}</p>
                   {jobSaved && (
                     <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
                     </span>
                   )}
                 </div>
@@ -765,7 +765,7 @@ export default function SettingsPage() {
               <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
                 {jobPreset
                   ? `현재: ${JOB_PRESETS.find((p) => p.id === jobPreset)?.label ?? ""}`
-                  : "직업군에 맞는 메뉴를 자동으로 설정합니다"}
+                  : t("job_desc_empty")}
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -802,7 +802,7 @@ export default function SettingsPage() {
                 })}
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-3">
-                직업군을 선택하면 추천 메뉴가 자동으로 적용됩니다. 이후 메뉴 설정에서 개별 수정 가능합니다.
+                {t("job_hint")}
               </p>
             </div>
           )}
@@ -815,24 +815,24 @@ export default function SettingsPage() {
                   <IconApps className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">메뉴 설정</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_menu")}</p>
                   {menuSaved && (
                     <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
                     </span>
                   )}
                 </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">사이드바에 표시할 메뉴를 선택하세요</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("menu_desc")}</p>
 
               {/* 선택 메뉴 — 드래그&드롭 순서 변경 */}
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                  선택 표시
+                  {t("menu_optional")}
                 </p>
                 {orderSaved && (
                   <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />순서 저장됨
+                    <IconCheck className="w-3.5 h-3.5" />{t("menu_order_saved")}
                   </span>
                 )}
               </div>
@@ -885,7 +885,7 @@ export default function SettingsPage() {
 
               {/* 공통 메뉴 (항상 표시) */}
               <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-                항상 표시
+                {t("menu_always")}
               </p>
               <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
                 {ALWAYS_VISIBLE_ITEMS.map(({ href, label }) => (
@@ -895,7 +895,7 @@ export default function SettingsPage() {
                       <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
                     </div>
                     <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 font-medium shrink-0">
-                      항상 표시
+                      {t("menu_always")}
                     </span>
                   </div>
                 ))}
@@ -911,21 +911,21 @@ export default function SettingsPage() {
                   <IconHelp className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">도움말 설정</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_help")}</p>
                   {helpSaved && (
                     <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />저장됨
+                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
                     </span>
                   )}
                 </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">페이지 도움말 버튼 표시 여부</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("help_desc")}</p>
 
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                 <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">페이지 도움말 버튼 표시</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("help_toggle")}</p>
                   <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                    각 페이지 우측 하단의 ? 버튼 (홈 AI 바로가기는 영향 없음)
+                    {t("help_toggle_desc")}
                   </p>
                 </div>
                 <button
@@ -984,21 +984,21 @@ export default function SettingsPage() {
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
                   <IconBell className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">알림 설정</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_notif")}</p>
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
-                {notifPermission === "granted" ? "알림 허용됨" : "브라우저 알림 권한 설정"}
+                {notifPermission === "granted" ? t("notif_allowed") : t("notif_setup")}
               </p>
 
               {/* 권한 상태 */}
               {notifPermission !== "granted" ? (
                 <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                   <div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">알림 권한</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("notif_permission")}</p>
                     <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       {notifPermission === "denied"
-                        ? "브라우저 설정에서 직접 허용해 주세요"
-                        : "일정·계약 만료 알림을 받으려면 허용하세요"}
+                        ? t("notif_denied_desc")
+                        : t("notif_default_desc")}
                     </p>
                   </div>
                   {notifPermission === "default" && (
@@ -1007,12 +1007,12 @@ export default function SettingsPage() {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shrink-0"
                       style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
                     >
-                      <IconBell className="w-3.5 h-3.5" />알림 허용
+                      <IconBell className="w-3.5 h-3.5" />{t("notif_allow_btn")}
                     </button>
                   )}
                   {notifPermission === "denied" && (
                     <span className="flex items-center gap-1 text-xs text-red-400 shrink-0">
-                      <IconBellOff className="w-3.5 h-3.5" />거부됨
+                      <IconBellOff className="w-3.5 h-3.5" />{t("notif_denied_badge")}
                     </span>
                   )}
                 </div>
@@ -1020,10 +1020,10 @@ export default function SettingsPage() {
                 <>
                   <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
                     <IconCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">알림이 허용됐습니다</p>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">{t("notif_granted_msg")}</p>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-zinc-400 px-1">
-                    알림을 끄려면 브라우저 사이트 설정에서 직접 변경해 주세요.
+                    {t("notif_off_hint")}
                   </p>
                 </>
               )}
@@ -1031,8 +1031,8 @@ export default function SettingsPage() {
               {/* 일정 알림 토글 */}
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                 <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">일정 알림</p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">오늘 일정이 있으면 앱 열 때 알림</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("notif_event_toggle")}</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{t("notif_event_desc")}</p>
                 </div>
                 <button
                   onClick={() => handleNotifToggle("eventNotif")}
@@ -1055,8 +1055,8 @@ export default function SettingsPage() {
               {/* 거래처 D-day 알림 토글 */}
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                 <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">거래처 D-day 알림</p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">계약 만료 7일 이내 거래처 알림</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("notif_dday_toggle")}</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{t("notif_dday_desc")}</p>
                 </div>
                 <button
                   onClick={() => handleNotifToggle("ddayNotif")}
