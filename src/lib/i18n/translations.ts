@@ -326,6 +326,13 @@ export const translations = {
     ai_connected: "Groq AI 연결됨",
     ai_error: "AI 연결 실패",
     ai_processing: "AI 처리",
+    help_settings_title: "설정 사용법",
+    help_settings_1_step: "내 정보",
+    help_settings_1_desc: "소속·이름·직급을 입력하면 이메일·템플릿 서명에 자동 사용됩니다.",
+    help_settings_2_step: "직업군 프리셋",
+    help_settings_2_desc: "직업군을 선택하면 추천 메뉴가 자동으로 설정됩니다.",
+    help_settings_3_step: "메뉴 설정",
+    help_settings_3_desc: "사이드바에 표시할 메뉴를 개별적으로 켜고 끌 수 있습니다.",
   },
   en: {
     home: "Home",
@@ -652,6 +659,13 @@ export const translations = {
     ai_connected: "Groq AI Connected",
     ai_error: "AI Connection Failed",
     ai_processing: "AI",
+    help_settings_title: "How to use Settings",
+    help_settings_1_step: "My Info",
+    help_settings_1_desc: "Enter your organization, name, and title to use automatically in email and template signatures.",
+    help_settings_2_step: "Job Type Preset",
+    help_settings_2_desc: "Selecting a job type automatically sets up recommended menus.",
+    help_settings_3_step: "Menu Settings",
+    help_settings_3_desc: "Turn individual sidebar menu items on or off.",
   },
 } as const;
 

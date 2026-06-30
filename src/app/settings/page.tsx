@@ -1083,11 +1083,11 @@ export default function SettingsPage() {
       </div>
 
       <HelpButton
-        title="설정 사용법"
+        title={t("help_settings_title")}
         steps={[
-          { step: "내 정보", desc: "소속·이름·직급을 입력하면 이메일·템플릿 서명에 자동 사용됩니다." },
-          { step: "직업군 프리셋", desc: "직업군을 선택하면 추천 메뉴가 자동으로 설정됩니다." },
-          { step: "메뉴 설정", desc: "사이드바에 표시할 메뉴를 개별적으로 켜고 끌 수 있습니다." },
+          { step: t("help_settings_1_step"), desc: t("help_settings_1_desc") },
+          { step: t("help_settings_2_step"), desc: t("help_settings_2_desc") },
+          { step: t("help_settings_3_step"), desc: t("help_settings_3_desc") },
         ]}
       />
     </div>
