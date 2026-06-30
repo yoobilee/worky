@@ -7,7 +7,7 @@ import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronLeft, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
   IconGripVertical, IconHelp, IconMessageCircle, IconCalendarEvent,
-  IconBell, IconBellOff,
+  IconBell, IconBellOff, IconWorld,
 } from "@tabler/icons-react";
 import {
   loadNotificationSettings, saveNotificationSettings,
@@ -30,7 +30,7 @@ const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
 
 type GreetingMode = "basic" | "time" | "day";
-type SettingsSection = "info" | "leave" | "greeting" | "job" | "menu" | "help" | "notif";
+type SettingsSection = "info" | "leave" | "greeting" | "job" | "menu" | "help" | "notif" | "language";
 
 const GREETING_TIME_PERIODS: { id: string; label: string }[] = [
   { id: "오전", label: "오전" },
@@ -343,6 +343,7 @@ export default function SettingsPage() {
     { key: "job",      label: "직업군 설정",   icon: IconBriefcase },
     { key: "menu",     label: "메뉴 설정",     icon: IconApps },
     { key: "help",     label: "도움말 설정",   icon: IconHelp },
+    { key: "language", label: t("settings_language"), icon: IconWorld },
     ...(notifPermission !== "unsupported"
       ? [{ key: "notif" as SettingsSection, label: "알림 설정", icon: IconBell }]
       : []),
@@ -483,28 +484,6 @@ export default function SettingsPage() {
                 </button>
               </div>
 
-              {/* 언어 선택 */}
-              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 mb-0.5">{t("settings_language")}</p>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mb-3">{t("settings_language_desc")}</p>
-                <div className="flex gap-2">
-                  {(["ko", "en"] as const).map((l) => (
-                    <button
-                      key={l}
-                      onClick={() => setLocale(l)}
-                      className={[
-                        "px-5 py-2 rounded-xl text-sm font-semibold border transition-all",
-                        locale === l
-                          ? "text-white border-transparent"
-                          : "text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50",
-                      ].join(" ")}
-                      style={locale === l ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-                    >
-                      {l === "ko" ? "한국어" : "English"}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
@@ -963,6 +942,37 @@ export default function SettingsPage() {
                     helpOn ? "translate-x-5" : "translate-x-1",
                   ].join(" ")} />
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* 언어 설정 */}
+          {activeSection === "language" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconWorld className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_language")}</p>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("settings_language_desc")}</p>
+
+              <div className="flex gap-2">
+                {(["ko", "en"] as const).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLocale(l)}
+                    className={[
+                      "px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all",
+                      locale === l
+                        ? "text-white border-transparent"
+                        : "text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50",
+                    ].join(" ")}
+                    style={locale === l ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
+                  >
+                    {l === "ko" ? "한국어" : "English"}
+                  </button>
+                ))}
               </div>
             </div>
           )}
