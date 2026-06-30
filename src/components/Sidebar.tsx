@@ -158,12 +158,6 @@ const navItems = [
   },
 ];
 
-const statusConfig = {
-  checking:  { dot: "bg-amber-400 animate-pulse", label: "AI 연결 확인 중..." },
-  connected: { dot: "bg-emerald-400",             label: "Groq AI 연결됨"    },
-  error:     { dot: "bg-red-400",                 label: "AI 연결 실패"      },
-};
-
 const COLLAPSED_KEY = "worky-sidebar-collapsed";
 
 export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
@@ -171,6 +165,12 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const router   = useRouter();
   const { theme, toggle: toggleTheme } = useTheme();
   const { t } = useLocale();
+
+  const statusConfig = {
+    checking:  { dot: "bg-amber-400 animate-pulse", label: t("ai_checking") },
+    connected: { dot: "bg-emerald-400",             label: t("ai_connected") },
+    error:     { dot: "bg-red-400",                 label: t("ai_error")     },
+  };
   const st = statusConfig[aiStatus];
 
   const [collapsed,     setCollapsed]     = useState(false);
@@ -341,8 +341,8 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
         {/* 다크모드 토글 */}
         <button
           onClick={toggleTheme}
-          aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}
-          title={isCollapsed ? (theme === "dark" ? "라이트 모드" : "다크 모드") : undefined}
+          aria-label={theme === "dark" ? t("theme_light") : t("theme_dark")}
+          title={isCollapsed ? (theme === "dark" ? t("theme_light") : t("theme_dark")) : undefined}
           className={[
             "w-full flex items-center px-2.5 py-2 rounded-xl text-sm",
             "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
@@ -354,7 +354,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
             {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
           </span>
           <span className={`inline-block ${labelCls}`}>
-            {theme === "dark" ? "라이트 모드" : "다크 모드"}
+            {theme === "dark" ? t("theme_light") : t("theme_dark")}
           </span>
         </button>
 

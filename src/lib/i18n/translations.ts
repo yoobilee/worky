@@ -320,6 +320,12 @@ export const translations = {
     desc_clients: "거래처별 보고 현황과 담당자 정보를 관리하세요",
     desc_members: "팀원 정보와 자리 배치를 관리하세요",
     desc_settings: "내 정보와 앱 환경설정을 관리하세요",
+    theme_light: "라이트 모드",
+    theme_dark: "다크 모드",
+    ai_checking: "AI 연결 확인 중...",
+    ai_connected: "Groq AI 연결됨",
+    ai_error: "AI 연결 실패",
+    ai_processing: "AI 처리",
   },
   en: {
     home: "Home",
@@ -640,6 +646,12 @@ export const translations = {
     desc_clients: "Manage report status and contact info by client",
     desc_members: "Manage member info and seating arrangement",
     desc_settings: "Manage your info and app preferences",
+    theme_light: "Light Mode",
+    theme_dark: "Dark Mode",
+    ai_checking: "Checking AI connection...",
+    ai_connected: "Groq AI Connected",
+    ai_error: "AI Connection Failed",
+    ai_processing: "AI",
   },
 } as const;
 

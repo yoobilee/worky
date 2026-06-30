@@ -161,7 +161,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
-                AI 처리
+                {t("ai_processing")}
               </span>
             )}
             <div className="hidden lg:block"><NotificationBell userId={userId} /></div>
