@@ -3,9 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
-
-const PICKER_DAYS   = ["일","월","화","수","목","금","토"];
-const PICKER_MONTHS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -15,6 +13,15 @@ const THIS_YEAR   = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: THIS_YEAR + 5 - (THIS_YEAR - 100) + 1 }, (_, i) => THIS_YEAR + 5 - i);
 
 export default function DatePickerInput({ value, onChange, placeholder, forceDown }: { value: string; onChange: (v: string) => void; placeholder?: string; forceDown?: boolean }) {
+  const { locale, t } = useLocale();
+
+  const PICKER_DAYS = locale === "en"
+    ? ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+    : ["일","월","화","수","목","금","토"];
+  const PICKER_MONTHS = locale === "en"
+    ? ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    : ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+
   const parseYear  = () => value ? Number(value.split("-")[0]) : new Date().getFullYear();
   const parseMonth = () => value ? Number(value.split("-")[1]) - 1 : new Date().getMonth();
 
@@ -28,7 +35,6 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
   const popoverRef  = useRef<HTMLDivElement>(null);
   const yearListRef = useRef<HTMLDivElement>(null);
 
-  // 외부 클릭 감지
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -55,7 +61,6 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
     return { top, left: rect.left, width: Math.max(rect.width, 256) };
   };
 
-  // 리사이즈 시 팝업 위치 재계산
   useEffect(() => {
     if (!open) return;
     const recalc = () => {
@@ -63,12 +68,9 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
       if (rect) setPos(computePos(rect));
     };
     window.addEventListener("resize", recalc);
-    return () => {
-      window.removeEventListener("resize", recalc);
-    };
+    return () => window.removeEventListener("resize", recalc);
   }, [open]);
 
-  // 연도 피커 열릴 때 선택 연도로 스크롤
   useEffect(() => {
     if (!yearPickerOpen || !yearListRef.current) return;
     const btn = yearListRef.current.querySelector(`[data-year="${year}"]`) as HTMLElement | null;
@@ -97,10 +99,17 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
   while (cells.length % 7 !== 0) cells.push(null);
 
   const display = (() => {
-    if (!value) return placeholder ?? "날짜 선택";
+    if (!value) return placeholder ?? t("date_select");
     const [y, m, d] = value.split("-").map(Number);
-    return `${y}년 ${m}월 ${d}일 (${PICKER_DAYS[new Date(y, m-1, d).getDay()]})`;
+    const dow = PICKER_DAYS[new Date(y, m-1, d).getDay()];
+    return locale === "en"
+      ? `${PICKER_MONTHS[m-1]} ${d}, ${y} (${dow})`
+      : `${y}년 ${m}월 ${d}일 (${dow})`;
   })();
+
+  const headerLabel = locale === "en"
+    ? `${PICKER_MONTHS[month]} ${year}`
+    : `${year}년 ${PICKER_MONTHS[month]}`;
 
   const popover = open && pos ? (
     <div
@@ -108,46 +117,44 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
       style={{ position: "absolute", top: pos.top, left: pos.left, width: pos.width, zIndex: 50 }}
       className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3"
     >
-      {/* 헤더 */}
       <div className="flex items-center justify-between mb-2 px-1">
         {yearPickerOpen ? (
           <div className="flex-1 text-center">
             <button type="button" onClick={() => setYearPickerOpen(false)}
               className="px-2 py-0.5 rounded-lg text-xs font-semibold text-[#4D44CC] dark:text-[#8B85FF] hover:bg-[#6C63FF]/10 transition">
-              {year}년 ▲
+              {locale === "en" ? `${year} ▲` : `${year}년 ▲`}
             </button>
           </div>
         ) : (
           <>
-            <button type="button" onClick={prevMonth} aria-label="이전 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 transition">
+            <button type="button" onClick={prevMonth} aria-label={t("prev_month")} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 transition">
               <IconChevronLeft className="w-3.5 h-3.5" />
             </button>
             <button type="button" onClick={() => setYearPickerOpen(true)}
               className="px-2 py-0.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-[#6C63FF]/10 hover:text-[#4D44CC] dark:text-[#8B85FF] transition">
-              {year}년 {PICKER_MONTHS[month]}
+              {headerLabel}
             </button>
-            <button type="button" onClick={nextMonth} aria-label="다음 달" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 transition">
+            <button type="button" onClick={nextMonth} aria-label={t("next_month")} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 transition">
               <IconChevronRight className="w-3.5 h-3.5" />
             </button>
           </>
         )}
       </div>
 
-      {/* 연도 피커 */}
       {yearPickerOpen ? (
         <div className="rounded-xl border border-slate-100 dark:border-zinc-800 overflow-hidden">
           <div ref={yearListRef} className="max-h-48 overflow-y-auto">
-          {YEAR_OPTIONS.map(y => (
-            <button key={y} type="button" data-year={y}
-              onClick={() => { setYear(y); setYearPickerOpen(false); }}
-              className={[
-                "w-full px-3 py-1.5 text-xs text-left transition",
-                y === year
-                  ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium"
-                  : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
-              ].join(" ")}
-            >{y}년</button>
-          ))}
+            {YEAR_OPTIONS.map(y => (
+              <button key={y} type="button" data-year={y}
+                onClick={() => { setYear(y); setYearPickerOpen(false); }}
+                className={[
+                  "w-full px-3 py-1.5 text-xs text-left transition",
+                  y === year
+                    ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium"
+                    : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                ].join(" ")}
+              >{locale === "en" ? `${y}` : `${y}년`}</button>
+            ))}
           </div>
         </div>
       ) : (

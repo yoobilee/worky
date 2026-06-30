@@ -7,9 +7,9 @@ import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSet
 import { loadMenuOrder, MENU_ORDER_EVENT } from "@/lib/menuSettings";
 import { useTheme } from "./ThemeProvider";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import type { TranslationKey } from "@/lib/i18n/translations";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
+  MENU_LOCALE_MAP,
 } from "@/lib/menuSettings";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -166,15 +166,6 @@ const statusConfig = {
 
 const COLLAPSED_KEY = "worky-sidebar-collapsed";
 
-const FIXED_LOCALE_MAP: Partial<Record<string, TranslationKey>> = {
-  "/":         "home",
-  "/todo":     "sidebar_todo",
-  "/qa":       "sidebar_qa",
-  "/email":    "sidebar_email",
-  "/schedule": "sidebar_schedule",
-  "/calendar": "sidebar_calendar",
-};
-
 export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
   const pathname = usePathname();
   const router   = useRouter();
@@ -319,7 +310,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
                 {item.icon}
               </span>
               <span className={`inline-block ${labelCls}`}>
-                {FIXED_LOCALE_MAP[item.href] ? t(FIXED_LOCALE_MAP[item.href]!) : item.label}
+                {MENU_LOCALE_MAP[item.href] ? t(MENU_LOCALE_MAP[item.href]) : item.label}
               </span>
             </Link>
           );

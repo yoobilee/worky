@@ -17,6 +17,7 @@ import {
 } from "@tabler/icons-react";
 import {
   loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
+  MENU_LOCALE_MAP,
 } from "@/lib/menuSettings";
 import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
 import { type CalendarEvent } from "@/lib/calendarStorage";
@@ -531,7 +532,7 @@ export default function HomePage() {
                       <Icon className="w-4 h-4" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate">{label}</p>
+                      <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
                       <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
                     </div>
                   </Link>
@@ -565,7 +566,7 @@ export default function HomePage() {
                               <Icon className="w-3.5 h-3.5" />
                             </span>
                             <div className="min-w-0">
-                              <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{label}</p>
+                              <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
                               <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
                             </div>
                           </Link>

@@ -1,3 +1,5 @@
+import type { TranslationKey } from "@/lib/i18n/translations";
+
 export const OPTIONAL_MENU_ITEMS = [
   { href: "/content",   label: "메시지 작성" },
   { href: "/clients",   label: "거래처 관리" },
@@ -84,3 +86,23 @@ export function saveHelpButtonEnabled(enabled: boolean): void {
   localStorage.setItem(HELP_BUTTON_KEY, String(enabled));
   window.dispatchEvent(new CustomEvent(HELP_BUTTON_EVENT));
 }
+
+export const MENU_LOCALE_MAP: Record<string, TranslationKey> = {
+  "/":          "sidebar_home",
+  "/todo":      "sidebar_todo",
+  "/qa":        "sidebar_qa",
+  "/email":     "sidebar_email",
+  "/schedule":  "sidebar_schedule",
+  "/calendar":  "sidebar_calendar",
+  "/content":   "menu_content",
+  "/clients":   "menu_clients",
+  "/members":   "menu_members",
+  "/template":  "menu_template",
+  "/document":  "menu_document",
+  "/translate": "menu_translate",
+  "/summary":   "menu_summary",
+  "/data":      "menu_data",
+  "/insight":   "menu_insight",
+  "/glossary":  "menu_glossary",
+  "/feedback":  "menu_feedback",
+};

@@ -20,6 +20,7 @@ import {
   MENU_SETTINGS_EVENT, type MenuSettings,
   loadMenuOrder, saveMenuOrder,
   loadHelpButtonEnabled, saveHelpButtonEnabled,
+  MENU_LOCALE_MAP,
 } from "@/lib/menuSettings";
 import { createClient } from "@/lib/supabase/client";
 import { getSettings, upsertSettings, type CustomGreeting } from "@/lib/db/settings";
@@ -860,7 +861,7 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2 min-w-0">
                         <IconGripVertical className="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" />
                         <div>
-                          <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{item.label}</p>
+                          <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{MENU_LOCALE_MAP[item.href] ? t(MENU_LOCALE_MAP[item.href]) : item.label}</p>
                           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
                         </div>
                       </div>
@@ -891,7 +892,7 @@ export default function SettingsPage() {
                 {ALWAYS_VISIBLE_ITEMS.map(({ href, label }) => (
                   <div key={href} className="flex items-center justify-between px-4 py-3 opacity-60">
                     <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{label}</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
                       <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
                     </div>
                     <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 font-medium shrink-0">
