@@ -1,6 +1,5 @@
 "use client";
 
-
 import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef } from "react";
 import ConfirmModal from "./ConfirmModal";
@@ -11,23 +10,23 @@ import {
 } from "@tabler/icons-react";
 import { CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
-import { getEvents, getEventsInRange, addEvent, addEvents, updateEvent, deleteEvent } from "@/lib/db/calendar";
+import { getEventsInRange, addEvent, addEvents, updateEvent, deleteEvent } from "@/lib/db/calendar";
 import { getHolidays } from "@/lib/holidays";
 import { useToast } from "@/contexts/ToastContext";
 import DatePickerInput from "./DatePickerInput";
-
-const DAY_LABELS  = ["일", "월", "화", "수", "목", "금", "토"];
-const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
 
 function toKey(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 }
 
-function formatKey(key: string): string {
-  return key.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, d) =>
-    `${y}년 ${Number(m)}월 ${Number(d)}일`
-  );
+function formatKey(key: string, locale: string, monthNames: string[]): string {
+  const match = key.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return key;
+  const [, y, m, d] = match;
+  if (locale === "en") return `${monthNames[Number(m) - 1]} ${Number(d)}, ${y}`;
+  return `${y}년 ${Number(m)}월 ${Number(d)}일`;
 }
 
 const HOUR_OPTIONS   = Array.from({ length: 24 }, (_, i) => i);
@@ -46,12 +45,13 @@ function parseTimeValue(v: string): { hour: number; minute: number } | null {
 }
 
 function TimePickerInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [hourOpen, setHourOpen] = useState(false);
+  const { t, locale } = useLocale();
+  const [open,       setOpen]       = useState(false);
+  const [hourOpen,   setHourOpen]   = useState(false);
   const [minuteOpen, setMinuteOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const hourRef = useRef<HTMLDivElement>(null);
-  const minuteRef = useRef<HTMLDivElement>(null);
+  const ref        = useRef<HTMLDivElement>(null);
+  const hourRef    = useRef<HTMLDivElement>(null);
+  const minuteRef  = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,7 +68,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
   useEffect(() => {
     if (!hourOpen && !minuteOpen) return;
     const handler = (e: MouseEvent) => {
-      if (hourRef.current && !hourRef.current.contains(e.target as Node)) setHourOpen(false);
+      if (hourRef.current   && !hourRef.current.contains(e.target as Node))   setHourOpen(false);
       if (minuteRef.current && !minuteRef.current.contains(e.target as Node)) setMinuteOpen(false);
     };
     document.addEventListener("mousedown", handler);
@@ -79,13 +79,16 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
   const hour   = parsed?.hour ?? 9;
   const minute = parsed?.minute ?? 0;
 
-  const commit = (h: number, m: number) => {
+  const commit = (h: number, m: number) =>
     onChange(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-  };
+
+  const hourLabel   = (h: number) => locale === "en" ? String(h)                  : `${h}시`;
+  const minuteLabel = (m: number) => locale === "en" ? String(m).padStart(2, "0") : `${m}분`;
 
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen(v => { const next = !v; if (next) requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })); return next; })}
+      <button type="button"
+        onClick={() => setOpen(v => { const next = !v; if (next) requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })); return next; })}
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
           "bg-slate-50 dark:bg-zinc-800",
@@ -93,13 +96,13 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
         ].join(" ")}
       >
         <IconClock className="w-3.5 h-3.5 shrink-0" />
-        {parsed ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : "시간 선택"}
+        {parsed ? `${String(hour).padStart(2,"0")}:${String(minute).padStart(2,"0")}` : t("time_select")}
       </button>
 
       {open && (
         <div ref={popoverRef} className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-[280px] max-w-[calc(100vw-2rem)] p-3 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">시간 설정</span>
+            <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">{t("time_setting")}</span>
             <button type="button" onClick={() => setOpen(false)}
               className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
               <IconX className="w-3.5 h-3.5" />
@@ -113,7 +116,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                   "w-full px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-left transition text-slate-800 dark:text-zinc-100",
                   hourOpen ? "border-[#6C63FF] ring-2 ring-[#6C63FF]/40" : "border-slate-200 dark:border-zinc-700",
                 ].join(" ")}
-              >{hour}시</button>
+              >{hourLabel(hour)}</button>
               {hourOpen && (
                 <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
                   <div className="max-h-40 overflow-y-auto">
@@ -123,7 +126,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                           "w-full px-3 py-1.5 text-xs text-left transition",
                           h === hour ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
                         ].join(" ")}
-                      >{h}시</button>
+                      >{hourLabel(h)}</button>
                     ))}
                   </div>
                 </div>
@@ -135,7 +138,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                   "w-full px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-left transition text-slate-800 dark:text-zinc-100",
                   minuteOpen ? "border-[#6C63FF] ring-2 ring-[#6C63FF]/40" : "border-slate-200 dark:border-zinc-700",
                 ].join(" ")}
-              >{minute}분</button>
+              >{minuteLabel(minute)}</button>
               {minuteOpen && (
                 <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
                   <div className="max-h-40 overflow-y-auto">
@@ -145,7 +148,7 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
                           "w-full px-3 py-1.5 text-xs text-left transition",
                           m === minute ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800",
                         ].join(" ")}
-                      >{m}분</button>
+                      >{minuteLabel(m)}</button>
                     ))}
                   </div>
                 </div>
@@ -156,12 +159,12 @@ function TimePickerInput({ value, onChange }: { value: string; onChange: (v: str
           <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-zinc-800">
             <button type="button" onClick={() => { onChange(""); setOpen(false); }}
               className="text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 transition">
-              초기화
+              {t("time_reset")}
             </button>
             <button type="button" onClick={() => setOpen(false)}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-              완료
+              {t("time_done")}
             </button>
           </div>
         </div>
@@ -182,10 +185,11 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
   urlValue?: string;
   onUrlChange: (v: string | undefined) => void;
 }) {
-  const [results, setResults]     = useState<KakaoPlace[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [addrTooltip, setAddrTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  const { t } = useLocale();
+  const [results,      setResults]      = useState<KakaoPlace[]>([]);
+  const [showResults,  setShowResults]  = useState(false);
+  const [addrTooltip,  setAddrTooltip]  = useState<{ x: number; y: number; text: string } | null>(null);
+  const ref         = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -201,7 +205,7 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query.trim()) { setResults([]); setShowResults(false); return; }
     debounceRef.current = setTimeout(async () => {
-      const res = await fetch(`/api/kakao-places?query=${encodeURIComponent(query)}`);
+      const res  = await fetch(`/api/kakao-places?query=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (data.documents && data.documents.length > 0) {
         setResults(data.documents.slice(0, 5));
@@ -213,23 +217,15 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
     }, 300);
   };
 
-  const handleChange = (v: string) => {
-    onChange(v);
-    search(v);
-  };
-
+  const handleChange = (v: string) => { onChange(v); search(v); };
   const handleSelect = (place: KakaoPlace) => {
     onChange(place.place_name);
     onUrlChange(place.place_url);
-    setResults([]);
-    setShowResults(false);
+    setResults([]); setShowResults(false);
   };
-
   const handleClear = () => {
-    onChange("");
-    onUrlChange(undefined);
-    setResults([]);
-    setShowResults(false);
+    onChange(""); onUrlChange(undefined);
+    setResults([]); setShowResults(false);
   };
 
   const hasUrl = !!urlValue;
@@ -247,7 +243,7 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
       <input
         value={value}
         onChange={e => handleChange(e.target.value)}
-        placeholder="장소 (선택)"
+        placeholder={t("location_ph")}
         className={[
           "w-full px-3 py-2 pr-8 rounded-xl border text-sm bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition",
           hasUrl ? "border-[#6C63FF]" : "border-slate-200 dark:border-zinc-700",
@@ -256,38 +252,28 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
       {value && (
         <button type="button" onClick={handleClear}
           className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-500 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
-          aria-label="장소 삭제">
+          aria-label={t("location_delete")}>
           <IconX className="w-3.5 h-3.5" />
         </button>
       )}
       {showResults && results.length > 0 && (
         <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden w-full">
           <div className="max-h-56 overflow-y-auto">
-          {results.map((p, i) => (
-            <button key={i} type="button" onClick={() => handleSelect(p)}
-              className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
-              <p
-                className="text-xs font-medium text-slate-700 dark:text-zinc-200 truncate"
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  if (el.scrollWidth <= el.offsetWidth) return;
-                  const rect = el.getBoundingClientRect();
-                  setAddrTooltip({ x: rect.left, y: rect.top - 4, text: p.place_name });
-                }}
-                onMouseLeave={() => setAddrTooltip(null)}
-              >{p.place_name}</p>
-              <p
-                className="text-[11px] text-slate-500 dark:text-zinc-400 truncate"
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  if (el.scrollWidth <= el.offsetWidth) return;
-                  const rect = el.getBoundingClientRect();
-                  setAddrTooltip({ x: rect.left, y: rect.top - 4, text: p.place_name });
-                }}
-                onMouseLeave={() => setAddrTooltip(null)}
-              >{p.address_name}</p>
-            </button>
-          ))}
+            {results.map((p, i) => (
+              <button key={i} type="button" onClick={() => handleSelect(p)}
+                className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
+                <p
+                  className="text-xs font-medium text-slate-700 dark:text-zinc-200 truncate"
+                  onMouseEnter={(e) => { const el = e.currentTarget; if (el.scrollWidth <= el.offsetWidth) return; const rect = el.getBoundingClientRect(); setAddrTooltip({ x: rect.left, y: rect.top - 4, text: p.place_name }); }}
+                  onMouseLeave={() => setAddrTooltip(null)}
+                >{p.place_name}</p>
+                <p
+                  className="text-[11px] text-slate-500 dark:text-zinc-400 truncate"
+                  onMouseEnter={(e) => { const el = e.currentTarget; if (el.scrollWidth <= el.offsetWidth) return; const rect = el.getBoundingClientRect(); setAddrTooltip({ x: rect.left, y: rect.top - 4, text: p.place_name }); }}
+                  onMouseLeave={() => setAddrTooltip(null)}
+                >{p.address_name}</p>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -298,14 +284,6 @@ function LocationInput({ value, onChange, urlValue, onUrlChange }: {
 const MAX_REPEAT_COUNT = 1000;
 
 type RepeatType = "none" | "daily" | "weekly" | "monthly";
-const REPEAT_CYCLE_OPTIONS: { value: Exclude<RepeatType, "none">; label: string }[] = [
-  { value: "daily",   label: "매일" },
-  { value: "weekly",  label: "매주" },
-  { value: "monthly", label: "매월" },
-];
-const REPEAT_CYCLE_LABEL: Record<Exclude<RepeatType, "none">, string> = {
-  daily: "매일", weekly: "매주", monthly: "매월",
-};
 
 interface RepeatPickerProps {
   value: RepeatType;
@@ -315,9 +293,10 @@ interface RepeatPickerProps {
 }
 
 function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: RepeatPickerProps) {
-  const [open, setOpen] = useState(false);
+  const { t, locale } = useLocale();
+  const [open,       setOpen]       = useState(false);
   const [useEndDate, setUseEndDate] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const ref        = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -329,11 +308,28 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const isActive = value !== "none";
+  const REPEAT_CYCLE_OPTIONS: { value: Exclude<RepeatType, "none">; label: string }[] = [
+    { value: "daily",   label: t("repeat_daily") },
+    { value: "weekly",  label: t("repeat_weekly") },
+    { value: "monthly", label: t("repeat_monthly") },
+  ];
+  const REPEAT_CYCLE_LABEL: Record<Exclude<RepeatType, "none">, string> = {
+    daily: t("repeat_daily"), weekly: t("repeat_weekly"), monthly: t("repeat_monthly"),
+  };
+
+  const isActive  = value !== "none";
+  const cycleLabel = isActive ? REPEAT_CYCLE_LABEL[value as Exclude<RepeatType, "none">] : "";
+
+  const triggerLabel = (() => {
+    if (!isActive) return t("repeat_none");
+    if (endDate) return tFormat(t("repeat_n_until"), { cycle: cycleLabel, date: endDate });
+    return locale === "en" ? cycleLabel : `${cycleLabel} 반복`;
+  })();
 
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen(v => { const next = !v; if (next) requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })); return next; })}
+      <button type="button"
+        onClick={() => setOpen(v => { const next = !v; if (next) requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })); return next; })}
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left flex items-center gap-1.5 transition",
           "bg-slate-50 dark:bg-zinc-800",
@@ -341,15 +337,13 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
         ].join(" ")}
       >
         <IconRepeat className="w-3.5 h-3.5 shrink-0" />
-        {isActive
-          ? `${REPEAT_CYCLE_LABEL[value as Exclude<RepeatType, "none">]} 반복${endDate ? ` · ${endDate} 까지` : ""}`
-          : "반복 안함"}
+        {triggerLabel}
       </button>
 
       {open && (
         <div ref={popoverRef} className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg w-[280px] max-w-[calc(100vw-2rem)] p-3 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">반복 설정</span>
+            <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">{t("repeat_setting")}</span>
             <button type="button" onClick={() => setOpen(false)}
               className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
               <IconX className="w-3.5 h-3.5" />
@@ -372,7 +366,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
           {isActive && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-slate-500 dark:text-zinc-400">종료 날짜 지정</span>
+                <span className="text-[11px] text-slate-500 dark:text-zinc-400">{t("repeat_end_date")}</span>
                 <button type="button"
                   role="switch"
                   aria-checked={useEndDate}
@@ -391,7 +385,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
               {useEndDate ? (
                 <DatePickerInput value={endDate} onChange={onEndDateChange} forceDown />
               ) : (
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400">최대 1000개까지 자동으로 생성됩니다</p>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400">{t("repeat_max_hint")}</p>
               )}
             </div>
           )}
@@ -400,13 +394,13 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
             <button type="button"
               onClick={() => { onValueChange("none"); onEndDateChange(""); setUseEndDate(false); setOpen(false); }}
               className="text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 transition">
-              반복 안함
+              {t("repeat_none")}
             </button>
             <button type="button" onClick={() => setOpen(false)}
               disabled={!isActive || (useEndDate && !endDate)}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-40 transition"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-              완료
+              {t("time_done")}
             </button>
           </div>
         </div>
@@ -417,8 +411,19 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
 
 export default function CalendarComponent() {
   const toast    = useToast();
+  const { t, locale } = useLocale();
   const today    = new Date();
   const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const DAY_LABELS = [
+    t("day_sun"), t("day_mon"), t("day_tue"), t("day_wed"),
+    t("day_thu"), t("day_fri"), t("day_sat"),
+  ];
+  const MONTH_NAMES = [
+    t("month_short_1"),  t("month_short_2"),  t("month_short_3"),  t("month_short_4"),
+    t("month_short_5"),  t("month_short_6"),  t("month_short_7"),  t("month_short_8"),
+    t("month_short_9"),  t("month_short_10"), t("month_short_11"), t("month_short_12"),
+  ];
 
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -430,11 +435,11 @@ export default function CalendarComponent() {
   const [formLocationUrl, setFormLocationUrl] = useState<string | undefined>(undefined);
   const [formRepeat,      setFormRepeat]      = useState<RepeatType>("none");
   const [formRepeatEnd,   setFormRepeatEnd]   = useState("");
-  const [hydrated,   setHydrated]   = useState(false);
-  const [userId,     setUserId]     = useState<string | null>(null);
+  const [hydrated,        setHydrated]        = useState(false);
+  const [userId,          setUserId]          = useState<string | null>(null);
   const [editingId,       setEditingId]       = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [displayed, setDisplayed] = useState<string | null>(null);
+  const [displayed,       setDisplayed]       = useState<string | null>(null);
   const [editTitle,       setEditTitle]       = useState("");
   const [editTime,        setEditTime]        = useState("");
   const [editLocation,    setEditLocation]    = useState("");
@@ -449,12 +454,11 @@ export default function CalendarComponent() {
     });
   }, []);
 
-  // 월별 일정 로드
   useEffect(() => {
     if (!userId) return;
     const startDate = toKey(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const endDate = toKey(year, month, lastDay);
+    const lastDay   = new Date(year, month + 1, 0).getDate();
+    const endDate   = toKey(year, month, lastDay);
     getEventsInRange(userId, startDate, endDate).then((rows) => {
       setEvents(rows.map((r) => ({
         id: r.id, date: r.date, title: r.title,
@@ -464,12 +468,11 @@ export default function CalendarComponent() {
     });
   }, [year, month, userId]);
 
-  // 패널에 표시할 날짜 — 접히는 애니메이션 동안에도 마지막 선택 날짜 내용을 유지
   useEffect(() => {
     if (selected) setDisplayed(selected);
   }, [selected]);
 
-  const prevMonth = () => { month === 0 ? (setYear(y => y-1), setMonth(11)) : setMonth(m => m-1); };
+  const prevMonth = () => { month === 0  ? (setYear(y => y-1), setMonth(11)) : setMonth(m => m-1); };
   const nextMonth = () => { month === 11 ? (setYear(y => y+1), setMonth(0))  : setMonth(m => m+1); };
 
   const firstDow    = new Date(year, month, 1).getDay();
@@ -490,7 +493,7 @@ export default function CalendarComponent() {
 
   const buildRepeatDates = (start: string, end: string | null, repeat: RepeatType, maxCount: number): string[] => {
     const dates: string[] = [];
-    const cur = new Date(start);
+    const cur     = new Date(start);
     const endDate = end ? new Date(end) : null;
     while (dates.length < maxCount) {
       if (endDate && cur > endDate) break;
@@ -528,11 +531,11 @@ export default function CalendarComponent() {
       return;
     }
 
-    const dates = buildRepeatDates(displayed, formRepeatEnd || null, formRepeat, MAX_REPEAT_COUNT);
+    const dates   = buildRepeatDates(displayed, formRepeatEnd || null, formRepeat, MAX_REPEAT_COUNT);
     const groupId = crypto.randomUUID();
-    const rows = await addEvents(userId, dates.map(date => ({ ...base, date, recurrence_group_id: groupId })));
+    const rows    = await addEvents(userId, dates.map(date => ({ ...base, date, recurrence_group_id: groupId })));
     setEvents(prev => [...prev, ...rows.map(r => ({ id: r.id, date: r.date, title: r.title, time: r.time ?? undefined, location: r.location ?? undefined, location_url: r.location_url ?? undefined }))]);
-    toast.success(`${rows.length}개 일정이 생성되었습니다`);
+    toast.success(tFormat(t("toast_events_created"), { n: rows.length }));
     resetForm();
   };
 
@@ -585,13 +588,13 @@ export default function CalendarComponent() {
         <div className="flex items-center gap-2">
           <IconCalendar className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
           <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
-            {displayed ? formatKey(displayed) : ""}
+            {displayed ? formatKey(displayed, locale, MONTH_NAMES) : ""}
           </h2>
         </div>
         <button
           onClick={() => setSelected(null)}
           className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
-          aria-label="닫기"
+          aria-label={t("cal_close")}
         >
           <IconX className="w-4 h-4" />
         </button>
@@ -600,13 +603,12 @@ export default function CalendarComponent() {
       {/* 일정 목록 */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {selectedEvents.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-zinc-400 mb-4">등록된 일정이 없습니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400 mb-4">{t("no_events_msg")}</p>
         ) : (
           <div className="space-y-2 mb-4">
             {selectedEvents.map(ev => (
               <div key={ev.id} className="rounded-xl bg-slate-50 dark:bg-zinc-800 group overflow-visible">
                 {editingId === ev.id ? (
-                  /* 인라인 편집 폼 */
                   <div className="px-3 py-3 space-y-2 overflow-visible">
                     <input
                       value={editTitle}
@@ -626,17 +628,16 @@ export default function CalendarComponent() {
                     <div className="flex justify-end gap-2">
                       <button onClick={() => setEditingId(null)}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 transition">
-                        <IconX className="w-3.5 h-3.5" />취소
+                        <IconX className="w-3.5 h-3.5" />{t("cancel")}
                       </button>
                       <button onClick={() => saveEdit(ev.id)} disabled={!editTitle.trim()}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition disabled:opacity-40"
                         style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-                        <IconCheck className="w-3.5 h-3.5" />저장
+                        <IconCheck className="w-3.5 h-3.5" />{t("save")}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  /* 일반 표시 */
                   <div className="flex items-start gap-3 px-3 py-2.5">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 truncate">{ev.title}</p>
@@ -684,12 +685,12 @@ export default function CalendarComponent() {
 
       {/* 일정 추가 폼 */}
       <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800 shrink-0">
-        <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">일정 추가</p>
+        <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">{t("event_add_section")}</p>
         <input
           value={formTitle}
           onChange={e => setFormTitle(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleAdd()}
-          placeholder="일정 제목을 입력하세요"
+          placeholder={t("event_title_ph")}
           className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
         <div className="grid grid-cols-2 gap-2">
@@ -714,7 +715,7 @@ export default function CalendarComponent() {
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 shrink-0"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
             <IconPlus className="w-4 h-4" />
-            추가
+            {t("add")}
           </button>
         </div>
       </div>
@@ -726,13 +727,12 @@ export default function CalendarComponent() {
 
       {confirmDeleteId && (
         <ConfirmModal
-          message="일정을 삭제하시겠습니까?"
+          message={t("confirm_delete_event")}
           onConfirm={doDelete}
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
 
-      {/* 캘린더 + 사이드 패널 — sm 이상에서는 좌우 분할 */}
       <div className="flex flex-col sm:flex-row gap-4 items-start">
 
         {/* 캘린더 카드 */}
@@ -740,14 +740,14 @@ export default function CalendarComponent() {
 
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-5">
-            <button onClick={prevMonth} aria-label="이전 달"
+            <button onClick={prevMonth} aria-label={t("cal_prev_month")}
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
               <IconChevronLeft className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
             </button>
             <span className="text-base font-semibold text-slate-800 dark:text-zinc-100">
-              {year}년 {MONTH_NAMES[month]}
+              {locale === "en" ? `${MONTH_NAMES[month]} ${year}` : `${year}년 ${MONTH_NAMES[month]}`}
             </span>
-            <button onClick={nextMonth} aria-label="다음 달"
+            <button onClick={nextMonth} aria-label={t("cal_next_month")}
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
               <IconChevronRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
             </button>
@@ -762,18 +762,18 @@ export default function CalendarComponent() {
             ))}
           </div>
 
-          {/* 날짜 그리드 — 모든 셀 동일 높이 */}
+          {/* 날짜 그리드 */}
           <div className="grid grid-cols-7 gap-0.5">
             {cells.map((day, idx) => {
               if (day === null) return <div key={idx} className="min-h-[88px]" />;
-              const key      = toKey(year, month, day);
-              const evts     = eventsOn(key);
-              const isSel    = key === selected;
-              const isToday  = key === todayKey;
-              const dow      = (firstDow + day - 1) % 7;
-              const holiday  = getHolidays(year)[key];
-              const isSun    = dow === 0;
-              const isSat    = dow === 6;
+              const key     = toKey(year, month, day);
+              const evts    = eventsOn(key);
+              const isSel   = key === selected;
+              const isToday = key === todayKey;
+              const dow     = (firstDow + day - 1) % 7;
+              const holiday = getHolidays(year)[key];
+              const isSun   = dow === 0;
+              const isSat   = dow === 6;
               return (
                 <button key={idx} onClick={() => setSelected(prev => prev === key ? null : key)}
                   className={[
@@ -813,7 +813,7 @@ export default function CalendarComponent() {
           </div>
         </div>
 
-        {/* 사이드 패널 (sm 이상) — 슬라이드 인/아웃 */}
+        {/* 사이드 패널 (sm 이상) */}
         <div
           className={[
             "hidden sm:flex flex-col self-stretch bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm transition-[width,opacity] duration-300 ease-in-out",
@@ -824,7 +824,7 @@ export default function CalendarComponent() {
         </div>
       </div>
 
-      {/* 선택 날짜 패널 (모바일) — 날짜 미선택 시 숨김, 선택 시 사르르 펼침 */}
+      {/* 선택 날짜 패널 (모바일) */}
       <div
         className="sm:hidden overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out"
         style={{ maxHeight: selected ? "1000px" : "0px", opacity: selected ? 1 : 0 }}
@@ -835,13 +835,13 @@ export default function CalendarComponent() {
       </div>
 
       <HelpButton
-        title="일정 관리 사용법"
+        title={t("help_cal_title")}
         steps={[
-          { step: "날짜 클릭", desc: "날짜를 클릭하면 오른쪽에 일정 패널이 열립니다." },
-          { step: "일정 추가", desc: "제목 입력 후 시간과 장소를 선택하고 추가합니다." },
-          { step: "장소 검색", desc: "장소 입력 시 카카오맵 검색 결과가 나타납니다. 선택하면 지도 링크가 저장됩니다." },
-          { step: "편집/삭제", desc: "등록된 일정에 마우스를 올리면 수정·삭제 버튼이 나타납니다." },
-          { step: "월 이동", desc: "좌우 화살표로 이전/다음 달로 이동합니다." },
+          { step: t("date_select"), desc: t("help_cal_1") },
+          { step: t("event_add_section"), desc: t("help_cal_2") },
+          { step: t("location_ph"),       desc: t("help_cal_3") },
+          { step: t("modify"),            desc: t("help_cal_4") },
+          { step: locale === "en" ? "Navigate" : "월 이동", desc: t("help_cal_5") },
         ]}
       />
     </div>
