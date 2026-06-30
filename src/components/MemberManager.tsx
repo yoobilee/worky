@@ -14,6 +14,8 @@ import { createClient } from "@/lib/supabase/client";
 import { getMembers, addMember, updateMember, deleteMember } from "@/lib/db/members";
 import type { Member, MemberFormState } from "@/types/member";
 import SeatingPlanner from "./SeatingPlanner";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
 
 const EMPTY_FORM: MemberFormState = {
   name: "", position: "", department: "", phone: "",
@@ -51,7 +53,13 @@ function parseEmail(email: string): { id: string; domain: string; custom: string
   return { id, domain: CUSTOM_DOMAIN, custom: domain };
 }
 
-function EmailDomainPicker({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: boolean }) {
+function EmailDomainPicker({ value, onChange, error, labelSelect, labelCustom }: {
+  value: string;
+  onChange: (v: string) => void;
+  error?: boolean;
+  labelSelect: string;
+  labelCustom: string;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -65,7 +73,7 @@ function EmailDomainPicker({ value, onChange, error }: { value: string; onChange
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const label = value === CUSTOM_DOMAIN ? "직접 입력" : value || "도메인 선택";
+  const label = value === CUSTOM_DOMAIN ? labelCustom : value || labelSelect;
 
   return (
     <div className="relative flex-1 min-w-0" ref={ref}>
@@ -90,7 +98,7 @@ function EmailDomainPicker({ value, onChange, error }: { value: string; onChange
             ))}
             <button type="button" onClick={() => { onChange(CUSTOM_DOMAIN); setOpen(false); }}
               className={`w-full px-3 py-2 text-sm text-left border-t border-slate-100 dark:border-zinc-800 transition ${value === CUSTOM_DOMAIN ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] font-medium" : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}>
-              직접 입력
+              {labelCustom}
             </button>
           </div>
         </div>
@@ -101,6 +109,7 @@ function EmailDomainPicker({ value, onChange, error }: { value: string; onChange
 
 export default function MemberManager() {
   const toast = useToast();
+  const { t } = useLocale();
 
   const [hydrated,        setHydrated]        = useState(false);
   const [members,         setMembers]         = useState<Member[]>([]);
@@ -147,15 +156,16 @@ export default function MemberManager() {
 
   const grouped: { dept: string; items: Member[] }[] = (() => {
     const map = new Map<string, Member[]>();
+    const unclassified = t("group_unclassified");
     for (const m of sorted) {
-      const key = m.department?.trim() || "미분류";
+      const key = m.department?.trim() || unclassified;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(m);
     }
     return Array.from(map.entries())
       .sort(([a], [b]) => {
-        if (a === "미분류") return 1;
-        if (b === "미분류") return -1;
+        if (a === unclassified) return 1;
+        if (b === unclassified) return -1;
         return a.localeCompare(b, "ko");
       })
       .map(([dept, items]) => ({ dept, items }));
@@ -203,9 +213,9 @@ export default function MemberManager() {
 
     const newErrors: { phone?: string; email?: string } = {};
     if (finalEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(finalEmail))
-      newErrors.email = "올바른 이메일 형식이 아닙니다";
+      newErrors.email = t("err_email_invalid");
     if (form.phone.trim() && !/^[0-9\-+() ]{7,20}$/.test(form.phone.trim()))
-      newErrors.phone = "올바른 전화번호 형식이 아닙니다";
+      newErrors.phone = t("err_phone_invalid");
     if (newErrors.email || newErrors.phone) { setErrors(newErrors); return; }
     setErrors({});
 
@@ -226,11 +236,11 @@ export default function MemberManager() {
         tags:       payload.tags,
       }));
       setSelectedId(editingId);
-      toast.success("구성원이 수정되었습니다");
+      toast.success(t("toast_member_updated"));
     } else {
       const row = await addMember(userId, payload);
       if (row) { setMembers(prev => [...prev, row]); setSelectedId(row.id); }
-      toast.success("구성원이 추가되었습니다");
+      toast.success(t("toast_member_added"));
     }
     setShowForm(false);
     setEditingId(null);
@@ -244,7 +254,7 @@ export default function MemberManager() {
     await deleteMember(confirmDeleteId);
     if (confirmDeleteId === selectedId) setSelectedId(null);
     setMembers(prev => prev.filter(m => m.id !== confirmDeleteId));
-    toast.success("구성원이 삭제되었습니다");
+    toast.success(t("toast_member_deleted"));
     setConfirmDeleteId(null);
   };
 
@@ -272,7 +282,7 @@ export default function MemberManager() {
   const EmptyState = (
     <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-300 dark:text-zinc-600">
       <IconUsers className="w-12 h-12" />
-      <p className="text-sm text-slate-500 dark:text-zinc-400">구성원을 선택하거나 추가해보세요</p>
+      <p className="text-sm text-slate-500 dark:text-zinc-400">{t("empty_select_member")}</p>
     </div>
   );
 
@@ -309,7 +319,7 @@ export default function MemberManager() {
       <div className="border-t border-slate-100 dark:border-zinc-800 my-4" />
 
       {(!selectedMember.phone && !selectedMember.email && !selectedMember.kakaoId && !selectedMember.birthday && !selectedMember.memo) ? (
-        <p className="text-xs text-slate-500 dark:text-zinc-400 italic">등록된 추가 정보가 없습니다</p>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 italic">{t("empty_no_extra_info")}</p>
       ) : (
         <div className="space-y-3">
           {selectedMember.phone && (
@@ -351,27 +361,27 @@ export default function MemberManager() {
   const FormContent = (
     <div className="flex flex-col h-full">
       <p className="text-sm font-semibold text-slate-700 dark:text-zinc-200 mb-4 shrink-0">
-        {editingId ? "구성원 수정" : "구성원 추가"}
+        {editingId ? t("member_edit_title") : t("member_add_title")}
       </p>
 
       <div className="flex-1 overflow-y-auto space-y-3 min-h-0 px-1 -mx-1 pt-1 -mt-1">
         <input
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          placeholder="이름 *"
+          placeholder={t("ph_member_name")}
           className={INPUT_CLS}
         />
 
         <div className="grid grid-cols-2 gap-2">
-          <input value={form.position}   onChange={e => setForm(f => ({ ...f, position:   e.target.value }))} placeholder="직급"  className={INPUT_CLS} />
-          <input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} placeholder="소속"  className={INPUT_CLS} />
+          <input value={form.position}   onChange={e => setForm(f => ({ ...f, position:   e.target.value }))} placeholder={t("ph_position")}   className={INPUT_CLS} />
+          <input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} placeholder={t("ph_department")} className={INPUT_CLS} />
         </div>
 
         <div>
           <input
             value={form.phone}
             onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(prev => ({ ...prev, phone: undefined })); }}
-            placeholder="전화번호"
+            placeholder={t("ph_member_phone")}
             className={`w-full px-3 py-2 rounded-xl border text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition ${errors.phone ? "border-2 border-red-500 dark:border-red-500 bg-red-50/60 dark:bg-red-950/20 focus:ring-red-300/40" : "border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 focus:ring-[#6C63FF]/40"}`}
           />
           {errors.phone && <p role="alert" className="text-xs text-red-500 mt-1">{errors.phone}</p>}
@@ -382,7 +392,7 @@ export default function MemberManager() {
             <input
               value={emailId}
               onChange={e => { setEmailId(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
-              placeholder="아이디"
+              placeholder={t("ph_email_id")}
               className={`flex-1 min-w-0 px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition ${errors.email ? "border-2 border-red-500 dark:border-red-500 bg-red-50/60 dark:bg-red-950/20 focus:ring-red-300/40" : "border-slate-200 dark:border-zinc-700 focus:ring-[#6C63FF]/40"}`}
             />
             <span className="text-slate-500 dark:text-zinc-400 text-sm shrink-0">@</span>
@@ -390,12 +400,14 @@ export default function MemberManager() {
               value={emailDomain}
               onChange={(v) => { setEmailDomain(v); if (v !== CUSTOM_DOMAIN) setCustomDomain(""); setErrors(prev => ({ ...prev, email: undefined })); }}
               error={!!errors.email}
+              labelSelect={t("domain_select")}
+              labelCustom={t("domain_custom")}
             />
             {emailDomain === CUSTOM_DOMAIN && (
               <input
                 value={customDomain}
                 onChange={e => { setCustomDomain(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
-                placeholder="도메인 직접 입력"
+                placeholder={t("ph_custom_domain")}
                 className={`flex-1 min-w-0 px-3 py-2 rounded-xl border bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition ${errors.email ? "border-2 border-red-500 dark:border-red-500 bg-red-50/60 dark:bg-red-950/20 focus:ring-red-300/40" : "border-slate-200 dark:border-zinc-700 focus:ring-[#6C63FF]/40"}`}
               />
             )}
@@ -404,14 +416,14 @@ export default function MemberManager() {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <input value={form.kakaoId} onChange={e => setForm(f => ({ ...f, kakaoId: e.target.value }))} placeholder="카카오톡 ID" className={INPUT_CLS} />
-          <DatePickerInput value={form.birthday} onChange={v => setForm(f => ({ ...f, birthday: v }))} placeholder="생일 선택" />
+          <input value={form.kakaoId} onChange={e => setForm(f => ({ ...f, kakaoId: e.target.value }))} placeholder={t("ph_kakao_id")} className={INPUT_CLS} />
+          <DatePickerInput value={form.birthday} onChange={v => setForm(f => ({ ...f, birthday: v }))} placeholder={t("ph_birthday")} />
         </div>
 
         <textarea
           value={form.memo}
           onChange={e => setForm(f => ({ ...f, memo: e.target.value }))}
-          placeholder="메모"
+          placeholder={t("ph_member_memo")}
           rows={3}
           className={`${INPUT_CLS} resize-none`}
         />
@@ -420,12 +432,12 @@ export default function MemberManager() {
       <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-slate-100 dark:border-zinc-800 shrink-0">
         <button onClick={closeForm}
           className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
-          <IconX className="w-3.5 h-3.5" />취소
+          <IconX className="w-3.5 h-3.5" />{t("cancel")}
         </button>
         <button onClick={handleSave} disabled={!form.name.trim()}
           className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-semibold text-white transition disabled:opacity-40"
           style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-          저장
+          {t("save")}
         </button>
       </div>
     </div>
@@ -466,12 +478,12 @@ export default function MemberManager() {
   const listContent = members.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-8 gap-1 text-slate-300 dark:text-zinc-600">
       <IconUser className="w-8 h-8" />
-      <p className="text-xs text-slate-500 dark:text-zinc-400">등록된 구성원이 없습니다</p>
+      <p className="text-xs text-slate-500 dark:text-zinc-400">{t("empty_no_members")}</p>
     </div>
   ) : filtered.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-8 gap-1 text-slate-300 dark:text-zinc-600">
       <IconSearch className="w-8 h-8" />
-      <p className="text-xs text-slate-500 dark:text-zinc-400">검색 결과가 없습니다</p>
+      <p className="text-xs text-slate-500 dark:text-zinc-400">{t("empty_no_member_search")}</p>
     </div>
   ) : groupByDept ? (
     <div className="space-y-3">
@@ -480,7 +492,7 @@ export default function MemberManager() {
           <div className="flex items-center gap-1.5 mb-1 px-2">
             <IconUsersGroup className="w-3 h-3 text-slate-500 dark:text-zinc-400" />
             <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">{dept}</span>
-            <span className="text-[11px] text-slate-300 dark:text-zinc-600">{items.length}명</span>
+            <span className="text-[11px] text-slate-300 dark:text-zinc-600">{tFormat(t("n_people"), { n: items.length })}</span>
           </div>
           {items.map(m => <MemberRow key={m.id} m={m} />)}
         </div>
@@ -496,7 +508,7 @@ export default function MemberManager() {
     <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
       {confirmDeleteId && (
         <ConfirmModal
-          message="구성원을 삭제하시겠습니까?"
+          message={t("confirm_delete_member")}
           onConfirm={doDelete}
           onCancel={() => setConfirmDeleteId(null)}
         />
@@ -504,8 +516,8 @@ export default function MemberManager() {
 
       <div role="tablist" className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
         {([
-          { id: "list" as const, label: "목록" },
-          { id: "seating" as const, label: "자리 배치도" },
+          { id: "list" as const,    label: t("member_tab_list") },
+          { id: "seating" as const, label: t("member_tab_seating") },
         ]).map(({ id, label }) => (
           <button key={id} role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)}
             className={[
@@ -524,9 +536,9 @@ export default function MemberManager() {
         <div className="w-full sm:w-[300px] shrink-0 self-stretch bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-4 flex flex-col gap-3 sm:h-[600px]">
           {/* 헤더 */}
           <div className="flex items-center gap-2 shrink-0">
-            <h2 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">구성원 관리</h2>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("member_management")}</h2>
             <span className="text-xs text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
-              {members.length}명
+              {tFormat(t("n_people"), { n: members.length })}
             </span>
           </div>
 
@@ -536,7 +548,7 @@ export default function MemberManager() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="이름, 소속, 직급 검색"
+              placeholder={t("search_member")}
               className="w-full pl-8 pr-7 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             {search && (
@@ -550,7 +562,7 @@ export default function MemberManager() {
           {/* 소속별 토글 + 추가 버튼 */}
           <div className="flex items-center justify-between shrink-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-500 dark:text-zinc-400">소속별로 보기</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400">{t("group_by_dept")}</span>
               <button
                 type="button"
                 role="switch"
@@ -571,7 +583,7 @@ export default function MemberManager() {
               onClick={openAdd}
               className="w-8 h-8 rounded-full flex items-center justify-center text-white transition shrink-0"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              aria-label="구성원 추가"
+              aria-label={t("member_add_title")}
             >
               <IconPlus className="w-4 h-4" />
             </button>
@@ -604,13 +616,13 @@ export default function MemberManager() {
       {activeTab === "seating" && <SeatingPlanner members={members} avatarGradient={avatarGradient} />}
 
       <HelpButton
-        title="구성원 관리 사용법"
+        title={t("help_member_title")}
         steps={[
-          { step: "구성원 추가", desc: "목록 패널 우측 상단 + 버튼으로 새 구성원을 등록합니다." },
-          { step: "이메일 입력", desc: "아이디와 도메인을 분리해서 입력하거나 직접 입력 옵션을 선택합니다." },
-          { step: "검색", desc: "이름·소속·직급·전화번호·이메일로 통합 검색이 가능합니다." },
-          { step: "소속별 보기", desc: "소속별로 보기 토글을 켜면 부서·소속별로 그룹화해서 볼 수 있습니다." },
-          { step: "수정/삭제", desc: "구성원을 선택하면 상세 패널에서 수정·삭제 버튼이 표시됩니다." },
+          { step: t("member_add_title"), desc: t("help_member_1") },
+          { step: t("ph_email_id"),      desc: t("help_member_2") },
+          { step: t("search_member"),    desc: t("help_member_3") },
+          { step: t("group_by_dept"),    desc: t("help_member_4") },
+          { step: t("modify"),           desc: t("help_member_5") },
         ]}
       />
     </div>

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { IconPlus, IconX, IconUserPlus, IconRotate } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 import { getDesks, addDesk, updateDeskPosition, assignDeskMember, deleteDesk, updateDeskRotation } from "@/lib/db/seating";
 import type { Desk } from "@/types/seating";
 import type { Member } from "@/types/member";
@@ -18,6 +19,7 @@ const DESK_HEIGHT = 64;
 const SNAP_THRESHOLD = 6;
 
 export default function SeatingPlanner({ members, avatarGradient }: SeatingPlannerProps) {
+  const { t } = useLocale();
   const [hydrated, setHydrated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [desks, setDesks] = useState<Desk[]>([]);
@@ -126,11 +128,11 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500 dark:text-zinc-400">책상을 드래그해서 자유롭게 배치하세요</p>
+        <p className="text-sm text-slate-500 dark:text-zinc-400">{t("seating_hint")}</p>
         <button onClick={handleAddDesk}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition"
           style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-          <IconPlus className="w-4 h-4" />책상 추가
+          <IconPlus className="w-4 h-4" />{t("desk_add")}
         </button>
       </div>
 
@@ -183,7 +185,7 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
                   ) : (
                     <>
                       <IconUserPlus className="w-5 h-5 text-slate-300 dark:text-zinc-600 shrink-0" />
-                      <span className="text-xs text-slate-500 dark:text-zinc-400">배정</span>
+                      <span className="text-xs text-slate-500 dark:text-zinc-400">{t("desk_unassigned")}</span>
                     </>
                   )}
                 </button>
@@ -213,7 +215,7 @@ export default function SeatingPlanner({ members, avatarGradient }: SeatingPlann
                     <div className="max-h-52 overflow-y-auto">
                       <button onClick={(e) => { e.stopPropagation(); handleAssign(desk.id, null); }}
                         className="w-full px-3 py-2 text-xs text-left text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-                        비우기
+                        {t("desk_clear")}
                       </button>
                       {members.map(m => (
                         <button key={m.id} onClick={(e) => { e.stopPropagation(); handleAssign(desk.id, m.id); }}
