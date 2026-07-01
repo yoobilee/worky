@@ -1088,6 +1088,10 @@ export default function SettingsPage() {
           { step: t("help_settings_1_step"), desc: t("help_settings_1_desc") },
           { step: t("help_settings_2_step"), desc: t("help_settings_2_desc") },
           { step: t("help_settings_3_step"), desc: t("help_settings_3_desc") },
+          { step: t("help_settings_4_step"), desc: t("help_settings_4_desc") },
+          { step: t("help_settings_5_step"), desc: t("help_settings_5_desc") },
+          { step: t("help_settings_6_step"), desc: t("help_settings_6_desc") },
+          { step: t("help_settings_7_step"), desc: t("help_settings_7_desc") },
         ]}
       />
     </div>
