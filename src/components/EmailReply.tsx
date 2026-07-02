@@ -18,9 +18,11 @@ import {
   IconMailPlus,
   IconLoader2,
 } from "@tabler/icons-react";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 type Tone = "정중하게" | "간결하게" | "거절하기" | "사과하기" | "감사하기";
 type TabType = "new" | "reply";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 interface SenderInfo {
   org:   string;
@@ -30,12 +32,12 @@ interface SenderInfo {
 
 const SENDER_KEY = "worky_sender_info";
 
-const TONES: { id: Tone; Icon: React.ComponentType<{ className?: string }>; desc: string }[] = [
-  { id: "정중하게", Icon: IconTie,            desc: "격식 있고 공손한 톤" },
-  { id: "간결하게", Icon: IconBolt,           desc: "짧고 핵심만 전달" },
-  { id: "거절하기", Icon: IconBan,            desc: "정중히 거절하는 톤" },
-  { id: "사과하기", Icon: IconHeartHandshake, desc: "진심 어린 사과 표현" },
-  { id: "감사하기", Icon: IconHeart,          desc: "감사함을 전하는 톤" },
+const TONES: { id: Tone; Icon: React.ComponentType<{ className?: string }>; labelKey: TranslationKey; descKey: TranslationKey }[] = [
+  { id: "정중하게", Icon: IconTie,            labelKey: "er_tone_formal",    descKey: "er_tone_formal_desc"    },
+  { id: "간결하게", Icon: IconBolt,           labelKey: "er_tone_concise",   descKey: "er_tone_concise_desc"   },
+  { id: "거절하기", Icon: IconBan,            labelKey: "er_tone_decline",   descKey: "er_tone_decline_desc"   },
+  { id: "사과하기", Icon: IconHeartHandshake, labelKey: "er_tone_apologize", descKey: "er_tone_apologize_desc" },
+  { id: "감사하기", Icon: IconHeart,          labelKey: "er_tone_thanks",    descKey: "er_tone_thanks_desc"    },
 ];
 
 const KO_RULES = `
@@ -130,6 +132,7 @@ function parseDrafts(raw: string): string[] {
 }
 
 export default function EmailReply() {
+  const { t } = useLocale();
   const [activeTab, setActiveTab]   = useState<TabType>("new");
   const [sender, setSender]         = useState<SenderInfo>({ org: "", name: "", title: "" });
   const [hydrated, setHydrated]     = useState(false);
@@ -211,7 +214,7 @@ export default function EmailReply() {
       }
       trackUsage("email");
     } catch (e) {
-      setNewError(e instanceof Error ? e.message : "이메일 생성 중 오류가 발생했습니다.");
+      setNewError(e instanceof Error ? e.message : t("er_error_generate"));
     } finally {
       setNewLoading(false);
     }
@@ -240,11 +243,11 @@ export default function EmailReply() {
         acc += decoder.decode(value, { stream: true });
       }
       const parsed = parseDrafts(acc);
-      if (parsed.length === 0) throw new Error("AI 응답이 비어 있습니다. 다시 시도해주세요.");
+      if (parsed.length === 0) throw new Error(t("er_error_empty"));
       setDrafts(parsed);
       trackUsage("email");
     } catch (e) {
-      setReplyError(e instanceof Error ? e.message : "이메일 생성 중 오류가 발생했습니다.");
+      setReplyError(e instanceof Error ? e.message : t("er_error_generate"));
     } finally {
       setReplyLoading(false);
     }
@@ -276,7 +279,7 @@ export default function EmailReply() {
       const accessToken = session?.provider_token;
       if (!accessToken) {
         setSendModal(null);
-        showToast(false, "Gmail 권한이 없습니다. 다시 로그인해 주세요.");
+        showToast(false, t("er_toast_no_auth"));
         return;
       }
       const res = await fetch("/api/gmail", {
@@ -292,13 +295,13 @@ export default function EmailReply() {
       const data = await res.json();
       setSendModal(null);
       if (res.ok) {
-        showToast(true, "이메일이 성공적으로 전송되었습니다.");
+        showToast(true, t("er_toast_sent"));
       } else {
-        showToast(false, data.error ?? "전송 실패");
+        showToast(false, data.error ?? t("er_toast_send_fail"));
       }
     } catch {
       setSendModal(null);
-      showToast(false, "전송 중 오류가 발생했습니다.");
+      showToast(false, t("er_toast_send_fail"));
     } finally {
       setSending(false);
     }
@@ -332,9 +335,9 @@ export default function EmailReply() {
       {/* 탭 */}
       <div role="tablist" className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
         {([
-          { id: "new",   label: "새 이메일 작성", Icon: IconMailPlus },
-          { id: "reply", label: "답장 작성",       Icon: IconMailForward },
-        ] as const).map(({ id, label, Icon }) => (
+          { id: "new",   labelKey: "er_tab_new",   Icon: IconMailPlus    },
+          { id: "reply", labelKey: "er_tab_reply",  Icon: IconMailForward },
+        ] as const).map(({ id, labelKey, Icon }) => (
           <button
             key={id}
             role="tab"
@@ -348,7 +351,7 @@ export default function EmailReply() {
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -356,13 +359,13 @@ export default function EmailReply() {
       {/* 발신자 정보 없을 때 안내 */}
       {!hasSender && (
         <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm shrink-0">
-          <span>이메일 서명에 사용할 내 정보가 없습니다.</span>
+          <span>{t("er_no_info_banner")}</span>
           <Link
             href="/settings"
             className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors shrink-0"
           >
             <IconSettings className="w-3.5 h-3.5" />
-            설정에서 입력
+            {t("er_settings_link")}
           </Link>
         </div>
       )}
@@ -372,7 +375,7 @@ export default function EmailReply() {
         <>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0 flex flex-col gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">받는 사람 (이메일)</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">{t("er_label_to")}</label>
               <input
                 type="email"
                 value={newTo}
@@ -382,26 +385,26 @@ export default function EmailReply() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">제목</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">{t("er_label_subject")}</label>
               <input
                 type="text"
                 value={newSubject}
                 onChange={(e) => setNewSubject(e.target.value)}
-                placeholder="이메일 제목"
+                placeholder={t("er_ph_subject")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">이메일 내용</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">{t("er_label_body")}</label>
               <textarea
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}
-                placeholder={"예: 다음 주 화요일 오후 2시 프로젝트 킥오프 미팅 일정 조율 요청. 참석자는 개발팀과 기획팀."}
+                placeholder={t("er_ph_body_hint")}
                 rows={4}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
               />
               <p className="mt-1.5 text-xs text-slate-500 dark:text-zinc-400">
-                * 보낼 내용을 자유롭게 작성하면 AI가 맞춤법·표현을 다듬어 완성도 높은 이메일로 생성합니다.
+                {t("er_hint")}
               </p>
             </div>
             <div className="flex justify-end">
@@ -412,9 +415,9 @@ export default function EmailReply() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {newLoading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />생성 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
                 ) : (
-                  <><IconMailPlus className="w-4 h-4" />이메일 생성</>
+                  <><IconMailPlus className="w-4 h-4" />{t("er_generate_new")}</>
                 )}
               </button>
             </div>
@@ -432,7 +435,7 @@ export default function EmailReply() {
           {newResult ? (
             <div ref={newResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 이메일</span>
+                <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("er_result_new")}</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => openSendModal(newTo, newSubject, newResult)}
@@ -442,7 +445,7 @@ export default function EmailReply() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    전송
+                    {t("er_send_btn")}
                   </button>
                   <button
                     onClick={() => handleCopy(newResult)}
@@ -452,7 +455,7 @@ export default function EmailReply() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    {newCopied ? "복사됨!" : "복사"}
+                    {newCopied ? t("copied") : t("er_copy")}
                   </button>
                 </div>
               </div>
@@ -465,7 +468,7 @@ export default function EmailReply() {
           ) : (
             <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
               <IconMailPlus className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-              <p className="text-sm text-slate-500 dark:text-zinc-400">이메일 내용을 입력하면 답장 초안이 여기에 생성됩니다.</p>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">{t("er_empty_new")}</p>
             </div>
           )}
         </>
@@ -476,18 +479,18 @@ export default function EmailReply() {
         <>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-              받은 이메일 내용
+              {t("er_label_received")}
             </label>
             <textarea
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
-              placeholder={"안녕하세요,\n다음 주 회의 일정을 변경할 수 있을지 문의드립니다..."}
+              placeholder={t("er_ph_received")}
               className="w-full h-52 px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
           </div>
 
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
-            <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">답장 톤 선택</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">{t("er_label_tone")}</p>
             <div className="grid grid-cols-5 gap-2">
               {TONES.map((tone) => {
                 const isActive = selectedTone === tone.id;
@@ -504,9 +507,9 @@ export default function EmailReply() {
                     style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
                   >
                     <tone.Icon className="w-5 h-5" />
-                    <span>{tone.id}</span>
+                    <span>{t(tone.labelKey)}</span>
                     <span className={`text-xs ${isActive ? "text-white/70" : "text-slate-500 dark:text-zinc-400"}`}>
-                      {tone.desc}
+                      {t(tone.descKey)}
                     </span>
                   </button>
                 );
@@ -523,7 +526,7 @@ export default function EmailReply() {
                 {replyLoading ? (
                   <>
                     <IconLoader2 className="w-4 h-4 animate-spin text-white" />
-                    생성 중...
+                    {t("generating")}
                   </>
                 ) : (
                   <>
@@ -531,7 +534,7 @@ export default function EmailReply() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
-                    답장 초안 생성
+                    {t("er_generate_reply")}
                   </>
                 )}
               </button>
@@ -558,7 +561,7 @@ export default function EmailReply() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-white"
                       style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-                      초안 {i + 1}
+                      {t("er_result_draft").replace("{n}", String(i + 1))}
                     </span>
                     <div className="flex items-center gap-2">
                       <button
@@ -569,7 +572,7 @@ export default function EmailReply() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
-                        전송
+                        {t("er_send_btn")}
                       </button>
                       <button
                         onClick={() => handleCopy(draft, i)}
@@ -577,9 +580,9 @@ export default function EmailReply() {
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
-                        {copiedIndex === i ? "복사됨!" : "복사"}
+                        {copiedIndex === i ? t("copied") : t("er_copy")}
                       </button>
                     </div>
                   </div>
@@ -598,7 +601,7 @@ export default function EmailReply() {
           ) : (
             <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
               <IconMailPlus className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-              <p className="text-sm text-slate-500 dark:text-zinc-400">이메일 내용을 입력하면 여러 답장 초안이 여기에 생성됩니다.</p>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">{t("er_empty_reply")}</p>
             </div>
           )}
         </>
@@ -609,7 +612,7 @@ export default function EmailReply() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-6 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-800 dark:text-zinc-100">이메일 전송</h3>
+              <h3 className="text-base font-bold text-slate-800 dark:text-zinc-100">{t("er_send_modal_title")}</h3>
               <button
                 onClick={() => setSendModal(null)}
                 className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 transition"
@@ -622,7 +625,7 @@ export default function EmailReply() {
 
             <div className="flex flex-col gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">받는 사람 (이메일)</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">{t("er_label_to")}</label>
                 <input
                   type="email"
                   value={sendTo}
@@ -632,17 +635,17 @@ export default function EmailReply() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">제목</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">{t("er_label_subject")}</label>
                 <input
                   type="text"
                   value={sendSubject}
                   onChange={(e) => setSendSubject(e.target.value)}
-                  placeholder="이메일 제목"
+                  placeholder={t("er_label_subject")}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">이메일 내용</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">{t("er_label_body")}</label>
                 <div className="px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-600 dark:text-zinc-400 whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
                   {sendModal.body}
                 </div>
@@ -654,7 +657,7 @@ export default function EmailReply() {
                 onClick={() => setSendModal(null)}
                 className="px-4 py-2 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
               >
-                취소
+                {t("cancel")}
               </button>
               <button
                 onClick={handleSend}
@@ -665,14 +668,14 @@ export default function EmailReply() {
                 {sending ? (
                   <>
                     <IconLoader2 className="w-4 h-4 animate-spin text-white" />
-                    전송 중...
+                    {t("er_sending")}
                   </>
                 ) : (
                   <>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
-                    전송
+                    {t("er_send_btn")}
                   </>
                 )}
               </button>
@@ -682,12 +685,12 @@ export default function EmailReply() {
       )}
 
       <HelpButton
-        title="이메일 작성 사용법"
+        title={t("help_er_title")}
         steps={[
-          { step: "탭 선택", desc: "새 이메일 작성 또는 답장 작성 탭을 선택합니다." },
-          { step: "내용 입력", desc: "보낼 이메일 내용이나 받은 이메일을 입력합니다." },
-          { step: "생성", desc: "AI가 이메일 초안을 작성합니다." },
-          { step: "전송", desc: "'전송' 버튼으로 Gmail을 통해 직접 발송하거나 복사해 사용하세요." },
+          { step: t("help_er_1_step"), desc: t("help_er_1_desc") },
+          { step: t("help_er_2_step"), desc: t("help_er_2_desc") },
+          { step: t("help_er_3_step"), desc: t("help_er_3_desc") },
+          { step: t("help_er_4_step"), desc: t("help_er_4_desc") },
         ]}
       />
     </div>

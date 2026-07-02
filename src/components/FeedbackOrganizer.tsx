@@ -136,7 +136,7 @@ export default function FeedbackOrganizer() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           rows={5}
-          placeholder="예: 전체적으로 톤이 너무 밝아요. 로고 크기 줄여주세요. 폰트가 마음에 안 들어요."
+          placeholder={t("fo_ph_input")}
           className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
         <div className="flex justify-end mt-3">

@@ -211,7 +211,7 @@ export default function ScheduleExtractor() {
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={"안녕하세요,\n다음 주 수요일 오후 2시에 3층 회의실에서 전략 회의가 있습니다.\n참석 부탁드립니다."}
+          placeholder={t("se_ph_input")}
           rows={5}
           className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />

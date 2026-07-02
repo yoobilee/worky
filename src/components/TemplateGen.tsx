@@ -5,6 +5,8 @@ import HelpButton from "./HelpButton";
 import { useState, useEffect, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import { IconReport, IconNotes, IconBulb, IconAlertTriangle, IconLoader2 } from "@tabler/icons-react";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
 import EditableResult from "@/components/EditableResult";
 import React from "react";
 
@@ -86,11 +88,13 @@ function renderMarkdown(text: string): React.ReactNode {
 
 type TemplateType = "report" | "meeting" | "plan";
 
+import type { TranslationKey } from "@/lib/i18n/translations";
+
 interface TemplateOption {
   id: TemplateType;
-  label: string;
+  labelKey: TranslationKey;
+  placeholderKey: TranslationKey;
   Icon: React.ComponentType<{ className?: string }>;
-  placeholder: string;
   systemPrompt: string;
 }
 
@@ -108,27 +112,27 @@ You must respond ONLY in Korean (한국어). Do not use any Chinese characters (
 const TEMPLATES: TemplateOption[] = [
   {
     id: "report",
-    label: "업무 보고서",
+    labelKey: "tg_type_report",
+    placeholderKey: "tg_ph_report",
     Icon: IconReport,
-    placeholder: "예: 이번 주 마케팅 캠페인 성과 보고. 클릭율 15% 향상, 전환율 8% 향상, 예산 초과 없음.",
     systemPrompt: `당신은 전문 비즈니스 문서 작성가입니다. 사용자가 제공한 내용을 바탕으로 체계적인 업무 보고서를 작성해주세요.
 보고서에는 반드시 포함해야 할 항목: 제목, 작성일, 보고 목적, 주요 내용 (번호 목록), 결과 및 성과, 향후 계획, 특이사항.
 전문적이고 간결하게 작성하세요.${KO_RULES}`,
   },
   {
     id: "meeting",
-    label: "회의록",
+    labelKey: "tg_type_minutes",
+    placeholderKey: "tg_ph_minutes",
     Icon: IconNotes,
-    placeholder: "예: 2024 Q1 마케팅 전략 회의. 참석자: 마케팅팀 5명. 주요 안건: 신규 채널 발굴, 예산 배분.",
     systemPrompt: `당신은 회의록 작성 전문가입니다. 사용자가 제공한 내용으로 공식 회의록을 작성해주세요.
 회의록 구조: 회의명, 일시/장소, 참석자, 안건 목록, 논의 내용 (각 안건별), 결정 사항, 액션 아이템 (담당자/기한 포함), 차기 회의 예정.
 명확하고 구조적으로 작성하세요.${KO_RULES}`,
   },
   {
     id: "plan",
-    label: "기획안",
+    labelKey: "tg_type_plan",
+    placeholderKey: "tg_ph_plan",
     Icon: IconBulb,
-    placeholder: "예: 사내 온보딩 프로그램 개선 기획. 현재 2주 과정을 1달로 확대, 멘토링 시스템 도입.",
     systemPrompt: `당신은 기획안 작성 전문가입니다. 사용자가 제공한 아이디어를 바탕으로 체계적인 기획안을 작성해주세요.
 기획안 구조: 제목, 기획 배경 및 목적, 현황 분석, 기획 내용 (세부 계획), 기대 효과, 일정 계획, 예산 계획 (개략), 리스크 및 대응 방안.
 설득력 있고 전문적으로 작성하세요.${KO_RULES}`,
@@ -136,6 +140,7 @@ const TEMPLATES: TemplateOption[] = [
 ];
 
 export default function TemplateGen() {
+  const { t } = useLocale();
   const [selectedType, setSelectedType] = useState<TemplateType>("report");
   const [content, setContent]           = useState("");
   const [result, setResult]             = useState("");
@@ -149,8 +154,9 @@ export default function TemplateGen() {
     if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [result]);
 
-  const selectedTemplate    = TEMPLATES.find((t) => t.id === selectedType)!;
+  const selectedTemplate    = TEMPLATES.find((tpl) => tpl.id === selectedType)!;
   const SelectedTemplateIcon = selectedTemplate.Icon;
+  const selectedLabel = t(selectedTemplate.labelKey);
 
   const buildPrompt = () => {
     const now = new Date();
@@ -186,7 +192,7 @@ export default function TemplateGen() {
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? "알 수 없는 오류");
+        throw new Error((data as { error?: string }).error ?? t("unknown_error"));
       }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -199,7 +205,7 @@ export default function TemplateGen() {
       }
       trackUsage("template");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "문서 생성 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("tg_error"));
     } finally {
       setLoading(false);
     }
@@ -229,20 +235,20 @@ export default function TemplateGen() {
               <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
                 <IconAlertTriangle className="w-5 h-5 text-[#4D44CC] dark:text-[#8B85FF]" />
               </div>
-              <h3 className="text-base font-semibold text-slate-800 dark:text-zinc-100">탭 이동 확인</h3>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-zinc-100">{t("tg_tab_confirm_title")}</h3>
             </div>
             <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed mb-6">
-              작성 중인 내용이 있습니다. 탭을 이동하면 내용이 삭제됩니다. 이동하시겠습니까?
+              {t("tg_tab_confirm_body")}
             </p>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setPendingTab(null)}
                 className="px-4 py-2 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
-                취소
+                {t("cancel")}
               </button>
               <button onClick={confirmTabChange}
                 className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-colors"
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-                이동하기
+                {t("tg_move")}
               </button>
             </div>
           </div>
@@ -265,7 +271,7 @@ export default function TemplateGen() {
           >
             <tpl.Icon className="w-6 h-6" />
             <span className={`text-sm font-semibold ${selectedType === tpl.id ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>
-              {tpl.label}
+              {t(tpl.labelKey)}
             </span>
           </button>
         ))}
@@ -274,10 +280,10 @@ export default function TemplateGen() {
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
         <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-          {selectedTemplate.label} 내용 입력
+          {tFormat(t("tg_input_label"), { label: selectedLabel })}
         </label>
         <textarea value={content} onChange={(e) => setContent(e.target.value)}
-          placeholder={selectedTemplate.placeholder} rows={5}
+          placeholder={t(selectedTemplate.placeholderKey)} rows={5}
           className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
         />
         <div className="flex justify-end mt-3">
@@ -285,9 +291,9 @@ export default function TemplateGen() {
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
             {loading ? (
-              <><IconLoader2 className="w-4 h-4 animate-spin text-white" />생성 중...</>
+              <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
             ) : (
-              <><SelectedTemplateIcon className="w-4 h-4" />{selectedTemplate.label} 생성</>
+              <><SelectedTemplateIcon className="w-4 h-4" />{tFormat(t("tg_generate_btn"), { label: selectedLabel })}</>
             )}
           </button>
         </div>
@@ -308,7 +314,7 @@ export default function TemplateGen() {
         <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
-              생성된 {selectedTemplate.label}
+              {tFormat(t("tg_result_title"), { label: selectedLabel })}
             </h2>
             <div className="flex items-center gap-2">
               <button onClick={handleCopy}
@@ -316,7 +322,7 @@ export default function TemplateGen() {
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                {copied ? "복사됨!" : "복사"}
+                {copied ? t("copied") : t("copy")}
               </button>
               <button onClick={handleDownload}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition"
@@ -337,16 +343,16 @@ export default function TemplateGen() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconNotes className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-500 dark:text-zinc-400">필요한 정보를 입력하고 생성하면 템플릿이 여기에 만들어집니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">{t("tg_empty")}</p>
         </div>
       )}
       <HelpButton
-        title="템플릿 생성 사용법"
+        title={t("help_tg_title")}
         steps={[
-          { step: "유형 선택", desc: "업무보고서·회의록·기획안 중 원하는 유형을 선택합니다." },
-          { step: "내용 입력", desc: "주요 내용과 핵심 사항을 자유롭게 입력합니다." },
-          { step: "생성", desc: "버튼 클릭으로 완성 문서를 생성합니다." },
-          { step: "저장", desc: "복사 또는 txt 파일로 다운로드하세요." },
+          { step: t("help_tg_1_step"), desc: t("help_tg_1_desc") },
+          { step: t("help_tg_2_step"), desc: t("help_tg_2_desc") },
+          { step: t("help_tg_3_step"), desc: t("help_tg_3_desc") },
+          { step: t("help_tg_4_step"), desc: t("help_tg_4_desc") },
         ]}
       />
     </div>

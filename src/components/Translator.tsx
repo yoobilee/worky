@@ -15,6 +15,9 @@ import {
   IconSparkles,
   IconLoader2,
 } from "@tabler/icons-react";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 /* ───────── 타입 ───────── */
 
@@ -25,19 +28,19 @@ type Tone       = "공식적으로" | "부드럽게" | "간결하게" | "정중�
 
 /* ───────── 상수 ───────── */
 
-const LANG_OPTIONS: { code: LangCode; label: string; native: string }[] = [
-  { code: "ko", label: "한국어", native: "Korean" },
-  { code: "en", label: "영어",   native: "English" },
-  { code: "ja", label: "일본어", native: "Japanese" },
-  { code: "zh", label: "중국어", native: "Chinese (Simplified)" },
+const LANG_OPTIONS: { code: LangCode; labelKey: TranslationKey; native: string }[] = [
+  { code: "ko", labelKey: "tr_ko", native: "Korean" },
+  { code: "en", labelKey: "tr_en", native: "English" },
+  { code: "ja", labelKey: "tr_ja", native: "Japanese" },
+  { code: "zh", labelKey: "tr_zh", native: "Chinese (Simplified)" },
 ];
 
-const SOURCE_OPTIONS: { code: SourceLang; label: string }[] = [
-  { code: "auto", label: "자동감지" },
-  { code: "ko",   label: "한국어" },
-  { code: "en",   label: "영어" },
-  { code: "ja",   label: "일본어" },
-  { code: "zh",   label: "중국어" },
+const SOURCE_OPTIONS: { code: SourceLang; labelKey: TranslationKey }[] = [
+  { code: "auto", labelKey: "tr_auto" },
+  { code: "ko",   labelKey: "tr_ko"   },
+  { code: "en",   labelKey: "tr_en"   },
+  { code: "ja",   labelKey: "tr_ja"   },
+  { code: "zh",   labelKey: "tr_zh"   },
 ];
 
 const TARGET_MAP: Record<SourceLang, { options: LangCode[]; default: LangCode }> = {
@@ -48,11 +51,11 @@ const TARGET_MAP: Record<SourceLang, { options: LangCode[]; default: LangCode }>
   zh:   { options: ["ko", "en", "ja"],       default: "ko" },
 };
 
-const TONES: { id: Tone; desc: string }[] = [
-  { id: "공식적으로", desc: "격식 있는 비즈니스 문체" },
-  { id: "부드럽게",   desc: "친근하고 따뜻한 어조"   },
-  { id: "간결하게",   desc: "핵심만 압축한 짧은 문체" },
-  { id: "정중하게",   desc: "예의 바른 공손한 어조"   },
+const TONES: { id: Tone; labelKey: TranslationKey; descKey: TranslationKey }[] = [
+  { id: "공식적으로", labelKey: "tr_tone_formal",  descKey: "tr_tone_formal_desc"  },
+  { id: "부드럽게",   labelKey: "tr_tone_soft",    descKey: "tr_tone_soft_desc"    },
+  { id: "간결하게",   labelKey: "tr_tone_concise", descKey: "tr_tone_concise_desc" },
+  { id: "정중하게",   labelKey: "tr_tone_polite",  descKey: "tr_tone_polite_desc"  },
 ];
 
 /* ───────── 시스템 프롬프트 ───────── */
@@ -95,6 +98,7 @@ You must respond ONLY in Korean (한국어). Do not use any Chinese characters (
 /* ───────── 컴포넌트 ───────── */
 
 export default function Translator() {
+  const { t } = useLocale();
   const [mode, setMode]           = useState<Mode>("translate");
   const [input, setInput]         = useState("");
   const [sourceLang, setSourceLang] = useState<SourceLang>("auto");
@@ -146,7 +150,7 @@ export default function Translator() {
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? "알 수 없는 오류");
+        throw new Error((data as { error?: string }).error ?? t("unknown_error"));
       }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -160,7 +164,7 @@ export default function Translator() {
       }
       trackUsage("translate");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "처리 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("tr_error"));
     } finally {
       setLoading(false);
     }
@@ -173,9 +177,9 @@ export default function Translator() {
   };
 
   /* ── 모드 탭 설정 ── */
-  const MODES: { id: Mode; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: "translate", label: "번역",         Icon: IconWorld  },
-    { id: "refine",    label: "톤 다듬기",    Icon: IconPencil },
+  const MODES: { id: Mode; labelKey: TranslationKey; Icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: "translate", labelKey: "tr_tab_translate", Icon: IconWorld  },
+    { id: "refine",    labelKey: "tr_tab_polish",    Icon: IconPencil },
   ];
 
   return (
@@ -183,7 +187,7 @@ export default function Translator() {
 
       {/* 모드 전환 탭 */}
       <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1">
-        {MODES.map(({ id, label, Icon }) => (
+        {MODES.map(({ id, labelKey, Icon }) => (
           <button
             key={id}
             onClick={() => handleModeChange(id)}
@@ -195,7 +199,7 @@ export default function Translator() {
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -207,9 +211,9 @@ export default function Translator() {
           <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
 
             {/* 출발 언어 (5탭) */}
-            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">출발 언어</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">{t("tr_label_from")}</p>
             <div className="grid grid-cols-5 gap-1.5">
-              {SOURCE_OPTIONS.map(({ code, label }) => {
+              {SOURCE_OPTIONS.map(({ code, labelKey }) => {
                 const isActive = sourceLang === code;
                 return (
                   <button
@@ -223,7 +227,7 @@ export default function Translator() {
                     ].join(" ")}
                     style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
                   >
-                    {label}
+                    {t(labelKey)}
                   </button>
                 );
               })}
@@ -234,13 +238,13 @@ export default function Translator() {
               <IconArrowDown className="w-4 h-4 text-slate-300 dark:text-zinc-600" />
               <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                 {sourceLang === "auto"
-                  ? `자동 감지 → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`
-                  : `${SOURCE_OPTIONS.find((s) => s.code === sourceLang)?.label} → ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`}
+                  ? tFormat(t("tr_direction_auto"), { lang: t(LANG_OPTIONS.find((l) => l.code === targetLang)!.labelKey) })
+                  : tFormat(t("tr_direction_manual"), { src: t(SOURCE_OPTIONS.find((s) => s.code === sourceLang)!.labelKey), tgt: t(LANG_OPTIONS.find((l) => l.code === targetLang)!.labelKey) })}
               </span>
             </div>
 
             {/* 도착 언어 드롭다운 */}
-            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">도착 언어</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">{t("tr_label_to")}</p>
             <div className="relative">
               {/* 드롭다운 오버레이 (외부 클릭 닫기) */}
               {dropdownOpen && (
@@ -250,7 +254,7 @@ export default function Translator() {
                 onClick={() => setDropdownOpen((v) => !v)}
                 className="relative z-10 w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:border-[#6C63FF]/50 transition-all"
               >
-                <span>{LANG_OPTIONS.find((l) => l.code === targetLang)?.label}</span>
+                <span>{t(LANG_OPTIONS.find((l) => l.code === targetLang)!.labelKey)}</span>
                 <IconChevronDown
                   className={`w-4 h-4 text-slate-500 dark:text-zinc-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
                 />
@@ -259,7 +263,7 @@ export default function Translator() {
               {dropdownOpen && (
                 <div className="absolute top-full mt-1 left-0 right-0 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg z-20 overflow-hidden">
                   {TARGET_MAP[sourceLang].options.map((code) => {
-                    const label = LANG_OPTIONS.find((l) => l.code === code)?.label ?? code;
+                    const langOpt = LANG_OPTIONS.find((l) => l.code === code)!;
                     const isActive = targetLang === code;
                     return (
                       <button
@@ -276,7 +280,7 @@ export default function Translator() {
                         <span className="w-3.5 shrink-0">
                           {isActive && <IconCheck className="w-3.5 h-3.5" />}
                         </span>
-                        {label}
+                        {t(langOpt.labelKey)}
                       </button>
                     );
                   })}
@@ -288,12 +292,12 @@ export default function Translator() {
           {/* 입력 */}
           <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
-              번역할 텍스트
+              {t("tr_input_translate")}
             </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="번역할 내용을 입력하세요..."
+              placeholder={t("tr_input_translate")}
               className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <div className="flex justify-end mt-3 shrink-0">
@@ -304,9 +308,9 @@ export default function Translator() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {loading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />번역 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("tr_loading_translate")}</>
                 ) : (
-                  <><IconWorld className="w-4 h-4" />번역하기</>
+                  <><IconWorld className="w-4 h-4" />{t("tr_run_translate")}</>
                 )}
               </button>
             </div>
@@ -319,9 +323,9 @@ export default function Translator() {
         <>
           {/* 톤 선택 */}
           <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">다듬을 톤 선택</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">{t("tr_label_tone")}</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {TONES.map(({ id, desc }) => {
+              {TONES.map(({ id, labelKey, descKey }) => {
                 const isActive = tone === id;
                 return (
                   <button
@@ -335,9 +339,9 @@ export default function Translator() {
                     ].join(" ")}
                     style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
                   >
-                    <span>{id}</span>
+                    <span>{t(labelKey)}</span>
                     <span className={`text-[11px] ${isActive ? "text-white/70" : "text-slate-500 dark:text-zinc-400"}`}>
-                      {desc}
+                      {t(descKey)}
                     </span>
                   </button>
                 );
@@ -348,12 +352,12 @@ export default function Translator() {
           {/* 입력 */}
           <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
-              다듬을 텍스트
+              {t("tr_input_polish")}
             </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="비즈니스 톤으로 다듬을 텍스트를 입력하세요..."
+              placeholder={t("tr_input_polish")}
               className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <div className="flex justify-end mt-3">
@@ -364,9 +368,9 @@ export default function Translator() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {loading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />다듬는 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("tr_loading_polish")}</>
                 ) : (
-                  <><IconSparkles className="w-4 h-4" />AI로 다듬기</>
+                  <><IconSparkles className="w-4 h-4" />{t("tr_run_polish")}</>
                 )}
               </button>
             </div>
@@ -391,17 +395,17 @@ export default function Translator() {
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300 truncate mr-3">
               {mode === "translate"
-                ? `번역 결과 — ${LANG_OPTIONS.find((l) => l.code === targetLang)?.label}`
-                : `다듬기 결과 — ${tone}`}
+                ? tFormat(t("tr_result_translate"), { lang: t(LANG_OPTIONS.find((l) => l.code === targetLang)!.labelKey) })
+                : tFormat(t("tr_result_polish"), { tone: t(TONES.find((tn) => tn.id === tone)!.labelKey) })}
             </span>
             <button
               onClick={handleCopy}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition shrink-0"
             >
               {copied ? (
-                <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</>
+                <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("copied")}</>
               ) : (
-                <><IconCopy className="w-3.5 h-3.5" />복사</>
+                <><IconCopy className="w-3.5 h-3.5" />{t("copy")}</>
               )}
             </button>
           </div>
@@ -414,16 +418,16 @@ export default function Translator() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconSparkles className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-500 dark:text-zinc-400">텍스트를 입력하고 번역하거나 톤을 조정하면 결과가 여기에 표시됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">{t("tr_empty")}</p>
         </div>
       )}
       <HelpButton
-        title="번역·다듬기 사용법"
+        title={t("help_tr_title")}
         steps={[
-          { step: "모드 선택", desc: "번역 또는 비즈니스 문체 다듬기 모드를 선택하세요." },
-          { step: "텍스트 입력", desc: "변환할 텍스트를 입력합니다." },
-          { step: "설정", desc: "번역은 대상 언어, 다듬기는 원하는 톤을 선택합니다." },
-          { step: "변환", desc: "버튼 클릭으로 결과를 생성하고 편집 후 복사하세요." },
+          { step: t("help_tr_1_step"), desc: t("help_tr_1_desc") },
+          { step: t("help_tr_2_step"), desc: t("help_tr_2_desc") },
+          { step: t("help_tr_3_step"), desc: t("help_tr_3_desc") },
+          { step: t("help_tr_4_step"), desc: t("help_tr_4_desc") },
         ]}
       />
     </div>
