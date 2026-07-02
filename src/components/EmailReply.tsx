@@ -345,10 +345,10 @@ export default function EmailReply() {
             data-active={activeTab === id}
             onClick={() => setActiveTab(id)}
             className={[
-              "tab-underline w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              "tab-underline w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2",
               activeTab === id
-                ? "bg-[#6C63FF] text-white shadow-sm"
-                : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
+                ? "text-[#4D44CC] dark:text-[#8B85FF] border-[#6C63FF]"
+                : "text-slate-500 dark:text-zinc-400 border-transparent hover:text-slate-700 dark:hover:text-zinc-200",
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
