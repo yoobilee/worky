@@ -31,6 +31,8 @@ import {
   IconFileUpload,
   IconFileAnalytics,
 } from "@tabler/icons-react";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
 
 type InputMode = "text" | "file";
 
@@ -97,36 +99,6 @@ function parseResult(raw: string): InsightResult {
   return JSON.parse(match[0]);
 }
 
-const statCards = (result: InsightResult) => [
-  {
-    icon: <IconArrowUpRight className="w-4 h-4" />,
-    label: "최대값",
-    stat: result.keyStats.max,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bg: "bg-emerald-50 dark:bg-emerald-950/30",
-  },
-  {
-    icon: <IconArrowDownRight className="w-4 h-4" />,
-    label: "최소값",
-    stat: result.keyStats.min,
-    color: "text-rose-600 dark:text-rose-400",
-    bg: "bg-rose-50 dark:bg-rose-950/30",
-  },
-  {
-    icon: <IconMath className="w-4 h-4" />,
-    label: "평균",
-    stat: result.keyStats.avg,
-    color: "text-blue-600 dark:text-blue-400",
-    bg: "bg-blue-50 dark:bg-blue-950/30",
-  },
-  {
-    icon: <IconSum className="w-4 h-4" />,
-    label: "합계",
-    stat: result.keyStats.total,
-    color: "text-violet-600 dark:text-violet-400",
-    bg: "bg-violet-50 dark:bg-violet-950/30",
-  },
-];
 
 const REPORT_SYSTEM_PROMPT = `당신은 데이터 분석 보고서 작성 전문가입니다.
 제공된 데이터 분석 결과(핵심 수치, 트렌드, 이상치, 인사이트)를 바탕으로 실무에서 바로 사용할 수 있는 성과 보고서를 작성해주세요.
@@ -146,6 +118,15 @@ const REPORT_SYSTEM_PROMPT = `당신은 데이터 분석 보고서 작성 전문
 - 데이터에 없는 날짜·연도를 절대 추정하거나 임의로 작성하지 마세요`;
 
 export default function DataInsight() {
+  const { t } = useLocale();
+
+  const statCards = (result: InsightResult) => [
+    { icon: <IconArrowUpRight className="w-4 h-4" />, label: t("di_stat_max"),   stat: result.keyStats.max,   color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+    { icon: <IconArrowDownRight className="w-4 h-4" />, label: t("di_stat_min"), stat: result.keyStats.min,   color: "text-rose-600 dark:text-rose-400",       bg: "bg-rose-50 dark:bg-rose-950/30"       },
+    { icon: <IconMath className="w-4 h-4" />,           label: t("di_stat_avg"), stat: result.keyStats.avg,   color: "text-blue-600 dark:text-blue-400",       bg: "bg-blue-50 dark:bg-blue-950/30"       },
+    { icon: <IconSum className="w-4 h-4" />,            label: t("di_stat_sum"), stat: result.keyStats.total, color: "text-violet-600 dark:text-violet-400",   bg: "bg-violet-50 dark:bg-violet-950/30"   },
+  ];
+
   const [inputMode, setInputMode]   = useState<InputMode>("text");
   const [input, setInput]           = useState("");
   const [file, setFile]             = useState<File | null>(null);
@@ -182,10 +163,10 @@ export default function DataInsight() {
     setExtracting(true);
     try {
       const text = await parseFileToText(f);
-      if (!text.trim()) throw new Error("파일에서 데이터를 추출할 수 없습니다.");
+      if (!text.trim()) throw new Error(t("di_error_format"));
       setFileText(text);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "파일 처리 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("di_error_file"));
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {
@@ -223,7 +204,7 @@ export default function DataInsight() {
       setResult(parseResult(acc));
       trackUsage("insight");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "분석 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("di_error_analyze"));
     } finally {
       setLoading(false);
     }
@@ -272,7 +253,7 @@ export default function DataInsight() {
         setReport(acc);
       }
     } catch (e) {
-      setReportError(e instanceof Error ? e.message : "보고서 생성 중 오류가 발생했습니다.");
+      setReportError(e instanceof Error ? e.message : t("di_error_report"));
     } finally {
       setReportLoading(false);
     }
@@ -313,9 +294,9 @@ export default function DataInsight() {
       {/* 입력 탭 */}
       <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
         {([
-          { id: "text" as InputMode, label: "텍스트 입력", Icon: IconAlignLeft },
-          { id: "file" as InputMode, label: "파일 업로드", Icon: IconFileUpload },
-        ]).map(({ id, label, Icon }) => (
+          { id: "text" as InputMode, labelKey: "di_tab_text" as const, Icon: IconAlignLeft  },
+          { id: "file" as InputMode, labelKey: "di_tab_file" as const, Icon: IconFileUpload },
+        ]).map(({ id, labelKey, Icon }) => (
           <button
             key={id}
             onClick={() => handleModeChange(id)}
@@ -327,7 +308,7 @@ export default function DataInsight() {
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -337,12 +318,12 @@ export default function DataInsight() {
         {inputMode === "text" ? (
           <>
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-              숫자 데이터 입력
+              {t("di_input_label")}
             </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={"월별 매출 (단위: 만원)\n1월: 1,200 / 2월: 1,450 / 3월: 980\n4월: 1,700 / 5월: 2,100 / 6월: 1,890\n\nCSV, 표, 자유형식 모두 가능합니다."}
+              placeholder={t("di_input_label")}
               className="w-full h-40 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <div className="flex justify-end mt-3">
@@ -353,9 +334,9 @@ export default function DataInsight() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {loading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />분석 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("di_loading_analyze")}</>
                 ) : (
-                  <><IconChartBar className="w-4 h-4" />AI로 분석하기</>
+                  <><IconChartBar className="w-4 h-4" />{t("di_run_btn")}</>
                 )}
               </button>
             </div>
@@ -363,7 +344,7 @@ export default function DataInsight() {
         ) : (
           <>
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-              CSV 또는 Excel 파일 업로드
+              {t("di_file_label")}
             </label>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -378,10 +359,10 @@ export default function DataInsight() {
               <IconFileUpload className={`w-8 h-8 ${file ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
               <div className="text-center px-4">
                 <p className={`text-sm font-medium ${file ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-600 dark:text-zinc-400"}`}>
-                  {file ? file.name : "클릭해서 파일 선택"}
+                  {file ? file.name : t("di_file_select")}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                  {file ? "클릭해서 파일 교체" : "CSV, Excel(.xlsx, .xls) 지원"}
+                  {file ? t("di_file_change") : t("di_file_hint")}
                 </p>
               </div>
             </button>
@@ -395,17 +376,17 @@ export default function DataInsight() {
             {extracting && (
               <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
                 <IconLoader2 className="w-4 h-4 animate-spin text-[#4D44CC] dark:text-[#8B85FF] shrink-0" />
-                데이터 추출 중...
+                {t("di_loading_extract")}
               </div>
             )}
             {fileText && !extracting && (
               <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">추출된 데이터 미리보기</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">{t("di_extracted_preview")}</p>
                 <div className="max-h-[80px] overflow-hidden">
                   <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">{fileText}</p>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1.5">
-                  총 {fileText.split("\n").length.toLocaleString()}행 추출됨
+                  {tFormat(t("di_extracted_count"), { n: fileText.split("\n").length.toLocaleString() })}
                 </p>
               </div>
             )}
@@ -417,9 +398,9 @@ export default function DataInsight() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {loading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />분석 중...</>
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("di_loading_analyze")}</>
                 ) : (
-                  <><IconChartBar className="w-4 h-4" />AI로 분석하기</>
+                  <><IconChartBar className="w-4 h-4" />{t("di_run_btn")}</>
                 )}
               </button>
             </div>
@@ -448,7 +429,7 @@ export default function DataInsight() {
               {copied
                 ? <IconCheck className="w-3.5 h-3.5 text-emerald-500" />
                 : <IconCopy className="w-3.5 h-3.5" />}
-              {copied ? "복사됨!" : "전체 복사"}
+              {copied ? t("copied") : t("di_copy_all")}
             </button>
           </div>
 
@@ -476,7 +457,7 @@ export default function DataInsight() {
                 <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400">
                   <IconTrendingUp className="w-4 h-4" />
                 </div>
-                <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">트렌드 분석</p>
+                <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("di_trend")}</p>
               </div>
               <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">{result.trend}</p>
             </div>
@@ -486,7 +467,7 @@ export default function DataInsight() {
                 <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400">
                   <IconAlertCircle className="w-4 h-4" />
                 </div>
-                <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">이상치</p>
+                <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("di_outlier")}</p>
               </div>
               <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">{result.outliers}</p>
             </div>
@@ -498,7 +479,7 @@ export default function DataInsight() {
               <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
                 <IconBulb className="w-4 h-4" />
               </div>
-              <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">핵심 인사이트</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("di_insight")}</p>
             </div>
             <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 leading-relaxed">
               {result.insight}
@@ -514,9 +495,9 @@ export default function DataInsight() {
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
             >
               {reportLoading ? (
-                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />생성 중...</>
+                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
               ) : (
-                <><IconFileAnalytics className="w-4 h-4" />보고서로 생성</>
+                <><IconFileAnalytics className="w-4 h-4" />{t("di_report_btn")}</>
               )}
             </button>
           </div>
@@ -537,15 +518,15 @@ export default function DataInsight() {
                   <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
                     <IconFileAnalytics className="w-4 h-4" />
                   </div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">생성된 성과 보고서</p>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("di_report_title")}</p>
                 </div>
                 <button
                   onClick={handleReportCopy}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
                 >
                   {reportCopied
-                    ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</>
-                    : <><IconCopy className="w-3.5 h-3.5" />복사</>}
+                    ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("copied")}</>
+                    : <><IconCopy className="w-3.5 h-3.5" />{t("copy")}</>}
                 </button>
               </div>
               <EditableResult value={report} onChange={setReport} rows={16}>
@@ -569,16 +550,16 @@ export default function DataInsight() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconChartBar className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-500 dark:text-zinc-400">데이터를 입력하고 분석하면 인사이트가 여기에 표시됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">{t("di_empty")}</p>
         </div>
       )}
       <HelpButton
-        title="데이터 분석 사용법"
+        title={t("help_di_title")}
         steps={[
-          { step: "데이터 입력", desc: "숫자 데이터를 텍스트로 입력하거나 파일을 업로드하세요." },
-          { step: "AI 분석", desc: "핵심 수치·트렌드·이상치를 자동으로 분석합니다." },
-          { step: "보고서 생성", desc: "'보고서로 생성' 버튼으로 실무용 보고서를 작성합니다." },
-          { step: "편집", desc: "결과 텍스트를 클릭하면 직접 수정할 수 있습니다." },
+          { step: t("help_di_1_step"), desc: t("help_di_1_desc") },
+          { step: t("help_di_2_step"), desc: t("help_di_2_desc") },
+          { step: t("help_di_3_step"), desc: t("help_di_3_desc") },
+          { step: t("help_di_4_step"), desc: t("help_di_4_desc") },
         ]}
       />
     </div>

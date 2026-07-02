@@ -16,6 +16,9 @@ import {
   IconSparkles,
   IconLoader2,
 } from "@tabler/icons-react";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 type InputMode = "text" | "file";
 type SummaryStyle = "핵심 요약" | "요점 정리" | "한 줄 요약";
@@ -23,11 +26,12 @@ type SummaryStyle = "핵심 요약" | "요점 정리" | "한 줄 요약";
 const SUMMARY_STYLES: {
   id: SummaryStyle;
   Icon: React.ComponentType<{ className?: string }>;
-  desc: string;
+  labelKey: TranslationKey;
+  descKey: TranslationKey;
 }[] = [
-  { id: "핵심 요약",    Icon: IconListDetails, desc: "주요 내용 정리" },
-  { id: "요점 정리", Icon: IconList,        desc: "항목별 요약" },
-  { id: "한 줄 요약",   Icon: IconMinus,       desc: "한 문장으로 압축" },
+  { id: "핵심 요약", Icon: IconListDetails, labelKey: "ds_style_key",    descKey: "ds_style_key_desc"    },
+  { id: "요점 정리", Icon: IconList,        labelKey: "ds_style_points",  descKey: "ds_style_points_desc" },
+  { id: "한 줄 요약", Icon: IconMinus,      labelKey: "ds_style_oneline", descKey: "ds_style_oneline_desc" },
 ];
 
 function buildSystemPrompt(style: SummaryStyle): string {
@@ -74,21 +78,21 @@ function renderMarkdown(text: string): React.ReactNode {
   };
 
   for (const line of lines) {
-    const t = line.trim();
-    if (t.startsWith("## ")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("## ")) {
       flushList();
-      nodes.push(<p key={k++} className="text-[15px] font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1">{parseInline(t.slice(3))}</p>);
-    } else if (t.startsWith("### ")) {
+      nodes.push(<p key={k++} className="text-[15px] font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1">{parseInline(trimmed.slice(3))}</p>);
+    } else if (trimmed.startsWith("### ")) {
       flushList();
-      nodes.push(<p key={k++} className="text-sm font-bold text-slate-800 dark:text-zinc-100 mt-2 mb-0.5">{parseInline(t.slice(4))}</p>);
-    } else if (/^[-•*] /.test(t)) {
-      listItems.push(parseInline(t.slice(2)));
-    } else if (t === "") {
+      nodes.push(<p key={k++} className="text-sm font-bold text-slate-800 dark:text-zinc-100 mt-2 mb-0.5">{parseInline(trimmed.slice(4))}</p>);
+    } else if (/^[-•*] /.test(trimmed)) {
+      listItems.push(parseInline(trimmed.slice(2)));
+    } else if (trimmed === "") {
       flushList();
       nodes.push(<div key={k++} className="h-1.5" />);
     } else {
       flushList();
-      nodes.push(<p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{parseInline(t)}</p>);
+      nodes.push(<p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{parseInline(trimmed)}</p>);
     }
   }
   flushList();
@@ -119,6 +123,7 @@ async function extractTextFromPDF(file: File): Promise<string> {
 }
 
 export default function DocSummary() {
+  const { t } = useLocale();
   const [inputMode, setInputMode] = useState<InputMode>("text");
   const [textInput, setTextInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -158,10 +163,10 @@ export default function DocSummary() {
       } else {
         text = await f.text();
       }
-      if (!text.trim()) throw new Error("텍스트를 추출할 수 없습니다. 스캔 PDF는 지원되지 않습니다.");
+      if (!text.trim()) throw new Error(t("ds_error_scan"));
       setExtractedText(text);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "파일 처리 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("ds_error_file"));
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {
@@ -203,7 +208,7 @@ export default function DocSummary() {
       }
       trackUsage("summary");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "요약 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("ds_error_summary"));
     } finally {
       setLoading(false);
     }
@@ -215,16 +220,16 @@ export default function DocSummary() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const inputModes: { id: InputMode; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: "text", label: "텍스트 붙여넣기", Icon: IconAlignLeft },
-    { id: "file", label: "파일 업로드",     Icon: IconFileUpload },
+  const inputModes: { id: InputMode; labelKey: TranslationKey; Icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: "text", labelKey: "ds_tab_text", Icon: IconAlignLeft  },
+    { id: "file", labelKey: "ds_tab_file", Icon: IconFileUpload },
   ];
 
   return (
     <div className="flex flex-col gap-3 max-w-5xl mx-auto w-full flex-1 min-h-0">
       {/* 모드 탭 — Translator와 동일 스타일 */}
       <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
-        {inputModes.map(({ id, label, Icon }) => (
+        {inputModes.map(({ id, labelKey, Icon }) => (
           <button
             key={id}
             onClick={() => handleModeChange(id)}
@@ -236,7 +241,7 @@ export default function DocSummary() {
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -246,12 +251,12 @@ export default function DocSummary() {
         {inputMode === "text" ? (
           <>
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
-              요약할 텍스트 입력
+              {t("ds_input_label")}
             </label>
             <textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="요약할 내용을 붙여넣으세요..."
+              placeholder={t("ds_input_label")}
               className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             {textInput && (
@@ -263,7 +268,7 @@ export default function DocSummary() {
         ) : (
           <>
             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
-              PDF 또는 텍스트 파일 업로드
+              {t("ds_file_label")}
             </label>
 
             {/* 드래그 영역 — 파일 유무와 관계없이 항상 표시 */}
@@ -280,10 +285,10 @@ export default function DocSummary() {
               <IconFileUpload className={`w-8 h-8 ${file ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
               <div className="text-center px-4">
                 <p className={`text-sm font-medium ${file ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-600 dark:text-zinc-400"}`}>
-                  {file ? file.name : "클릭해서 파일 선택"}
+                  {file ? file.name : t("ds_file_select")}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                  {file ? "클릭해서 파일 교체" : "PDF, TXT 지원"}
+                  {file ? t("ds_file_change") : t("ds_file_hint")}
                 </p>
               </div>
             </button>
@@ -300,21 +305,21 @@ export default function DocSummary() {
             {extracting && (
               <div className="flex items-center gap-2 mt-3 text-sm text-slate-500 dark:text-zinc-400">
                 <IconLoader2 className="w-4 h-4 animate-spin text-[#4D44CC] dark:text-[#8B85FF] shrink-0" />
-                텍스트 추출 중...
+                {t("ds_loading_extract")}
               </div>
             )}
 
             {/* 추출된 텍스트 미리보기 */}
             {extractedText && !extracting && (
               <div className="mt-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">추출된 텍스트 미리보기</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">{t("ds_extracted_preview")}</p>
                 <div className="max-h-[80px] overflow-hidden">
                   <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
                     {extractedText}
                   </p>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1.5">
-                  총 {extractedText.length.toLocaleString()}자 추출됨
+                  {tFormat(t("ds_extracted_count"), { n: extractedText.length.toLocaleString() })}
                 </p>
               </div>
             )}
@@ -324,9 +329,9 @@ export default function DocSummary() {
 
       {/* 요약 방식 선택 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">요약 방식</p>
+        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">{t("ds_style_label")}</p>
         <div className="grid grid-cols-3 gap-2">
-          {SUMMARY_STYLES.map(({ id, Icon, desc }) => {
+          {SUMMARY_STYLES.map(({ id, Icon, labelKey, descKey }) => {
             const isActive = summaryStyle === id;
             return (
               <button
@@ -341,9 +346,9 @@ export default function DocSummary() {
                 style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
               >
                 <Icon className="w-5 h-5" />
-                <span>{id}</span>
+                <span>{t(labelKey)}</span>
                 <span className={`text-xs ${isActive ? "text-white/70" : "text-slate-500 dark:text-zinc-400"}`}>
-                  {desc}
+                  {t(descKey)}
                 </span>
               </button>
             );
@@ -360,12 +365,12 @@ export default function DocSummary() {
             {loading ? (
               <>
                 <IconLoader2 className="w-4 h-4 animate-spin text-white" />
-                요약 중...
+                {t("ds_loading_summary")}
               </>
             ) : (
               <>
                 <IconSparkles className="w-4 h-4" />
-                AI로 요약하기
+                {t("ds_run_btn")}
               </>
             )}
           </button>
@@ -388,7 +393,7 @@ export default function DocSummary() {
         <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
-              요약 결과 — {summaryStyle}
+              {tFormat(t("ds_result_title"), { style: t(SUMMARY_STYLES.find((s) => s.id === summaryStyle)!.labelKey) })}
             </span>
             <button
               onClick={handleCopy}
@@ -397,12 +402,12 @@ export default function DocSummary() {
               {copied ? (
                 <>
                   <IconCheck className="w-3.5 h-3.5 text-emerald-500" />
-                  복사됨!
+                  {t("copied")}
                 </>
               ) : (
                 <>
                   <IconCopy className="w-3.5 h-3.5" />
-                  복사
+                  {t("copy")}
                 </>
               )}
             </button>
@@ -416,16 +421,16 @@ export default function DocSummary() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconSparkles className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-500 dark:text-zinc-400">문서를 입력하고 요약하면 핵심 내용이 여기에 정리됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">{t("ds_empty")}</p>
         </div>
       )}
       <HelpButton
-        title="문서 요약 사용법"
+        title={t("help_ds_title")}
         steps={[
-          { step: "내용 입력", desc: "텍스트를 붙여넣거나 PDF 파일을 업로드하세요." },
-          { step: "스타일 선택", desc: "요약 방식과 길이를 선택합니다." },
-          { step: "요약 생성", desc: "AI가 핵심 내용을 추출합니다." },
-          { step: "편집", desc: "결과를 클릭하면 직접 편집할 수 있습니다." },
+          { step: t("help_ds_1_step"), desc: t("help_ds_1_desc") },
+          { step: t("help_ds_2_step"), desc: t("help_ds_2_desc") },
+          { step: t("help_ds_3_step"), desc: t("help_ds_3_desc") },
+          { step: t("help_ds_4_step"), desc: t("help_ds_4_desc") },
         ]}
       />
     </div>

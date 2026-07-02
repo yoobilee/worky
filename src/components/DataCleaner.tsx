@@ -7,6 +7,9 @@ import { IconLoader2, IconSparkles, IconHistory, IconTrash, IconX } from "@table
 import { trackUsage } from "@/lib/usageStats";
 import { createClient } from "@/lib/supabase/client";
 import { getDataCleanerHistory, addDataCleanerHistory, deleteDataCleanerHistory, type DataCleanerHistoryEntry } from "@/lib/db/dataCleanerHistory";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 /* ── AI / 청크 처리 ── */
 const SYSTEM_PROMPT = `당신은 데이터 정리 전문가입니다. 사용자가 붙여넣은 지저분한 텍스트나 데이터를 분석하여 깔끔한 HTML 표로 변환하세요.
@@ -102,8 +105,8 @@ function tableHtmlToCSV(html: string): string {
 const CLEAN_COUNT_KEY = "worky_clean_count";
 const LAST_CLEAN_KEY  = "worky_last_clean";
 
-function formatLastClean(iso: string | null): string {
-  if (!iso) return "기록 없음";
+function formatLastClean(iso: string | null, t: (key: TranslationKey) => string): string {
+  if (!iso) return t("dc_no_record");
   const then = new Date(iso);
   const now  = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -112,14 +115,15 @@ function formatLastClean(iso: string | null): string {
   if (diffDays === 0) {
     const hh = String(then.getHours()).padStart(2, "0");
     const mm = String(then.getMinutes()).padStart(2, "0");
-    return `오늘 ${hh}:${mm}`;
+    return tFormat(t("dc_today"), { hh, mm });
   }
-  if (diffDays === 1) return "어제";
-  return `${diffDays}일 전`;
+  if (diffDays === 1) return t("dc_yesterday");
+  return tFormat(t("dc_days_ago"), { n: String(diffDays) });
 }
 
 /* ── 메인 컴포넌트 ── */
 export default function DataCleaner() {
+  const { t } = useLocale();
   const [input,         setInput]         = useState("");
   const [tableHtml,     setTableHtml]     = useState("");
   const [loading,       setLoading]       = useState(false);
@@ -170,7 +174,7 @@ export default function DataCleaner() {
         return next;
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "데이터 정리 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("dc_error"));
     } finally {
       setLoading(false);
       setChunkProgress(null);
@@ -216,12 +220,12 @@ export default function DataCleaner() {
       {/* Bento 통계 카드 */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">누적 정리 건수</p>
-          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{cleanCount}건</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{t("dc_stat_count")}</p>
+          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{tFormat(t("dc_count_n"), { n: String(cleanCount) })}</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">마지막 정리</p>
-          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{formatLastClean(lastClean)}</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{t("dc_stat_last")}</p>
+          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{formatLastClean(lastClean, t)}</p>
         </div>
       </div>
 
@@ -239,16 +243,16 @@ export default function DataCleaner() {
         >
           <div className="border-b border-slate-200 dark:border-zinc-800 shrink-0">
             <div className="flex items-center justify-between px-4 py-3">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">정리 히스토리</h3>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t("dc_history_title")}</h3>
               <button onClick={() => setShowHistory(false)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
                 <IconX className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-zinc-400 px-4 pb-3">최근 50개까지 표시됩니다</p>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-400 px-4 pb-3">{t("dc_history_hint")}</p>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
             {history.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-zinc-400 text-center py-8">아직 정리 기록이 없습니다</p>
+              <p className="text-sm text-slate-500 dark:text-zinc-400 text-center py-8">{t("dc_history_empty")}</p>
             ) : (
               history.map(h => (
                 <div key={h.id} className="flex items-start gap-2 px-3 py-2.5 rounded-xl border border-slate-100 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 transition group">
@@ -275,11 +279,11 @@ export default function DataCleaner() {
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
-            원본 데이터 입력
+            {t("dc_input_label")}
           </label>
           <button onClick={openHistory}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-            <IconHistory className="w-3.5 h-3.5" />히스토리
+            <IconHistory className="w-3.5 h-3.5" />{t("dc_history_btn")}
           </button>
         </div>
         <textarea
@@ -301,15 +305,15 @@ export default function DataCleaner() {
               <>
                 <IconLoader2 className="w-4 h-4 animate-spin text-white" />
                 {chunkProgress && chunkProgress.total > 1
-                  ? `정리 중... (${chunkProgress.done}/${chunkProgress.total})`
-                  : "정리 중..."}
+                  ? tFormat(t("dc_loading_progress"), { done: String(chunkProgress.done), total: String(chunkProgress.total) })
+                  : t("dc_loading")}
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
                 </svg>
-                AI로 정리하기
+                {t("dc_run_btn")}
               </>
             )}
           </button>
@@ -330,7 +334,7 @@ export default function DataCleaner() {
       {tableHtml ? (
         <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">정리된 표</h2>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("dc_result_title")}</h2>
             <div className="flex items-center gap-2">
               <button onClick={handleCopy}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
@@ -338,7 +342,7 @@ export default function DataCleaner() {
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                {copied ? "복사됨!" : "HTML 복사"}
+                {copied ? t("copied") : t("dc_html_copy")}
               </button>
               <button onClick={handleDownloadCSV}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition"
@@ -347,7 +351,7 @@ export default function DataCleaner() {
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                CSV 다운로드
+                {t("dc_csv_download")}
               </button>
             </div>
           </div>
@@ -368,15 +372,15 @@ export default function DataCleaner() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconSparkles className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-500 dark:text-zinc-400">텍스트를 입력하고 표로 정리하면 결과가 여기에 표시됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">{t("dc_empty")}</p>
         </div>
       )}
       <HelpButton
-        title="데이터 정리 사용법"
+        title={t("help_dc_title")}
         steps={[
-          { step: "데이터 입력", desc: "CSV 내용이나 표 형식 텍스트를 붙여넣으세요. 자유형식 텍스트도 가능합니다." },
-          { step: "AI 분석", desc: "AI로 정리하기 버튼을 클릭하면 AI가 데이터를 깔끔한 표로 변환합니다." },
-          { step: "내보내기", desc: "HTML 복사 또는 CSV 파일로 다운로드하세요." },
+          { step: t("help_dc_1_step"), desc: t("help_dc_1_desc") },
+          { step: t("help_dc_2_step"), desc: t("help_dc_2_desc") },
+          { step: t("help_dc_3_step"), desc: t("help_dc_3_desc") },
         ]}
       />
     </div>

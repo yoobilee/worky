@@ -9,6 +9,7 @@ import { trackUsage } from "@/lib/usageStats";
 import { createClient } from "@/lib/supabase/client";
 import { saveQaHistory, updateQaHistory, getQaHistories, type QaHistory } from "@/lib/db/qa_histories";
 import { fetchWorkData } from "@/lib/db/qna-context";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 interface Message {
   id: string;
@@ -70,6 +71,7 @@ const DATA_NEED_SYSTEM_PROMPT = `사용자 질문을 보고 Worky 앱의 데이�
 반드시 한국어로만 답변하세요. 다른 언어는 절대 사용하지 마세요.`;
 
 function MessageBubble({ msg }: { msg: Message }) {
+  const { t } = useLocale();
   return (
     <div className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
       {msg.role === "assistant" && (
@@ -93,7 +95,7 @@ function MessageBubble({ msg }: { msg: Message }) {
       </div>
       {msg.role === "user" && (
         <div className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 text-xs font-bold mt-0.5">
-          나
+          {t("qa_me")}
         </div>
       )}
     </div>
@@ -115,6 +117,7 @@ function LoadingDots() {
 }
 
 export default function QnA() {
+  const { t } = useLocale();
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -214,7 +217,7 @@ export default function QnA() {
 
       let systemPrompt = SYSTEM_PROMPT;
       if (needsData && tables.length > 0 && userId) {
-        setLoadingStage("데이터 조회 중...");
+        setLoadingStage(t("qa_loading"));
         const workData = await fetchWorkData(userId, tables);
         setLoadingStage("");
         systemPrompt = `당신은 Worky 업무 도우미입니다.\n[사용자 데이터]\n${workData}\n위 데이터를 참고해서 답변하세요.\n\n${SYSTEM_PROMPT}`;
@@ -242,7 +245,7 @@ export default function QnA() {
       trackUsage("qa");
     } catch (e) {
       setMessages((prev) => prev.filter((m) => m.role !== "assistant" || m.content !== ""));
-      setError(e instanceof Error ? e.message : "응답을 가져오는 데 실패했습니다.");
+      setError(e instanceof Error ? e.message : t("qa_error"));
     } finally {
       setLoading(false);
       setLoadingStage("");
@@ -274,7 +277,7 @@ export default function QnA() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
           >
             <IconHistory className="w-3.5 h-3.5" />
-            히스토리
+            {t("qa_history_btn")}
           </button>
           <button
             onClick={handleReset}
@@ -283,7 +286,7 @@ export default function QnA() {
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            대화 초기화
+            {t("qa_reset_btn")}
           </button>
         </div>
       </div>
@@ -345,7 +348,7 @@ export default function QnA() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="질문을 입력하세요... (Shift+Enter로 줄바꿈)"
+            placeholder={t("qa_input_hint")}
             rows={1}
             className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none max-h-32 overflow-y-auto"
             style={{ fieldSizing: "content" } as React.CSSProperties}
@@ -362,15 +365,15 @@ export default function QnA() {
             </svg>
           </button>
         </div>
-        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2 px-1">Enter로 전송 · Shift+Enter로 줄바꿈</p>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2 px-1">{t("qa_input_hint")}</p>
       </div>
       <HelpButton
-        title="Q&A 사용법"
+        title={t("help_qa_title")}
         steps={[
-          { step: "질문 입력", desc: "하단 입력창에 질문을 입력하거나 추천 질문을 클릭하세요. 새로고침마다 추천 질문이 바뀝니다." },
-          { step: "대화 히스토리", desc: "우측 상단 히스토리 버튼으로 이전 대화 내역을 확인할 수 있습니다. AI 응답이 완료되면 자동으로 저장됩니다." },
-          { step: "대화 초기화", desc: "초기화 버튼을 누르면 새 대화를 시작합니다. 이전 대화는 히스토리에 저장되어 있습니다." },
-          { step: "활용 팁", desc: "업무 보고, 이메일 초안, 일정 정리 등 업무 전반에 걸쳐 활용할 수 있습니다." },
+          { step: t("help_qa_1_step"), desc: t("help_qa_1_desc") },
+          { step: t("help_qa_2_step"), desc: t("help_qa_2_desc") },
+          { step: t("help_qa_3_step"), desc: t("help_qa_3_desc") },
+          { step: t("help_qa_4_step"), desc: t("help_qa_4_desc") },
         ]}
       />
 
@@ -388,7 +391,7 @@ export default function QnA() {
         >
           <div className="w-72 h-full flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">대화 히스토리</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">{t("qa_history_title")}</h3>
               <button
                 onClick={() => setShowHistory(false)}
                 aria-label="닫기"
@@ -399,7 +402,7 @@ export default function QnA() {
             </div>
             <div className="flex-1 overflow-y-auto">
               {histories.length === 0 ? (
-                <p className="text-sm text-slate-500 dark:text-zinc-400 text-center mt-8">저장된 히스토리가 없습니다</p>
+                <p className="text-sm text-slate-500 dark:text-zinc-400 text-center mt-8">{t("qa_history_empty")}</p>
               ) : (
                 histories.map((h) => (
                   <button

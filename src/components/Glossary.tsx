@@ -18,6 +18,8 @@ import {
 } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
 import { getGlossary, addTerm, updateTerm, deleteTerm } from "@/lib/db/glossary";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 /* ───────── 타입·상수 ───────── */
 
@@ -32,6 +34,15 @@ interface Term {
 }
 
 const CATEGORIES: Category[] = ["직무", "회사규정", "IT", "마케팅", "재무", "기타"];
+
+const CATEGORY_DISPLAY_KEYS: Record<Category, TranslationKey> = {
+  직무:   "gl_cat_job",
+  회사규정: "gl_cat_policy",
+  IT:     "gl_cat_it",
+  마케팅: "gl_cat_marketing",
+  재무:   "gl_cat_finance",
+  기타:   "gl_cat_etc",
+};
 
 const CATEGORY_COLORS: Record<Category, string> = {
   직무:   "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
@@ -66,9 +77,10 @@ const AI_SYSTEM_PROMPT = `당신은 친절한 직장 내 용어 해설사입니�
 /* ───────── 하위 컴포넌트 ───────── */
 
 function CategoryBadge({ category }: { category: Category }) {
+  const { t } = useLocale();
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${CATEGORY_COLORS[category]}`}>
-      {category}
+      {t(CATEGORY_DISPLAY_KEYS[category])}
     </span>
   );
 }
@@ -76,6 +88,7 @@ function CategoryBadge({ category }: { category: Category }) {
 /* ───────── 메인 컴포넌트 ───────── */
 
 export default function Glossary() {
+  const { t } = useLocale();
   const [terms, setTerms]           = useState<Term[]>([]);
   const [hydrated, setHydrated]     = useState(false);
   const [userId, setUserId]         = useState<string | null>(null);
@@ -137,9 +150,9 @@ export default function Glossary() {
     setShowForm(true);
   };
 
-  const openEdit = (t: Term) => {
-    setEditId(t.id);
-    setFormTerm(t.term); setFormDesc(t.description); setFormCat(t.category);
+  const openEdit = (term: Term) => {
+    setEditId(term.id);
+    setFormTerm(term.term); setFormDesc(term.description); setFormCat(term.category);
     setShowForm(true);
   };
 
@@ -148,8 +161,8 @@ export default function Glossary() {
     if (editId) {
       await updateTerm(editId, { term: formTerm.trim(), definition: formDesc.trim(), category: formCat });
       setTerms((prev) =>
-        prev.map((t) =>
-          t.id === editId ? { ...t, term: formTerm.trim(), description: formDesc.trim(), category: formCat } : t
+        prev.map((item) =>
+          item.id === editId ? { ...item, term: formTerm.trim(), description: formDesc.trim(), category: formCat } : item
         )
       );
     } else {
@@ -172,7 +185,7 @@ export default function Glossary() {
   const doDelete = async () => {
     if (!confirmDeleteId) return;
     await deleteTerm(confirmDeleteId);
-    setTerms((prev) => prev.filter((t) => t.id !== confirmDeleteId));
+    setTerms((prev) => prev.filter((item) => item.id !== confirmDeleteId));
     setConfirmDeleteId(null);
   };
 
@@ -207,16 +220,16 @@ export default function Glossary() {
         setAiResult(acc);
       }
     } catch (e) {
-      setAiError(e instanceof Error ? e.message : "설명을 가져오지 못했습니다.");
+      setAiError(e instanceof Error ? e.message : t("gl_error"));
     } finally {
       setAiLoading(false);
     }
   };
 
   /* ── 필터링 ── */
-  const filtered = terms.filter((t) => {
-    const matchSearch = t.term.toLowerCase().includes(search.toLowerCase());
-    const matchCat    = filterCat === "전체" || t.category === filterCat;
+  const filtered = terms.filter((item) => {
+    const matchSearch = item.term.toLowerCase().includes(search.toLowerCase());
+    const matchCat    = filterCat === "전체" || item.category === filterCat;
     return matchSearch && matchCat;
   });
 
@@ -227,7 +240,7 @@ export default function Glossary() {
 
       {confirmDeleteId && (
         <ConfirmModal
-          message="용어를 삭제하시겠습니까?"
+          message={t("gl_confirm_delete")}
           onConfirm={doDelete}
           onCancel={() => setConfirmDeleteId(null)}
         />
@@ -240,18 +253,18 @@ export default function Glossary() {
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <IconBook className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">용어집 현황</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("gl_stat_title")}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800">
               <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{terms.length}</p>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">전체 용어</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{t("gl_stat_total")}</p>
             </div>
             <div className="px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800">
               <p className="text-2xl font-bold text-[#4D44CC] dark:text-[#8B85FF]">
-                {new Set(terms.map((t) => t.category)).size}
+                {new Set(terms.map((item) => item.category)).size}
               </p>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">카테고리</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{t("gl_stat_category")}</p>
             </div>
           </div>
           <button
@@ -260,7 +273,7 @@ export default function Glossary() {
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
           >
             <IconPlus className="w-4 h-4" />
-            용어 추가
+            {t("gl_add_btn")}
           </button>
         </div>
 
@@ -268,14 +281,14 @@ export default function Glossary() {
         <div ref={aiResultRef} className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <IconSparkles className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">AI 용어 설명</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("gl_ai_section")}</span>
           </div>
           <div className="flex gap-2">
             <input
               value={aiQuery}
               onChange={(e) => setAiQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAiExplain()}
-              placeholder="모르는 용어를 입력하세요 (예: OKR, KPI, IR...)"
+              placeholder={t("gl_ai_placeholder")}
               className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <button
@@ -289,7 +302,7 @@ export default function Glossary() {
               ) : (
                 <IconSparkles className="w-4 h-4" />
               )}
-              {aiLoading ? "설명 중..." : "AI 설명"}
+              {aiLoading ? t("gl_loading") : t("gl_ai_btn")}
             </button>
           </div>
           {aiError && (
@@ -304,7 +317,7 @@ export default function Glossary() {
           )}
           {!aiResult && !aiError && (
             <p className="text-xs text-slate-500 dark:text-zinc-400">
-              Enter 또는 버튼을 눌러 AI 설명을 받아보세요.
+              {t("gl_ai_hint")}
             </p>
           )}
         </div>
@@ -319,7 +332,7 @@ export default function Glossary() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="용어 검색..."
+              placeholder={t("gl_search_placeholder")}
               className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
           </div>
@@ -336,7 +349,7 @@ export default function Glossary() {
                 ].join(" ")}
                 style={filterCat === cat ? { background: "#6C63FF" } : undefined}
               >
-                {cat}
+                {cat === "전체" ? t("gl_cat_all") : t(CATEGORY_DISPLAY_KEYS[cat])}
               </button>
             ))}
           </div>
@@ -349,7 +362,7 @@ export default function Glossary() {
               <IconBook className="w-6 h-6 text-slate-300 dark:text-zinc-600" />
             </div>
             <p className="text-sm text-slate-500 dark:text-zinc-400">
-              {search || filterCat !== "전체" ? "검색 결과가 없습니다." : "등록된 용어가 없습니다."}
+              {search || filterCat !== "전체" ? t("gl_empty_search") : t("gl_empty")}
             </p>
             {!search && filterCat === "전체" && (
               <button
@@ -357,34 +370,34 @@ export default function Glossary() {
                 className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white"
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
-                <IconPlus className="w-3.5 h-3.5" /> 첫 용어 추가하기
+                <IconPlus className="w-3.5 h-3.5" /> {t("gl_first_add_btn")}
               </button>
             )}
           </div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-            {filtered.map((t) => (
-              <div key={t.id} className="flex items-start gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors group">
+            {filtered.map((item) => (
+              <div key={item.id} className="flex items-start gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors group">
                 <IconTag className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF] shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t.term}</span>
-                    <CategoryBadge category={t.category} />
+                    <span className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{item.term}</span>
+                    <CategoryBadge category={item.category} />
                   </div>
-                  <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">{t.description}</p>
+                  <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">{item.description}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => openEdit(t)}
+                    onClick={() => openEdit(item)}
                     className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-[#4D44CC] dark:text-[#8B85FF] transition-colors"
-                    aria-label="수정"
+                    aria-label={t("gl_aria_edit")}
                   >
                     <IconPencil className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(t.id)}
+                    onClick={() => handleDelete(item.id)}
                     className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 transition-colors"
-                    aria-label="삭제"
+                    aria-label={t("gl_aria_delete")}
                   >
                     <IconTrash className="w-3.5 h-3.5" />
                   </button>
@@ -401,7 +414,7 @@ export default function Glossary() {
           <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
-                {editId ? "용어 수정" : "용어 추가"}
+                {editId ? t("gl_modal_edit") : t("gl_modal_add")}
               </h3>
               <button
                 onClick={() => setShowForm(false)}
@@ -413,7 +426,7 @@ export default function Glossary() {
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">용어명</label>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("gl_label_term")}</label>
                 <input
                   value={formTerm}
                   onChange={(e) => setFormTerm(e.target.value)}
@@ -423,7 +436,7 @@ export default function Glossary() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">설명</label>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("gl_label_desc")}</label>
                 <textarea
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
@@ -433,7 +446,7 @@ export default function Glossary() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">카테고리</label>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("gl_label_category")}</label>
                 <div className="flex flex-wrap gap-1.5">
                   {CATEGORIES.map((cat) => (
                     <button
@@ -447,7 +460,7 @@ export default function Glossary() {
                       ].join(" ")}
                       style={formCat === cat ? { background: "#6C63FF" } : undefined}
                     >
-                      {cat}
+                      {t(CATEGORY_DISPLAY_KEYS[cat])}
                     </button>
                   ))}
                 </div>
@@ -459,7 +472,7 @@ export default function Glossary() {
                 onClick={() => setShowForm(false)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
               >
-                취소
+                {t("cancel")}
               </button>
               <button
                 onClick={handleSave}
@@ -468,19 +481,19 @@ export default function Glossary() {
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 <IconCheck className="w-4 h-4" />
-                {editId ? "수정 완료" : "추가"}
+                {editId ? t("gl_edit_done") : t("gl_add_btn")}
               </button>
             </div>
           </div>
         </div>
       )}
       <HelpButton
-        title="용어집 사용법"
+        title={t("help_gl_title")}
         steps={[
-          { step: "용어 등록", desc: "새 용어와 설명을 입력하고 추가합니다." },
-          { step: "AI 설명", desc: "등록된 용어를 클릭하고 AI에게 상세 설명을 요청합니다." },
-          { step: "카테고리", desc: "카테고리별로 분류하여 용어를 정리합니다." },
-          { step: "검색", desc: "상단 검색창에서 원하는 용어를 빠르게 찾습니다." },
+          { step: t("help_gl_1_step"), desc: t("help_gl_1_desc") },
+          { step: t("help_gl_2_step"), desc: t("help_gl_2_desc") },
+          { step: t("help_gl_3_step"), desc: t("help_gl_3_desc") },
+          { step: t("help_gl_4_step"), desc: t("help_gl_4_desc") },
         ]}
       />
     </div>
