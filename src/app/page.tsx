@@ -548,7 +548,7 @@ export default function HomePage() {
       <div className="grid grid-cols-3 gap-2 shrink-0">
         <Link
           href="/todo"
-          className="rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+          className="card-hover rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
         >
           <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
             <IconListCheck className="w-3.5 h-3.5" /> {t("home_metric_todos_left")}
@@ -562,7 +562,7 @@ export default function HomePage() {
 
         <Link
           href="/calendar"
-          className="rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+          className="card-hover rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
         >
           <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
             <IconCalendar className="w-3.5 h-3.5" /> {t("home_metric_events_today")}
@@ -576,7 +576,7 @@ export default function HomePage() {
 
         <Link
           href="/settings"
-          className="rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+          className="card-hover rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
         >
           <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
             {t("home_metric_leave_left")}
@@ -611,7 +611,7 @@ export default function HomePage() {
                     <Link
                       key={feature}
                       href={meta.href}
-                      className="flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all"
+                      className="card-hover flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all"
                     >
                       <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
                         <Icon className="w-3.5 h-3.5" />

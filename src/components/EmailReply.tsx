@@ -342,9 +342,10 @@ export default function EmailReply() {
             key={id}
             role="tab"
             aria-selected={activeTab === id}
+            data-active={activeTab === id}
             onClick={() => setActiveTab(id)}
             className={[
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              "tab-underline w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
               activeTab === id
                 ? "bg-[#6C63FF] text-white shadow-sm"
                 : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
@@ -411,7 +412,7 @@ export default function EmailReply() {
               <button
                 onClick={handleNewGenerate}
                 disabled={newLoading || !newContent.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
                 {newLoading ? (
@@ -433,7 +434,7 @@ export default function EmailReply() {
           )}
 
           {newResult ? (
-            <div ref={newResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+            <div ref={newResultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("er_result_new")}</span>
                 <div className="flex items-center gap-2">
@@ -552,7 +553,7 @@ export default function EmailReply() {
           )}
 
           {drafts.length > 0 ? (
-            <div ref={replyResultRef} className="grid gap-3 lg:grid-cols-3">
+            <div ref={replyResultRef} className="animate-result-in grid gap-3 lg:grid-cols-3">
               {drafts.map((draft, i) => (
                 <div
                   key={i}

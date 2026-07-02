@@ -390,7 +390,7 @@ export default function DocSummary() {
 
       {/* 결과 */}
       {result ? (
-        <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+        <div ref={resultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
               {tFormat(t("ds_result_title"), { style: t(SUMMARY_STYLES.find((s) => s.id === summaryStyle)!.labelKey) })}

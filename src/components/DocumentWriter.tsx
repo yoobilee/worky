@@ -217,7 +217,7 @@ export default function DocumentWriter() {
 
       {/* 결과 */}
       {result ? (
-        <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+        <div ref={resultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{tFormat(t("dw_result_title"), { label: t(doc.labelKey) })}</h2>
             <button onClick={handleCopy}

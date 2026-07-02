@@ -391,7 +391,7 @@ export default function Translator() {
 
       {/* 결과 */}
       {result ? (
-        <div ref={resultRef} className="min-w-0 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+        <div ref={resultRef} className="animate-result-in min-w-0 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300 truncate mr-3">
               {mode === "translate"

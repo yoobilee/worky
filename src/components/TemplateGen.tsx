@@ -288,7 +288,7 @@ export default function TemplateGen() {
         />
         <div className="flex justify-end mt-3">
           <button onClick={handleGenerate} disabled={loading || !content.trim()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
             {loading ? (
               <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
@@ -311,7 +311,7 @@ export default function TemplateGen() {
 
       {/* 결과 */}
       {result ? (
-        <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+        <div ref={resultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
               {tFormat(t("tg_result_title"), { label: selectedLabel })}

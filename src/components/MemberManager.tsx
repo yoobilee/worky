@@ -451,7 +451,7 @@ export default function MemberManager() {
         type="button"
         onClick={() => { setSelectedId(m.id); setShowForm(false); }}
         className={[
-          "w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left transition",
+          "card-hover w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left transition",
           isSelected ? "bg-[#6C63FF]/10" : "hover:bg-slate-50 dark:hover:bg-zinc-800",
         ].join(" ")}
       >
@@ -519,9 +519,9 @@ export default function MemberManager() {
           { id: "list" as const,    label: t("member_tab_list") },
           { id: "seating" as const, label: t("member_tab_seating") },
         ]).map(({ id, label }) => (
-          <button key={id} role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)}
+          <button key={id} role="tab" aria-selected={activeTab === id} data-active={activeTab === id} onClick={() => setActiveTab(id)}
             className={[
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              "tab-underline w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
               activeTab === id ? "bg-[#6C63FF] text-white shadow-sm" : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
             ].join(" ")}>
             {label}
@@ -581,7 +581,7 @@ export default function MemberManager() {
             </div>
             <button
               onClick={openAdd}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white transition shrink-0"
+              className="btn-press w-8 h-8 rounded-full flex items-center justify-center text-white transition shrink-0"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               aria-label={t("member_add_title")}
             >

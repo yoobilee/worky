@@ -418,7 +418,7 @@ export default function DataInsight() {
 
       {/* 결과 */}
       {result ? (
-        <div ref={resultRef} className="space-y-3">
+        <div ref={resultRef} className="animate-result-in space-y-3">
 
           {/* 복사 버튼 */}
           <div className="flex justify-end">
@@ -512,7 +512,7 @@ export default function DataInsight() {
 
           {/* 생성된 보고서 */}
           {report && (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#6C63FF]/30 p-5 shadow-sm">
+            <div className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-[#6C63FF]/30 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">

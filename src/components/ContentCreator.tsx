@@ -269,9 +269,9 @@ export default function ContentCreator() {
           { id: "report"    as ContentTab, labelKey: "cc_tab_report" as TranslationKey, Icon: IconSend           },
           { id: "instagram" as ContentTab, labelKey: "cc_tab_insta"  as TranslationKey, Icon: IconBrandInstagram },
         ] as const).map(({ id, labelKey, Icon }) => (
-          <button key={id} role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)}
+          <button key={id} role="tab" aria-selected={activeTab === id} data-active={activeTab === id} onClick={() => setActiveTab(id)}
             className={[
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              "tab-underline w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
               activeTab === id
                 ? "bg-[#6C63FF] text-white shadow-sm"
                 : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
@@ -364,7 +364,7 @@ export default function ContentCreator() {
           {/* 생성 버튼 */}
           <div className="flex justify-end">
             <button onClick={handleReportGenerate} disabled={reportLoading || !workInput.trim()}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
               {reportLoading ? (
                 <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
@@ -384,7 +384,7 @@ export default function ContentCreator() {
           )}
 
           {reportResult ? (
-            <div ref={reportResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+            <div ref={reportResultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("cc_result_report")}</h2>
                 <button onClick={async () => { await navigator.clipboard.writeText(reportResult); setReportCopied(true); setTimeout(() => setReportCopied(false), 2000); }}
@@ -505,7 +505,7 @@ export default function ContentCreator() {
           {/* 생성 버튼 */}
           <div className="flex justify-end">
             <button onClick={handleInstaGenerate} disabled={instaLoading || !instaContent.trim()}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
               {instaLoading ? (
                 <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
@@ -525,7 +525,7 @@ export default function ContentCreator() {
           )}
 
           {instaResult ? (
-            <div ref={instaResultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
+            <div ref={instaResultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("cc_result_insta")}</h2>
                 <button onClick={async () => { await navigator.clipboard.writeText(instaResult); setInstaCopied(true); setTimeout(() => setInstaCopied(false), 2000); }}

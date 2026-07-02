@@ -1119,7 +1119,7 @@ export default function ClientManager() {
           </button>
           <button
             onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
+            className="btn-press flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
           >
             <IconPlus className="w-4 h-4" />{t("client_add")}
@@ -1988,7 +1988,7 @@ export default function ClientManager() {
             return (
               <div key={c.id}
                 className={[
-                  "bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-2.5 group",
+                  "card-hover bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-2.5 group",
                   accentColor ? "border-l-4" : "",
                 ].join(" ")}
                 style={accentColor ? { borderLeftColor: accentColor } : undefined}

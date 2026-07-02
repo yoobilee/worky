@@ -334,7 +334,7 @@ export default function DataCleaner() {
 
       {/* 결과 */}
       {tableHtml ? (
-        <div ref={resultRef} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
+        <div ref={resultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("dc_result_title")}</h2>
             <div className="flex items-center gap-2">
