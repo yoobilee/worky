@@ -31,12 +31,15 @@ import { runDailyNotificationChecks } from "@/lib/notifications";
 import { getClients } from "@/lib/db/clients";
 import OnboardingModal from "@/components/OnboardingModal";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 /* ───────── 상수 ───────── */
 
 interface Todo { id: string; text: string; completed: boolean }
 
 const DAY_KO = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+const DAY_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 interface Tip { text: string; category: string }
 
@@ -151,26 +154,26 @@ function getGreetingText(now: Date, customGreeting: CustomGreeting | null): stri
 
 interface WeatherInfo {
   temp: number;
-  label: string;
+  labelKey: TranslationKey;
   Icon: React.ComponentType<{ className?: string }>;
 }
 
-function getWeatherFromCode(code: number): { label: string; Icon: React.ComponentType<{ className?: string }> } {
-  if (code === 0 || code === 1) return { label: "맑음",    Icon: IconSun };
-  if (code <= 3)                 return { label: "구름",    Icon: IconCloud };
-  if (code <= 48)                return { label: "안개",    Icon: IconMist };
-  if (code <= 55)                return { label: "이슬비",  Icon: IconCloudRain };
-  if (code <= 67)                return { label: "비",      Icon: IconCloudRain };
-  if (code <= 77)                return { label: "눈",      Icon: IconCloudSnow };
-  if (code <= 82)                return { label: "소나기",  Icon: IconCloudRain };
-  if (code <= 86)                return { label: "눈 소나기", Icon: IconCloudSnow };
-  return                                { label: "뇌우",    Icon: IconCloudStorm };
+function getWeatherFromCode(code: number): { labelKey: TranslationKey; Icon: React.ComponentType<{ className?: string }> } {
+  if (code === 0 || code === 1) return { labelKey: "weather_clear",        Icon: IconSun };
+  if (code <= 3)                 return { labelKey: "weather_clouds",       Icon: IconCloud };
+  if (code <= 48)                return { labelKey: "weather_fog",          Icon: IconMist };
+  if (code <= 55)                return { labelKey: "weather_drizzle",      Icon: IconCloudRain };
+  if (code <= 67)                return { labelKey: "weather_rain",         Icon: IconCloudRain };
+  if (code <= 77)                return { labelKey: "weather_snow",         Icon: IconCloudSnow };
+  if (code <= 82)                return { labelKey: "weather_shower",       Icon: IconCloudRain };
+  if (code <= 86)                return { labelKey: "weather_snow_shower",  Icon: IconCloudSnow };
+  return                                { labelKey: "weather_thunderstorm", Icon: IconCloudStorm };
 }
 
 /* ───────── 컴포넌트 ───────── */
 
 export default function HomePage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [time, setTime]         = useState("");
   const [greeting, setGreeting] = useState("");
   const [dateStr, setDateStr]   = useState("");
@@ -213,8 +216,13 @@ export default function HomePage() {
     const now   = new Date();
     const month = now.getMonth() + 1;
     const date  = now.getDate();
-    const day   = DAY_KO[now.getDay()];
-    setDateStr(`${now.getFullYear()}년 ${month}월 ${date}일 ${day}`);
+    const dayKo = DAY_KO[now.getDay()];
+    const dayEn = DAY_EN[now.getDay()];
+    setDateStr(
+      locale === "en"
+        ? `${dayEn}, ${now.toLocaleString("en-US", { month: "long" })} ${date}, ${now.getFullYear()}`
+        : `${now.getFullYear()}년 ${month}월 ${date}일 ${dayKo}`
+    );
 
     // 날짜 기반 팁 (하루 동안 고정)
     const todayTip = TIPS[date % TIPS.length];
@@ -326,8 +334,8 @@ export default function HomePage() {
 
           // 날씨
           const cw = weatherData.current_weather;
-          const { label, Icon } = getWeatherFromCode(cw.weathercode);
-          setWeather({ temp: Math.round(cw.temperature), label, Icon });
+          const { labelKey, Icon } = getWeatherFromCode(cw.weathercode);
+          setWeather({ temp: Math.round(cw.temperature), labelKey, Icon });
 
           // 위치명: city → town → county → state 순 우선순위
           const addr = geoData.address ?? {};
@@ -378,14 +386,14 @@ export default function HomePage() {
                   const usedPct = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
                   return (
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 shrink-0">연차</span>
+                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 shrink-0">{t("leave_label")}</span>
                       <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden max-w-[160px]">
                         <div style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }} className="h-full rounded-full" />
                       </div>
                       <span className="text-xs text-slate-500 dark:text-zinc-400 shrink-0">
-                        <span className="font-semibold text-[#4D44CC] dark:text-[#8B85FF]">{leaveRemaining}일</span> 남음
+                        <span className="font-semibold text-[#4D44CC] dark:text-[#8B85FF]">{tFormat(t("leave_days_left"), { n: String(leaveRemaining) })}</span>
                         <span className="text-slate-300 dark:text-zinc-600 mx-1">·</span>
-                        총 {leaveData.total}일 중 {leaveData.used}일 사용
+                        {tFormat(t("leave_total_used"), { total: String(leaveData.total), used: String(leaveData.used) })}
                       </span>
                     </div>
                   );
@@ -404,13 +412,13 @@ export default function HomePage() {
                   )}
                   {geoStatus === "denied" && (
                     <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                      <IconMapPin className="w-3 h-3" /> 없음
+                      <IconMapPin className="w-3 h-3" /> {t("weather_none")}
                     </span>
                   )}
                   {geoStatus === "ok" && weather && WeatherIcon && (
                     <>
                       <WeatherIcon className="w-10 h-10 text-[#4D44CC] dark:text-[#8B85FF]" />
-                      <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200 leading-none">{weather.label}</span>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200 leading-none">{t(weather.labelKey)}</span>
                       <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-0.5">
                         <IconTemperature className="w-3 h-3" />{weather.temp}°C
                       </span>
@@ -495,16 +503,16 @@ export default function HomePage() {
                       <span className="truncate">{t.text}</span>
                     </div>
                   ))}
-                  {todos.filter((t) => !t.completed).length > 3 && (
+                  {todos.filter((td) => !td.completed).length > 3 && (
                     <p className="text-xs text-white/60 pl-3.5">
-                      외 {todos.filter((t) => !t.completed).length - 3}개 더
+                      {tFormat(t("home_n_more"), { n: String(todos.filter((td) => !td.completed).length - 3) })}
                     </p>
                   )}
                 </div>
               )}
               {completed === total && total > 0 && (
                 <div className="flex items-center gap-1.5 text-xs text-white/90">
-                  <IconCircleCheck className="w-3.5 h-3.5" /> 모든 할 일 완료!
+                  <IconCircleCheck className="w-3.5 h-3.5" /> {t("home_all_done")}
                 </div>
               )}
             </div>
@@ -548,8 +556,8 @@ export default function HomePage() {
                         <IconArrowRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
                       </span>
                       <div className="min-w-0 text-left">
-                        <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">더보기</p>
-                        <p className="text-xs text-slate-500 dark:text-zinc-400">{rest.length}개</p>
+                        <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">{t("home_more")}</p>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("home_count_n"), { n: String(rest.length) })}</p>
                       </div>
                     </button>
 
@@ -586,16 +594,16 @@ export default function HomePage() {
 
         {/* 이번 주 활동 */}
         {(() => {
-          const FEATURES: { key: FeatureKey; label: string }[] = [
-            { key: "data",      label: "데이터 정리"   },
-            { key: "email",     label: "이메일 작성"   },
-            { key: "template",  label: "템플릿 생성"   },
-            { key: "translate", label: "번역·다듬기"   },
-            { key: "summary",   label: "문서 요약"     },
-            { key: "schedule",  label: "일정 추출"     },
-            { key: "insight",   label: "데이터 분석" },
-            { key: "qa",        label: "Q&A"          },
-            { key: "feedback",  label: "피드백 정리"   },
+          const FEATURES: { key: FeatureKey; labelKey: TranslationKey }[] = [
+            { key: "data",      labelKey: "menu_data"      },
+            { key: "email",     labelKey: "sidebar_email"  },
+            { key: "template",  labelKey: "menu_template"  },
+            { key: "translate", labelKey: "menu_translate" },
+            { key: "summary",   labelKey: "menu_summary"   },
+            { key: "schedule",  labelKey: "sidebar_schedule" },
+            { key: "insight",   labelKey: "menu_insight"   },
+            { key: "qa",        labelKey: "sidebar_qa"     },
+            { key: "feedback",  labelKey: "menu_feedback"  },
           ];
           const counts = FEATURES.map((f) => weekStats[f.key] ?? 0);
           const maxCount = Math.max(...counts, 1);
@@ -609,7 +617,7 @@ export default function HomePage() {
                   <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("weekly_activity")}</span>
                 </div>
                 {totalUsed > 0 && (
-                  <span className="text-xs text-slate-500 dark:text-zinc-400">총 {totalUsed}회</span>
+                  <span className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("home_total_n"), { n: String(totalUsed) })}</span>
                 )}
               </div>
 
@@ -624,18 +632,18 @@ export default function HomePage() {
                 </div>
               ) : totalUsed === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-                  <p className="text-sm text-slate-500 dark:text-zinc-400">이번 주 아직 사용 기록이 없습니다.</p>
+                  <p className="text-sm text-slate-500 dark:text-zinc-400">{t("home_no_activity")}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {FEATURES.map(({ key, label }, i) => {
+                  {FEATURES.map(({ key, labelKey }, i) => {
                     const count  = counts[i];
                     const isMax  = count === maxCount && count > 0;
                     const pct    = Math.round((count / maxCount) * 100);
                     return (
                       <div key={key} className="flex items-center gap-2">
                         <span className={`text-xs w-[88px] shrink-0 truncate ${isMax ? "font-semibold text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`}>
-                          {label}
+                          {t(labelKey)}
                         </span>
                         <div className="flex-1 h-2 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                           <div
@@ -711,7 +719,7 @@ export default function HomePage() {
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("daily_tip")}</span>
           </div>
           <p className="text-sm leading-6 text-slate-700 dark:text-zinc-300 flex-1 line-clamp-3">
-            {tip || "오늘 하루도 차근차근 해나가면 됩니다."}
+            {tip || t("home_tip_fallback")}
           </p>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-zinc-700">
             {tipCategory && (
@@ -722,7 +730,7 @@ export default function HomePage() {
                 {tipCategory}
               </span>
             )}
-            <p className="text-xs text-slate-500 dark:text-zinc-400 ml-auto">매일 새로운 팁</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 ml-auto">{t("home_tip_daily")}</p>
           </div>
         </div>
 
@@ -839,6 +847,7 @@ function FaviconImg({ domain, name, size }: { domain: string; name: string; size
 }
 
 function SpeedDial() {
+  const { t } = useLocale();
   const [open, setOpen]               = useState(false);
   const [customLinks, setCustomLinks] = useState<CustomLink[]>([]);
   const [showModal, setShowModal]     = useState(false);
@@ -1017,7 +1026,7 @@ function SpeedDial() {
       {open && (
         <div className="flex items-center gap-2">
           <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-500 dark:text-zinc-400 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
-            추가
+            {t("speeddial_add_label")}
           </span>
           <button
             onClick={() => setShowModal(true)}
@@ -1038,7 +1047,7 @@ function SpeedDial() {
             className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-sm mx-4"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">바로가기 추가</h3>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">{t("speeddial_modal_title")}</h3>
             <div className="space-y-3">
               <input
                 type="url"
@@ -1061,7 +1070,7 @@ function SpeedDial() {
                 <div className="shrink-0" style={{ width: 28, height: 28 }}>
                   <FaviconImg domain={previewDomain} name={newName || newUrl} size={28} />
                 </div>
-                <span className="text-xs text-slate-500 dark:text-zinc-400">아이콘 미리보기</span>
+                <span className="text-xs text-slate-500 dark:text-zinc-400">{t("speeddial_icon_preview")}</span>
               </div>
             )}
             <div className="flex gap-2 mt-5">
@@ -1069,7 +1078,7 @@ function SpeedDial() {
                 onClick={() => { setShowModal(false); setNewUrl(""); setNewName(""); }}
                 className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-sm text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
               >
-                취소
+                {t("cancel")}
               </button>
               <button
                 onClick={addLink}
@@ -1077,7 +1086,7 @@ function SpeedDial() {
                 className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all"
                 style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
               >
-                추가
+                {t("speeddial_add_label")}
               </button>
             </div>
           </div>
@@ -1088,7 +1097,7 @@ function SpeedDial() {
       {/* 메인 토글 버튼 */}
       <button
         onClick={() => setOpen(v => !v)}
-        aria-label="AI 바로가기"
+        aria-label={t("speeddial_ai_shortcut")}
         className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 active:scale-95 transition-all duration-150"
         style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
       >

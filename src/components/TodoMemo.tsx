@@ -9,6 +9,9 @@ import { createClient } from "@/lib/supabase/client";
 import { getTodos, upsertTodos, getPastTodoRows, updateTodoInRow, getRowsByOriginalId, deleteTodoFromRow } from "@/lib/db/todos";
 import { getMemos, upsertMemos } from "@/lib/db/memos";
 import { useToast } from "@/contexts/ToastContext";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 interface Todo {
   id: string;
@@ -23,10 +26,10 @@ interface Todo {
 type MemoTab = "업무" | "회의" | "개인";
 type SaveStatus = "idle" | "saving" | "saved";
 
-const MEMO_TABS: { id: MemoTab; label: string }[] = [
-  { id: "업무", label: "업무 메모" },
-  { id: "회의", label: "회의 메모" },
-  { id: "개인", label: "개인 메모" },
+const MEMO_TABS: { id: MemoTab; labelKey: TranslationKey }[] = [
+  { id: "업무", labelKey: "todo_tab_memo_work" },
+  { id: "회의", labelKey: "todo_tab_memo_meeting" },
+  { id: "개인", labelKey: "todo_tab_memo_personal" },
 ];
 
 const MEMO_DB_KEYS: Record<MemoTab, "work_memo" | "meeting_memo" | "personal_memo"> = {
@@ -39,8 +42,10 @@ const LEFT_RATIO_KEY = "todoMemoLeftRatio";
 const MIN_RATIO = 0.4;
 const MAX_RATIO = 0.6;
 
-const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+const DAY_LABELS_KO = ["일", "월", "화", "수", "목", "금", "토"];
+const DAY_LABELS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_NAMES_KO = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+const MONTH_NAMES_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -56,18 +61,19 @@ function shiftDate(dateStr: string, delta: number): string {
   return toDateKey(d);
 }
 
-function formatDateLabel(dateStr: string): string {
+function formatDateLabel(dateStr: string, locale: string, t: (k: TranslationKey) => string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  const dow = DAY_LABELS[new Date(y, m - 1, d).getDay()];
-  if (dateStr === todayKey()) return `오늘 · ${m}월 ${d}일 (${dow})`;
-  return `${m}월 ${d}일 (${dow})`;
+  const labels = locale === "en" ? DAY_LABELS_EN : DAY_LABELS_KO;
+  const dow = labels[new Date(y, m - 1, d).getDay()];
+  if (dateStr === todayKey()) return tFormat(t("todo_today"), { m: String(m), d: String(d), dow });
+  return tFormat(t("todo_date"), { m: String(m), d: String(d), dow });
 }
 
-function formatOriginalDate(dateStr: string): string {
+function formatOriginalDate(dateStr: string, t: (k: TranslationKey) => string): string {
   const yesterday = shiftDate(todayKey(), -1);
-  if (dateStr === yesterday) return "어제에서 이월";
+  if (dateStr === yesterday) return t("todo_carried_yesterday");
   const [, m, d] = dateStr.split("-").map(Number);
-  return `${m}월 ${d}일에서 이월`;
+  return tFormat(t("todo_carried_from"), { m: String(m), d: String(d) });
 }
 
 // 과거 날짜 미완료 항목 → 오늘로 이월 (id 기반 중복 방지)
@@ -108,6 +114,9 @@ async function doCarryoverAsync(
 
 export default function TodoMemo() {
   const toast = useToast();
+  const { t, locale } = useLocale();
+  const DAY_LABELS = locale === "en" ? DAY_LABELS_EN : DAY_LABELS_KO;
+  const MONTH_NAMES = locale === "en" ? MONTH_NAMES_EN : MONTH_NAMES_KO;
   const [todos,        setTodos]        = useState<Todo[]>([]);
   const [input,        setInput]        = useState("");
   const [memoTab,        setMemoTab]        = useState<MemoTab>("업무");
@@ -225,7 +234,7 @@ export default function TodoMemo() {
   // 할 일 저장 (Supabase)
   useEffect(() => {
     if (!hydrated || !userId) return;
-    upsertTodos(userId, selectedDateRef.current, todos).catch(() => { toast.error("할 일 저장에 실패했습니다."); });
+    upsertTodos(userId, selectedDateRef.current, todos).catch(() => { toast.error(t("todo_save_fail")); });
   }, [todos, hydrated, userId]);
 
   // 날짜 이동 + 이월 처리
@@ -267,7 +276,7 @@ export default function TodoMemo() {
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
     debounceRef.current = setTimeout(() => {
-      if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: value }).catch(() => { toast.error("메모 저장에 실패했습니다."); });
+      if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: value }).catch(() => { toast.error(t("todo_memo_save_fail")); });
       setSaveStatus("saved");
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     }, 500);
@@ -282,7 +291,7 @@ export default function TodoMemo() {
   const clearMemo = () => setConfirmAction("memo");
   const doClearMemo = () => {
     setMemos((prev) => ({ ...prev, [memoTab]: "" }));
-    if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: "" }).catch(() => { toast.error("메모 초기화에 실패했습니다."); });
+    if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: "" }).catch(() => { toast.error(t("todo_memo_clear_fail")); });
     setSaveStatus("idle");
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
@@ -363,14 +372,14 @@ export default function TodoMemo() {
 
       {confirmAction === "completed" && (
         <ConfirmModal
-          message="오늘의 할 일을 모두 삭제하시겠습니까?"
-          onConfirm={() => { setTodos((prev) => prev.filter((t) => !t.completed)); setConfirmAction(null); }}
+          message={t("todo_confirm_completed")}
+          onConfirm={() => { setTodos((prev) => prev.filter((td) => !td.completed)); setConfirmAction(null); }}
           onCancel={() => setConfirmAction(null)}
         />
       )}
       {confirmAction === "memo" && (
         <ConfirmModal
-          message="메모를 모두 삭제하시겠습니까?"
+          message={t("todo_confirm_memo")}
           onConfirm={doClearMemo}
           onCancel={() => setConfirmAction(null)}
         />
@@ -379,16 +388,16 @@ export default function TodoMemo() {
       {/* Bento 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 shrink-0">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">전체 할 일</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">{t("todo_stat_total")}</p>
           <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-slate-100">{total}</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">완료</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">{t("todo_stat_done")}</p>
           <p className="text-3xl font-bold mt-2" style={{ color: "var(--primary)" }}>{completed}</p>
         </div>
         <div className="col-span-2 lg:col-span-1 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">진행률</p>
+            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">{t("todo_stat_rate")}</p>
             <span className="text-sm font-bold" style={{ color: "var(--primary)" }}>{progress}%</span>
           </div>
           <div className="mt-3 h-2 bg-slate-100 dark:bg-zinc-700 rounded-full overflow-hidden">
@@ -397,7 +406,7 @@ export default function TodoMemo() {
               style={{ width: `${progress}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }}
             />
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2">{total - completed}개 남음</p>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2">{tFormat(t("todo_stat_remaining"), { n: String(total - completed) })}</p>
         </div>
       </div>
 
@@ -414,7 +423,7 @@ export default function TodoMemo() {
             <button
               onClick={() => goToDate(shiftDate(selectedDate, -1))}
               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 transition-colors"
-              aria-label="이전 날짜"
+              aria-label={t("todo_prev_date")}
             >
               <IconChevronLeft className="w-4 h-4" />
             </button>
@@ -424,14 +433,14 @@ export default function TodoMemo() {
                 onClick={openPicker}
                 className="text-sm font-semibold text-slate-700 dark:text-zinc-200 hover:text-[#4D44CC] dark:hover:text-[#8B85FF] transition-colors whitespace-nowrap"
               >
-                {formatDateLabel(selectedDate)}
+                {formatDateLabel(selectedDate, locale, t)}
               </button>
               {!isToday && (
                 <button
                   onClick={() => goToDate(todayKey())}
                   className="text-xs px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#4D44CC] hover:bg-[#6C63FF]/20 transition-colors font-medium whitespace-nowrap"
                 >
-                  오늘로
+                  {t("todo_go_today")}
                 </button>
               )}
             </div>
@@ -439,7 +448,7 @@ export default function TodoMemo() {
             <button
               onClick={() => goToDate(shiftDate(selectedDate, 1))}
               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 transition-colors"
-              aria-label="다음 날짜"
+              aria-label={t("todo_next_date")}
             >
               <IconChevronRight className="w-4 h-4" />
             </button>
@@ -457,7 +466,7 @@ export default function TodoMemo() {
                     <IconChevronLeft className="w-3.5 h-3.5" />
                   </button>
                   <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200">
-                    {pickerYear}년 {MONTH_NAMES[pickerMonth]}
+                    {locale === "en" ? `${MONTH_NAMES[pickerMonth]} ${pickerYear}` : `${pickerYear}년 ${MONTH_NAMES[pickerMonth]}`}
                   </span>
                   <button
                     onClick={nextPickerMonth}
@@ -519,7 +528,7 @@ export default function TodoMemo() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addTodo()}
-              placeholder="새 할 일 추가..."
+              placeholder={t("todo_add_placeholder")}
               className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <button
@@ -528,7 +537,7 @@ export default function TodoMemo() {
               className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 whitespace-nowrap shrink-0 min-w-fit"
               style={{ background: "var(--primary)" }}
             >
-              추가
+              {t("todo_add_btn")}
             </button>
           </div>
 
@@ -540,7 +549,7 @@ export default function TodoMemo() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                <p className="text-sm">할 일이 없습니다</p>
+                <p className="text-sm">{t("todo_empty")}</p>
               </div>
             ) : (
               todos.map((todo) => (
@@ -567,7 +576,7 @@ export default function TodoMemo() {
                     </span>
                     {todo.carriedOver && todo.originalDate && (
                       <p className="text-[10px] text-[#4D44CC]/60 dark:text-[#8B85FF]/60 mt-0.5">
-                        {formatOriginalDate(todo.originalDate)}
+                        {formatOriginalDate(todo.originalDate, t)}
                       </p>
                     )}
                   </div>
@@ -589,7 +598,7 @@ export default function TodoMemo() {
               onClick={() => setConfirmAction("completed")}
               className="text-xs text-slate-500 hover:text-red-400 transition text-left whitespace-nowrap"
             >
-              완료된 항목 모두 삭제
+              {t("todo_delete_completed")}
             </button>
           )}
         </div>
@@ -614,17 +623,17 @@ export default function TodoMemo() {
         >
 
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">메모</h2>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("todo_memo_label")}</h2>
             <div className="flex items-center gap-2">
               {saveStatus === "saving" && (
-                <span className="text-xs text-slate-500 dark:text-zinc-400">저장 중...</span>
+                <span className="text-xs text-slate-500 dark:text-zinc-400">{t("todo_memo_saving")}</span>
               )}
               {saveStatus === "saved" && (
-                <span className="text-xs text-emerald-500 font-medium">방금 저장됨 ✓</span>
+                <span className="text-xs text-emerald-500 font-medium">{t("todo_memo_saved")}</span>
               )}
               <button
                 onClick={clearMemo}
-                aria-label="메모 전체 삭제"
+                aria-label={t("todo_memo_clear_aria")}
                 className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-400 transition-colors"
               >
                 <IconTrash className="w-3.5 h-3.5" />
@@ -633,7 +642,7 @@ export default function TodoMemo() {
           </div>
 
           <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
-            {MEMO_TABS.map(({ id, label }) => (
+            {MEMO_TABS.map(({ id, labelKey }) => (
               <button
                 key={id}
                 onClick={() => handleTabChange(id)}
@@ -644,7 +653,7 @@ export default function TodoMemo() {
                     : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
                 ].join(" ")}
               >
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </div>
@@ -652,7 +661,7 @@ export default function TodoMemo() {
           <textarea
             value={memos[memoTab]}
             onChange={(e) => handleMemoChange(e.target.value)}
-            placeholder="자유롭게 메모를 입력하세요..."
+            placeholder={t("todo_memo_placeholder")}
             className="flex-1 min-h-[200px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
           />
 
@@ -662,12 +671,12 @@ export default function TodoMemo() {
         </div>
       </div>
       <HelpButton
-        title="할 일 / 메모 사용법"
+        title={t("help_todo_title")}
         steps={[
-          { step: "날짜 선택", desc: "상단 날짜 버튼으로 원하는 날짜로 이동하세요." },
-          { step: "할 일 추가", desc: "입력란에 작업을 입력하고 Enter를 누르세요." },
-          { step: "완료 체크", desc: "체크박스 클릭으로 완료/미완료를 전환합니다." },
-          { step: "자동 이월", desc: "미완료 항목은 다음 날 자동으로 이월됩니다." },
+          { step: t("help_todo_1_step"), desc: t("help_todo_1_desc") },
+          { step: t("help_todo_2_step"), desc: t("help_todo_2_desc") },
+          { step: t("help_todo_3_step"), desc: t("help_todo_3_desc") },
+          { step: t("help_todo_4_step"), desc: t("help_todo_4_desc") },
         ]}
       />
     </div>

@@ -16,6 +16,9 @@ import {
   IconCheck,
   IconCalendarPlus,
 } from "@tabler/icons-react";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 interface Schedule {
   date: string;
@@ -76,6 +79,7 @@ function formatScheduleText(s: Schedule): string {
 }
 
 export default function ScheduleExtractor() {
+  const { t } = useLocale();
   const [input, setInput] = useState("");
   const [schedules,   setSchedules]   = useState<Schedule[]>([]);
   const [loading,     setLoading]     = useState(false);
@@ -103,7 +107,7 @@ export default function ScheduleExtractor() {
 
   const handleSaveToCalendar = async (s: Schedule, index: number) => {
     if (!userId) {
-      showToast(false, "로그인 후 이용해주세요.");
+      showToast(false, t("se_toast_login"));
       return;
     }
     const date = parseKoreanDate(s.date) ?? new Date().toISOString().slice(0, 10);
@@ -116,9 +120,9 @@ export default function ScheduleExtractor() {
     if (row) {
       setSavedIndex(index);
       setTimeout(() => setSavedIndex(null), 2000);
-      showToast(true, "일정이 캘린더에 저장되었습니다.");
+      showToast(true, t("se_toast_saved"));
     } else {
-      showToast(false, "일정 저장에 실패했습니다.");
+      showToast(false, t("se_toast_save_fail"));
     }
   };
 
@@ -138,16 +142,16 @@ export default function ScheduleExtractor() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
+      if (!res.ok) throw new Error(data.error ?? t("unknown_error"));
       const parsed = parseSchedules(data.result);
       if (parsed.length === 0) {
-        setError("추출된 일정이 없습니다. 날짜나 시간이 포함된 텍스트를 입력해주세요.");
+        setError(t("se_error_no_schedule"));
       } else {
         setSchedules(parsed);
         trackUsage("schedule");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "일정 추출 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("se_error_extract"));
     } finally {
       setLoading(false);
     }
@@ -161,7 +165,7 @@ export default function ScheduleExtractor() {
 
   const handleSaveAll = async () => {
     if (!userId) {
-      showToast(false, "로그인 후 이용해주세요.");
+      showToast(false, t("se_toast_login"));
       return;
     }
     const results = await Promise.all(
@@ -173,9 +177,9 @@ export default function ScheduleExtractor() {
     if (results.every((r) => r)) {
       setSavedAll(true);
       setTimeout(() => setSavedAll(false), 2000);
-      showToast(true, "모든 일정이 캘린더에 저장되었습니다.");
+      showToast(true, t("se_toast_all_saved"));
     } else {
-      showToast(false, "일부 일정 저장에 실패했습니다.");
+      showToast(false, t("se_toast_some_fail"));
     }
   };
 
@@ -202,7 +206,7 @@ export default function ScheduleExtractor() {
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
         <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-          이메일 / 공지 / 메시지 붙여넣기
+          {t("se_label")}
         </label>
         <textarea
           value={input}
@@ -221,12 +225,12 @@ export default function ScheduleExtractor() {
             {loading ? (
               <>
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                추출 중...
+                {t("se_loading")}
               </>
             ) : (
               <>
                 <IconCalendarEvent className="w-4 h-4" />
-                일정 추출하기
+                {t("se_extract_btn")}
               </>
             )}
           </button>
@@ -250,16 +254,16 @@ export default function ScheduleExtractor() {
           {/* 결과 헤더 */}
           <div ref={resultRef} className="flex items-center justify-between px-1">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
-              추출된 일정 {schedules.length}건
+              {tFormat(t("se_result_count"), { n: String(schedules.length) })}
             </span>
             <button
               onClick={handleSaveAll}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
             >
               {savedAll ? (
-                <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />저장됨!</>
+                <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("se_saved_all")}</>
               ) : (
-                <><IconCalendarPlus className="w-3.5 h-3.5" />전체 일정 추가</>
+                <><IconCalendarPlus className="w-3.5 h-3.5" />{t("se_save_all_btn")}</>
               )}
             </button>
           </div>
@@ -277,7 +281,7 @@ export default function ScheduleExtractor() {
                     className="text-xs font-semibold px-2.5 py-1 rounded-full text-white"
                     style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
                   >
-                    일정 {i + 1}
+                    {tFormat(t("se_schedule_badge"), { n: String(i + 1) })}
                   </span>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -285,9 +289,9 @@ export default function ScheduleExtractor() {
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
                     >
                       {savedIndex === i ? (
-                        <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />저장됨!</>
+                        <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("se_saved")}</>
                       ) : (
-                        <><IconCalendarPlus className="w-3.5 h-3.5" />일정 저장</>
+                        <><IconCalendarPlus className="w-3.5 h-3.5" />{t("se_save_btn")}</>
                       )}
                     </button>
                     <button
@@ -295,9 +299,9 @@ export default function ScheduleExtractor() {
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
                     >
                       {copiedIndex === i ? (
-                        <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</>
+                        <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("copied")}</>
                       ) : (
-                        <><IconCopy className="w-3.5 h-3.5" />복사</>
+                        <><IconCopy className="w-3.5 h-3.5" />{t("copy")}</>
                       )}
                     </button>
                   </div>
@@ -335,12 +339,12 @@ export default function ScheduleExtractor() {
         </>
       )}
       <HelpButton
-        title="일정 추출 사용법"
+        title={t("help_se_title")}
         steps={[
-          { step: "텍스트 붙여넣기", desc: "이메일·공지·메시지 원문을 그대로 입력합니다." },
-          { step: "일정 추출", desc: "AI가 날짜·시간·장소·내용을 자동으로 추출합니다." },
-          { step: "개별 저장", desc: "각 일정 카드의 '일정 저장' 버튼으로 캘린더에 저장합니다." },
-          { step: "전체 저장", desc: "'전체 일정 추가' 버튼으로 모든 일정을 한 번에 저장합니다." },
+          { step: t("help_se_1_step"), desc: t("help_se_1_desc") },
+          { step: t("help_se_2_step"), desc: t("help_se_2_desc") },
+          { step: t("help_se_3_step"), desc: t("help_se_3_desc") },
+          { step: t("help_se_4_step"), desc: t("help_se_4_desc") },
         ]}
       />
     </div>

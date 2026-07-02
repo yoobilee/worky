@@ -9,6 +9,9 @@ import {
 } from "@tabler/icons-react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 interface FeedbackResult {
   required: string[];
@@ -56,6 +59,7 @@ function parseResult(raw: string): FeedbackResult {
 }
 
 export default function FeedbackOrganizer() {
+  const { t } = useLocale();
   const [input,   setInput]   = useState("");
   const [result,        setResult]        = useState<FeedbackResult | null>(null);
   const [editableText,  setEditableText]  = useState("");
@@ -81,7 +85,7 @@ export default function FeedbackOrganizer() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
+      if (!res.ok) throw new Error(data.error ?? t("unknown_error"));
       const parsed = parseResult(data.result);
       setResult(parsed);
       // initialize editable text from formatted output
@@ -92,7 +96,7 @@ export default function FeedbackOrganizer() {
       setEditableText(lines.join("\n"));
       trackUsage("feedback");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "피드백 분석 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : t("fo_error"));
     } finally {
       setLoading(false);
     }
@@ -102,15 +106,15 @@ export default function FeedbackOrganizer() {
     if (!result) return;
     const lines: string[] = [];
     if (result.required.length) {
-      lines.push("[필수 수정사항]");
+      lines.push(t("fo_format_required"));
       result.required.forEach((r) => lines.push(`• ${r}`));
     }
     if (result.optional.length) {
-      lines.push("", "[선택 수정사항]");
+      lines.push("", t("fo_format_optional"));
       result.optional.forEach((r) => lines.push(`• ${r}`));
     }
     if (result.clarified.length) {
-      lines.push("", "[구체화된 피드백]");
+      lines.push("", t("fo_format_clarified"));
       result.clarified.forEach(({ original, clarified }) =>
         lines.push(`• "${original}" → ${clarified}`)
       );
@@ -126,7 +130,7 @@ export default function FeedbackOrganizer() {
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
         <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-          클라이언트 피드백 입력
+          {t("fo_input_label")}
         </label>
         <textarea
           value={input}
@@ -143,9 +147,9 @@ export default function FeedbackOrganizer() {
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
           >
             {loading ? (
-              <><IconLoader2 className="w-4 h-4 animate-spin text-white" />분석 중...</>
+              <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("fo_loading")}</>
             ) : (
-              <><IconMessageCheck className="w-4 h-4" />피드백 정리</>
+              <><IconMessageCheck className="w-4 h-4" />{t("fo_analyze_btn")}</>
             )}
           </button>
         </div>
@@ -170,8 +174,8 @@ export default function FeedbackOrganizer() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
             >
               {copied
-                ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />복사됨!</>
-                : <><IconCopy className="w-3.5 h-3.5" />전체 복사</>}
+                ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("copied")}</>
+                : <><IconCopy className="w-3.5 h-3.5" />{t("fo_copy_all")}</>}
             </button>
           </div>
 
@@ -182,9 +186,9 @@ export default function FeedbackOrganizer() {
                 <div className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-950/30 flex items-center justify-center shrink-0">
                   <IconAlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
                 </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">필수 수정사항</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("fo_required_title")}</p>
                 <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400">
-                  {result.required.length}건
+                  {tFormat(t("fo_n_count"), { n: String(result.required.length) })}
                 </span>
               </div>
               <ul className="space-y-2">
@@ -205,9 +209,9 @@ export default function FeedbackOrganizer() {
                 <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center shrink-0">
                   <IconCircleCheck className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">선택 수정사항</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("fo_optional_title")}</p>
                 <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-                  {result.optional.length}건
+                  {tFormat(t("fo_n_count"), { n: String(result.optional.length) })}
                 </span>
               </div>
               <ul className="space-y-2">
@@ -228,9 +232,9 @@ export default function FeedbackOrganizer() {
                 <div className="w-7 h-7 rounded-lg bg-[#6C63FF]/10 flex items-center justify-center shrink-0">
                   <IconBulb className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
                 </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">구체화된 피드백</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("fo_clarified_title")}</p>
                 <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
-                  {result.clarified.length}건
+                  {tFormat(t("fo_n_count"), { n: String(result.clarified.length) })}
                 </span>
               </div>
               <ul className="space-y-3">
@@ -250,7 +254,7 @@ export default function FeedbackOrganizer() {
           {/* 편집 가능한 전체 텍스트 */}
           {editableText && (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">편집 가능한 정리 결과</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">{t("fo_editable_label")}</p>
               <EditableResult value={editableText} onChange={setEditableText} rows={10}>
                 <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{editableText}</p>
               </EditableResult>
@@ -261,16 +265,16 @@ export default function FeedbackOrganizer() {
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconMessageCheck className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-          <p className="text-sm text-slate-500 dark:text-zinc-400">피드백 내용을 입력하고 정리하면 결과가 여기에 표시됩니다.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">{t("fo_empty")}</p>
         </div>
       )}
       <HelpButton
-        title="피드백 정리 사용법"
+        title={t("help_fo_title")}
         steps={[
-          { step: "피드백 입력", desc: "클라이언트 피드백 텍스트를 그대로 붙여넣으세요." },
-          { step: "AI 분류", desc: "필수·선택·구체화 항목으로 자동 분류됩니다." },
-          { step: "우선 처리", desc: "빨간 카드(필수 수정)부터 순서대로 처리하세요." },
-          { step: "편집·복사", desc: "정리된 내용을 편집하거나 전체 복사합니다." },
+          { step: t("help_fo_1_step"), desc: t("help_fo_1_desc") },
+          { step: t("help_fo_2_step"), desc: t("help_fo_2_desc") },
+          { step: t("help_fo_3_step"), desc: t("help_fo_3_desc") },
+          { step: t("help_fo_4_step"), desc: t("help_fo_4_desc") },
         ]}
       />
     </div>
