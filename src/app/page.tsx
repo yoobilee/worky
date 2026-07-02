@@ -6,10 +6,10 @@ import Link from "next/link";
 import {
   IconTable, IconMail, IconFileDescription, IconCalendarEvent,
   IconListCheck, IconBulb, IconWifi, IconWifiOff, IconArrowRight,
-  IconCircleCheck, IconMessageDots, IconNotes, IconPlus,
+  IconMessageDots, IconNotes, IconPlus,
   IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
   IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
-  IconBuilding, IconAddressBook, IconSparkles, IconX,
+  IconBuilding, IconAddressBook, IconSparkles, IconX, IconMessageCheck,
   IconBrandOpenai, IconBrandGoogle, IconBrandGmail, IconBrandGoogleDrive, IconBrandNotion, IconSearch,
   IconBrandGithub, IconBrandYoutube, IconBrandInstagram, IconBrandX, IconBrandFigma,
   IconBrandLinkedin, IconBrandSlack, IconBrandDiscord, IconMessageCircle, IconBrandFacebook,
@@ -22,12 +22,12 @@ import {
 import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
 import { type CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
-import { getStats } from "@/lib/db/usage_stats";
+import { getStats, getTopFeatures } from "@/lib/db/usage_stats";
 import { getEvents } from "@/lib/db/calendar";
 import { getTodos } from "@/lib/db/todos";
 import { getSettings, type CustomGreeting } from "@/lib/db/settings";
 import { calcAnnualLeave, type LeaveStandard, type EmploymentType, type LeaveResult } from "@/lib/leave";
-import { runDailyNotificationChecks } from "@/lib/notifications";
+import { runDailyNotificationChecks, addBusinessDays, calcDday } from "@/lib/notifications";
 import { getClients } from "@/lib/db/clients";
 import OnboardingModal from "@/components/OnboardingModal";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -73,6 +73,24 @@ const QUICK_LINKS = [
   { href: "/clients",   label: "거래처 관리",    Icon: IconBuilding,       desc: "거래처 보고 관리" },
   { href: "/members",   label: "구성원 관리",    Icon: IconAddressBook,    desc: "팀원 정보 관리" },
 ];
+
+/* 자주 쓰는 기능 칩에 쓰이는 FeatureKey → 목적지 매핑 (홈 화면 링크가 없는 report 등은 제외) */
+const FEATURE_CHIP_META: Partial<Record<FeatureKey, { href: string; Icon: typeof IconTable; labelKey: TranslationKey }>> = {
+  data:      { href: "/data",      Icon: IconTable,          labelKey: "menu_data" },
+  email:     { href: "/email",     Icon: IconMail,           labelKey: "sidebar_email" },
+  template:  { href: "/template",  Icon: IconNotes,          labelKey: "menu_template" },
+  translate: { href: "/translate", Icon: IconLanguage,       labelKey: "menu_translate" },
+  summary:   { href: "/summary",   Icon: IconFileDescription, labelKey: "menu_summary" },
+  schedule:  { href: "/schedule",  Icon: IconCalendarEvent,  labelKey: "sidebar_schedule" },
+  insight:   { href: "/insight",   Icon: IconChartBar,       labelKey: "menu_insight" },
+  qa:        { href: "/qa",        Icon: IconMessageDots,    labelKey: "sidebar_qa" },
+  feedback:  { href: "/feedback",  Icon: IconMessageCheck,   labelKey: "menu_feedback" },
+};
+
+type AiSuggestion =
+  | { type: "client"; name: string; dday: number }
+  | { type: "event"; title: string }
+  | { type: "todos"; count: number };
 
 /* ───────── 인사말 ───────── */
 
@@ -170,6 +188,15 @@ function getWeatherFromCode(code: number): { labelKey: TranslationKey; Icon: Rea
   return                                { labelKey: "weather_thunderstorm", Icon: IconCloudStorm };
 }
 
+function parseEventDateTime(date: string, time?: string | null): Date | null {
+  if (!time) return null;
+  const m = time.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const d = new Date(date + "T00:00:00");
+  d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+  return d;
+}
+
 /* ───────── 컴포넌트 ───────── */
 
 export default function HomePage() {
@@ -192,6 +219,11 @@ export default function HomePage() {
   const [dataLoaded,     setDataLoaded]     = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingUid,  setOnboardingUid]  = useState<string | null>(null);
+  const [topFeatures,    setTopFeatures]    = useState<Array<{ feature: FeatureKey; count: number }>>([]);
+  const [todayEventCount, setTodayEventCount] = useState(0);
+  const [nearestTodayEvent, setNearestTodayEvent] = useState<{ title: string; time: string; dt: Date } | null>(null);
+  const [hadEventsToday, setHadEventsToday] = useState(false);
+  const [aiSuggestion,   setAiSuggestion]   = useState<AiSuggestion | null>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const customGreetingRef = useRef<CustomGreeting | null>(null);
@@ -237,13 +269,15 @@ export default function HomePage() {
     supabase.auth.getUser().then(async ({ data }) => {
       const uid = data.user?.id;
       if (!uid) return;
-      const [dbStats, dbEvents, todayTodos, dbSettings, dbClients] = await Promise.all([
+      const [dbStats, dbEvents, todayTodos, dbSettings, dbClients, topFeaturesData] = await Promise.all([
         getStats(uid),
         getEvents(uid),
         getTodos(uid, todayStr),
         getSettings(uid),
         getClients(uid),
+        getTopFeatures(uid, 10),
       ]);
+      setTopFeatures(topFeaturesData);
       customGreetingRef.current = dbSettings?.custom_greeting ?? null;
       setGreeting(getGreetingText(new Date(), customGreetingRef.current));
       const empType = (dbSettings?.employment_type ?? 'new') as EmploymentType;
@@ -264,6 +298,36 @@ export default function HomePage() {
         .map(e => ({ id: e.id, date: e.date, title: e.title, time: e.time, location: e.location } as CalendarEvent));
       setUpcomingEvents(upcoming);
       if (todayTodos.length > 0) setTodos(todayTodos.map(t => ({ id: t.id, text: t.text, completed: t.completed })));
+
+      // 오늘 일정 요약 + 가장 가까운 임박 일정 계산
+      const todaysEvents = dbEvents.filter(e => e.date === todayStr);
+      setTodayEventCount(todaysEvents.length);
+      setHadEventsToday(todaysEvents.length > 0);
+      const now = new Date();
+      const upcomingTodayWithTime = todaysEvents
+        .map(e => ({ title: e.title, time: e.time ?? "", dt: parseEventDateTime(e.date, e.time) }))
+        .filter((e): e is { title: string; time: string; dt: Date } => e.dt !== null && e.dt.getTime() >= now.getTime())
+        .sort((a, b) => a.dt.getTime() - b.dt.getTime());
+      setNearestTodayEvent(upcomingTodayWithTime[0] ?? null);
+
+      // AI 제안 카드: a) 거래처 계약 만료 임박 → b) 오늘 일정 임박 → c) 오늘 할 일 과다, 우선순위대로 하나만
+      const expiringClients = dbClients
+        .filter(c => c.contract_start && c.contract_days)
+        .map(c => ({ name: c.name, dday: calcDday(addBusinessDays(c.contract_start!, c.contract_days!)) }))
+        .filter(c => c.dday >= 0 && c.dday <= 7)
+        .sort((a, b) => a.dday - b.dday);
+      const imminentEvent = upcomingTodayWithTime.find(e => e.dt.getTime() - now.getTime() <= 30 * 60 * 1000);
+      const remainingTodayTodos = todayTodos.filter(t => !t.completed).length;
+
+      if (expiringClients.length > 0) {
+        setAiSuggestion({ type: "client", name: expiringClients[0].name, dday: expiringClients[0].dday });
+      } else if (imminentEvent) {
+        setAiSuggestion({ type: "event", title: imminentEvent.title });
+      } else if (remainingTodayTodos >= 5) {
+        setAiSuggestion({ type: "todos", count: remainingTodayTodos });
+      } else {
+        setAiSuggestion(null);
+      }
 
       // 하루 한 번 브라우저 알림 (일정 + 거래처 D-day)
       runDailyNotificationChecks(
@@ -350,8 +414,6 @@ export default function HomePage() {
   // 할 일 통계
   const total     = todos.length;
   const completed = todos.filter((t) => t.completed).length;
-  const progress  = total === 0 ? 0 : Math.round((completed / total) * 100);
-  const preview   = todos.filter((t) => !t.completed).slice(0, 3);
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-2 flex-1 min-h-0 h-full w-full">
@@ -363,41 +425,51 @@ export default function HomePage() {
         />
       )}
 
-      {/* ── 환영 카드 ── */}
+      {/* ── 오늘 요약 헤더 ── */}
       {(() => {
-        const FEATURES_FOR_BADGE = ["data","email","template","translate","summary","schedule","insight","qa","feedback"] as FeatureKey[];
-        const totalUsed = FEATURES_FOR_BADGE.reduce((a, k) => a + (weekStats[k] ?? 0), 0);
-        const leaveRemaining = leaveData ? Math.max(0, leaveData.total - leaveData.used) : null;
+        const remainingToday = total - completed;
+        const summaryText = total === 0
+          ? t("home_todos_empty")
+          : remainingToday === 0
+            ? t("home_todos_all_done")
+            : tFormat(t("home_todos_left"), { n: String(remainingToday) });
+
+        const eventBlurb = nearestTodayEvent
+          ? (() => {
+              const diffMin = Math.max(0, Math.round((nearestTodayEvent.dt.getTime() - Date.now()) / 60000));
+              return diffMin >= 60
+                ? tFormat(t("home_event_hours_left"), { time: nearestTodayEvent.time, n: String(Math.round(diffMin / 60)) })
+                : tFormat(t("home_event_minutes_left"), { time: nearestTodayEvent.time, n: String(diffMin) });
+            })()
+          : !hadEventsToday
+            ? t("home_no_events_today")
+            : null;
+
         const WeatherIcon = weather?.Icon ?? null;
         return (
           <div className="px-3 py-2 shrink-0">
             <div className="flex items-center justify-between gap-4">
-              {/* 왼쪽: 날짜·인사·연차 프로그레스바 */}
+              {/* 왼쪽: 날짜·인사·오늘 요약 */}
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 tracking-wide">{dateStr}</p>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
-                  {greeting}
-                </h2>
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 tracking-wide shrink-0">{dateStr}</p>
+                  <span className="text-xs text-slate-400 dark:text-zinc-500 truncate">{greeting}</span>
+                </div>
                 {!dataLoaded ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-1.5 w-32" />
+                  <div className="flex flex-col gap-1.5 mt-1">
+                    <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-6 w-48" />
+                    <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-32" />
                   </div>
-                ) : leaveRemaining !== null && leaveData && (() => {
-                  const usedPct = leaveData.total > 0 ? Math.min(100, Math.round((leaveData.used / leaveData.total) * 100)) : 0;
-                  return (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 shrink-0">{t("leave_label")}</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden max-w-[160px]">
-                        <div style={{ width: `${usedPct}%`, background: "linear-gradient(90deg, #6C63FF, #9C95FF)" }} className="h-full rounded-full" />
-                      </div>
-                      <span className="text-xs text-slate-500 dark:text-zinc-400 shrink-0">
-                        <span className="font-semibold text-[#4D44CC] dark:text-[#8B85FF]">{tFormat(t("leave_days_left"), { n: String(leaveRemaining) })}</span>
-                        <span className="text-slate-300 dark:text-zinc-600 mx-1">·</span>
-                        {tFormat(t("leave_total_used"), { total: String(leaveData.total), used: String(leaveData.used) })}
-                      </span>
-                    </div>
-                  );
-                })()}
+                ) : (
+                  <>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
+                      {summaryText}
+                    </h2>
+                    {eventBlurb && (
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{eventBlurb}</p>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* 오른쪽: 날씨 + 구분선 + 시계 */}
@@ -442,151 +514,180 @@ export default function HomePage() {
         );
       })()}
 
-      {/* ── 메인 그리드 ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0">
-
-        {/* 할 일 진행률 — 1티어 강조 */}
+      {/* ── AI 제안 카드 ── */}
+      {dataLoaded && aiSuggestion && (
         <div
-          className="rounded-2xl p-3 shadow-md flex flex-col gap-2 overflow-hidden min-h-0"
-          style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+          className="px-4 py-3 rounded-2xl flex items-center justify-between gap-3 shrink-0"
+          style={{ background: "#6C63FF1A" }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <IconListCheck className="w-4 h-4 text-white/80" />
-              <span className="text-sm font-semibold text-white">{t("todo_progress")}</span>
-            </div>
-            <Link
-              href="/todo"
-              className="flex items-center gap-1 text-xs text-white/60 hover:text-white transition-colors"
-            >
-              {t("manage")} <IconArrowRight className="w-3 h-3" />
-            </Link>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <IconSparkles className="w-4 h-4 shrink-0" style={{ color: "#6C63FF" }} />
+            <p className="text-sm font-semibold truncate" style={{ color: "#6C63FF" }}>
+              {aiSuggestion.type === "client" && (
+                aiSuggestion.dday === 0
+                  ? tFormat(t("ai_suggestion_client_expiry_today"), { name: aiSuggestion.name })
+                  : tFormat(t("ai_suggestion_client_expiry"), { name: aiSuggestion.name, n: String(aiSuggestion.dday) })
+              )}
+              {aiSuggestion.type === "event" && tFormat(t("ai_suggestion_event_soon"), { title: aiSuggestion.title })}
+              {aiSuggestion.type === "todos" && t("ai_suggestion_busy_todos")}
+            </p>
           </div>
+          <Link
+            href={aiSuggestion.type === "client" ? "/clients" : aiSuggestion.type === "event" ? "/calendar" : "/todo"}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-transform hover:scale-105"
+            style={{ background: "#6C63FF" }}
+          >
+            {aiSuggestion.type === "client" && t("ai_suggestion_goto_clients")}
+            {aiSuggestion.type === "event" && t("ai_suggestion_goto_calendar")}
+            {aiSuggestion.type === "todos" && t("ai_suggestion_goto_todos")}
+          </Link>
+        </div>
+      )}
 
+      {/* ── 핵심 지표 3개 ── */}
+      <div className="grid grid-cols-3 gap-2 shrink-0">
+        <Link
+          href="/todo"
+          className="rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+        >
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+            <IconListCheck className="w-3.5 h-3.5" /> {t("home_metric_todos_left")}
+          </span>
           {!dataLoaded ? (
-            <div className="flex-1 flex flex-col gap-2 py-2">
-              <div className="animate-pulse bg-white/20 rounded-full h-8 w-16" />
-              <div className="animate-pulse bg-white/20 rounded-full h-2 w-full" />
-              <div className="animate-pulse bg-white/20 rounded-full h-2.5 w-3/4 mt-1" />
-              <div className="animate-pulse bg-white/20 rounded-full h-2.5 w-2/3" />
-            </div>
-          ) : total === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 py-6">
-              <p className="text-sm text-white/70">{t("no_todos")}</p>
-              <Link
-                href="/todo"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all text-[#4D44CC]"
-                style={{ backgroundColor: "#ffffff" }}
-              >
-                <IconPlus className="w-3.5 h-3.5" /> {t("add_todo")}
-              </Link>
-            </div>
+            <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />
           ) : (
-            <div className="flex flex-col gap-2 flex-1">
-              <div className="flex items-end justify-between">
-                <span className="text-3xl font-bold text-white">{progress}%</span>
-                <span className="text-xs text-white/60 mb-1">{completed}/{total}건</span>
-              </div>
-              <div className="h-2 rounded-full bg-white/20 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-white transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+            <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{total - completed}</span>
+          )}
+        </Link>
 
-              {/* 미완료 미리보기 */}
-              {preview.length > 0 && (
-                <div className="mt-1 space-y-1.5">
-                  {preview.map((t) => (
-                    <div key={t.id} className="flex items-center gap-2 text-xs text-white/90">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white/50 shrink-0" />
-                      <span className="truncate">{t.text}</span>
+        <Link
+          href="/calendar"
+          className="rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+        >
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+            <IconCalendar className="w-3.5 h-3.5" /> {t("home_metric_events_today")}
+          </span>
+          {!dataLoaded ? (
+            <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />
+          ) : (
+            <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{todayEventCount}</span>
+          )}
+        </Link>
+
+        <Link
+          href="/settings"
+          className="rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+        >
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+            {t("home_metric_leave_left")}
+          </span>
+          {!dataLoaded ? (
+            <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />
+          ) : leaveData ? (
+            <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+              {Math.max(0, leaveData.total - leaveData.used)}
+            </span>
+          ) : (
+            <span className="text-2xl font-bold text-slate-300 dark:text-zinc-700">–</span>
+          )}
+        </Link>
+      </div>
+
+      {/* ── 자주 쓰는 기능 ── */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm shrink-0 overflow-hidden min-h-0">
+        <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">{t("quick_access")}</p>
+        {(() => {
+          const validTop = topFeatures
+            .filter(({ feature }) => FEATURE_CHIP_META[feature])
+            .slice(0, 5);
+
+          if (dataLoaded && validTop.length > 0) {
+            return (
+              <div className="flex flex-wrap gap-2">
+                {validTop.map(({ feature }) => {
+                  const meta = FEATURE_CHIP_META[feature]!;
+                  const Icon = meta.Icon;
+                  return (
+                    <Link
+                      key={feature}
+                      href={meta.href}
+                      className="flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all"
+                    >
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
+                        <Icon className="w-3.5 h-3.5" />
+                      </span>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 whitespace-nowrap">
+                        {t(meta.labelKey)}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          const active = QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href));
+          const hasMore = active.length > 11;
+          const displayed = hasMore ? active.slice(0, 11) : active;
+          const rest      = hasMore ? active.slice(11) : [];
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {displayed.map(({ href, label, Icon, desc }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all group"
+                >
+                  <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
+                    <Icon className="w-4 h-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
+                  </div>
+                </Link>
+              ))}
+
+              {hasMore && (
+                <div className="relative" ref={moreRef}>
+                  <button
+                    onClick={() => setShowMore((v) => !v)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all"
+                  >
+                    <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-slate-100 dark:bg-zinc-800">
+                      <IconArrowRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+                    </span>
+                    <div className="min-w-0 text-left">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">{t("home_more")}</p>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("home_count_n"), { n: String(rest.length) })}</p>
                     </div>
-                  ))}
-                  {todos.filter((td) => !td.completed).length > 3 && (
-                    <p className="text-xs text-white/60 pl-3.5">
-                      {tFormat(t("home_n_more"), { n: String(todos.filter((td) => !td.completed).length - 3) })}
-                    </p>
+                  </button>
+
+                  {showMore && (
+                    <div className="absolute right-0 bottom-full mb-1 z-50 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden min-w-[200px]">
+                      {rest.map(({ href, label, Icon, desc }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          onClick={() => setShowMore(false)}
+                          className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-0"
+                        >
+                          <span className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
+                            <Icon className="w-3.5 h-3.5" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
+                            <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
-              {completed === total && total > 0 && (
-                <div className="flex items-center gap-1.5 text-xs text-white/90">
-                  <IconCircleCheck className="w-3.5 h-3.5" /> {t("home_all_done")}
-                </div>
-              )}
             </div>
-          )}
-        </div>
-
-
-        {/* 빠른 접근 */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm lg:col-span-2 overflow-hidden min-h-0">
-          <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">{t("quick_access")}</p>
-          {(() => {
-            const active = QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href));
-            const hasMore = active.length > 11;
-            const displayed = hasMore ? active.slice(0, 11) : active;
-            const rest      = hasMore ? active.slice(11) : [];
-            return (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                {displayed.map(({ href, label, Icon, desc }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all group"
-                  >
-                    <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
-                      <Icon className="w-4 h-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
-                    </div>
-                  </Link>
-                ))}
-
-                {hasMore && (
-                  <div className="relative" ref={moreRef}>
-                    <button
-                      onClick={() => setShowMore((v) => !v)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all"
-                    >
-                      <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-slate-100 dark:bg-zinc-800">
-                        <IconArrowRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
-                      </span>
-                      <div className="min-w-0 text-left">
-                        <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">{t("home_more")}</p>
-                        <p className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("home_count_n"), { n: String(rest.length) })}</p>
-                      </div>
-                    </button>
-
-                    {showMore && (
-                      <div className="absolute right-0 bottom-full mb-1 z-50 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden min-w-[200px]">
-                        {rest.map(({ href, label, Icon, desc }) => (
-                          <Link
-                            key={href}
-                            href={href}
-                            onClick={() => setShowMore(false)}
-                            className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-0"
-                          >
-                            <span className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
-                              <Icon className="w-3.5 h-3.5" />
-                            </span>
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
-                              <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
+          );
+        })()}
       </div>
 
       {/* ── 하단 그리드 ── */}

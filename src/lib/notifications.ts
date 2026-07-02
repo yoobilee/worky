@@ -52,7 +52,7 @@ export function sendNotification(title: string, body: string): void {
 
 /* ── D-day 계산 헬퍼 ── */
 
-function addBusinessDays(start: string, days: number): string {
+export function addBusinessDays(start: string, days: number): string {
   const d = new Date(start + "T00:00:00");
   let added = 0;
   while (added < days) {
@@ -63,7 +63,7 @@ function addBusinessDays(start: string, days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function calcDday(endDate: string): number {
+export function calcDday(endDate: string): number {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const end   = new Date(endDate + "T00:00:00");
   return Math.ceil((end.getTime() - today.getTime()) / 86_400_000);

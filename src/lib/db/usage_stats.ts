@@ -50,3 +50,28 @@ export async function trackFeature(userId: string, feature: FeatureKey): Promise
   const updated = { ...current, [feature]: (current[feature] ?? 0) + 1 };
   await upsertStats(userId, updated);
 }
+
+export async function getTopFeatures(
+  userId: string,
+  limit: number = 5
+): Promise<Array<{ feature: FeatureKey; count: number }>> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("usage_stats")
+    .select("stats")
+    .eq("user_id", userId);
+
+  const totals: Partial<Record<FeatureKey, number>> = {};
+  for (const row of data ?? []) {
+    const stats = (row.stats as Partial<Record<FeatureKey, number>>) ?? {};
+    for (const [key, count] of Object.entries(stats)) {
+      const feature = key as FeatureKey;
+      totals[feature] = (totals[feature] ?? 0) + (count ?? 0);
+    }
+  }
+
+  return Object.entries(totals)
+    .map(([feature, count]) => ({ feature: feature as FeatureKey, count: count ?? 0 }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
