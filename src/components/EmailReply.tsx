@@ -87,7 +87,9 @@ function buildReplySystemPrompt(sender: SenderInfo): string {
   const senderInfo = hasSender ? `발신자 정보: ${senderLine}\n` : "";
 
   return `당신은 비즈니스 이메일 작성 전문가입니다.
-사용자가 받은 이메일 내용과 원하는 답장 톤을 제공하면, 해당 톤에 맞는 한국어 답장 초안 3가지를 작성하세요.
+사용자가 받은 이메일 내용과 원하는 답장 톤을 제공하면, 서로 다른 표현의 한국어 답장 초안을 정확히 3개 작성하세요.
+[매우 중요] 반드시 3개를 모두 작성해야 합니다. 1개나 2개만 작성하는 것은 허용되지 않습니다.
+3개의 초안은 내용은 비슷해도 표현과 문장 구조를 서로 다르게 작성하세요.
 ${senderInfo}
 각 초안은 반드시 아래 구조를 정확히 따르세요. 날짜는 절대 임의로 만들지 마세요.
 
@@ -102,6 +104,7 @@ ${senderLine}입니다.
 "감사합니다." 이후 이름, 소속, 직급, 서명 등 어떤 텍스트도 절대 추가하지 마세요.
 "[회사명]", "[이름]", "[직함]", "[담당자]" 같은 플레이스홀더도 절대 사용 금지.
 
+아래 3개의 [초안 N] 구분자를 절대 생략하지 마세요.
 응답은 반드시 아래 구분자 형식으로만 작성하세요. JSON, 마크다운, 설명 텍스트는 절대 포함하지 마세요.
 
 [초안 1]
@@ -243,14 +246,16 @@ export default function EmailReply() {
     if (!emailInput.trim()) return;
     setReplyLoading(true); setReplyError(""); setDrafts([]);
     try {
+      const requestBody = JSON.stringify({
+        messages: [{ role: "user", content: `받은 이메일:\n${emailInput}\n\n답장 톤: ${selectedTone}` }],
+        systemPrompt: buildReplySystemPrompt(sender),
+        stream: true,
+      });
+
       const res = await fetch("/api/groq", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [{ role: "user", content: `받은 이메일:\n${emailInput}\n\n답장 톤: ${selectedTone}` }],
-          systemPrompt: buildReplySystemPrompt(sender),
-          stream: true,
-        }),
+        body: requestBody,
       });
       if (!res.ok || !res.body) throw new Error("알 수 없는 오류");
       const reader = res.body.getReader();
@@ -261,7 +266,29 @@ export default function EmailReply() {
         if (done) break;
         acc += decoder.decode(value, { stream: true });
       }
-      const parsed = parseDrafts(acc);
+
+      let parsed = parseDrafts(acc);
+      if (parsed.length < 2) {
+        // 구분자 형식이 안 지켜졌으면 1회만 재시도 (로딩 상태 유지)
+        const retryRes = await fetch("/api/groq", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        });
+        if (retryRes.ok && retryRes.body) {
+          const retryReader = retryRes.body.getReader();
+          const retryDecoder = new TextDecoder();
+          let retryAcc = "";
+          while (true) {
+            const { done, value } = await retryReader.read();
+            if (done) break;
+            retryAcc += retryDecoder.decode(value, { stream: true });
+          }
+          const retryParsed = parseDrafts(retryAcc);
+          if (retryParsed.length >= parsed.length) parsed = retryParsed;
+        }
+      }
+
       if (parsed.length === 0) throw new Error(t("er_error_empty"));
       setDrafts(parsed);
       trackUsage("email");
