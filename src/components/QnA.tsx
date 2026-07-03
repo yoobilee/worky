@@ -11,6 +11,82 @@ import { saveQaHistory, updateQaHistory, getQaHistories, type QaHistory } from "
 import { fetchWorkData } from "@/lib/db/qna-context";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
+function parseInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : part
+  );
+}
+
+function renderMarkdown(text: string): React.ReactNode {
+  const lines = text.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let bulletItems: React.ReactNode[] = [];
+  let orderedItems: React.ReactNode[] = [];
+  let k = 0;
+
+  const flushBullet = () => {
+    if (bulletItems.length === 0) return;
+    nodes.push(
+      <ul key={k++} className="list-disc pl-5 space-y-0.5 my-1">
+        {bulletItems.map((item, i) => (
+          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
+        ))}
+      </ul>
+    );
+    bulletItems = [];
+  };
+
+  const flushOrdered = () => {
+    if (orderedItems.length === 0) return;
+    nodes.push(
+      <ol key={k++} className="list-decimal pl-5 space-y-0.5 my-1">
+        {orderedItems.map((item, i) => (
+          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
+        ))}
+      </ol>
+    );
+    orderedItems = [];
+  };
+
+  const flushAll = () => { flushBullet(); flushOrdered(); };
+
+  for (const line of lines) {
+    const t = line.trim();
+
+    if (/^#{1,6} /.test(t)) {
+      flushAll();
+      const content = t.replace(/^#+\s+/, "");
+      const isLarge = t.startsWith("## ");
+      nodes.push(
+        <p key={k++} className={`font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1 ${isLarge ? "text-[15px]" : "text-sm"}`}>
+          {parseInline(content)}
+        </p>
+      );
+    } else if (/^[-•] /.test(t)) {
+      flushOrdered();
+      bulletItems.push(parseInline(t.slice(2)));
+    } else if (/^\d+\. /.test(t)) {
+      flushBullet();
+      orderedItems.push(parseInline(t.replace(/^\d+\.\s+/, "")));
+    } else if (t === "") {
+      flushAll();
+      nodes.push(<div key={k++} className="h-1.5" />);
+    } else {
+      flushAll();
+      nodes.push(
+        <p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">
+          {parseInline(t)}
+        </p>
+      );
+    }
+  }
+  flushAll();
+  return <div className="space-y-0.5">{nodes}</div>;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -75,11 +151,12 @@ function MessageBubble({ msg }: { msg: Message }) {
   return (
     <div className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
       {msg.role === "assistant" && (
-        <div
-          className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm mt-0.5"
-          style={{ background: "linear-gradient(135deg, #6C63FF, #9C95FF)" }}
-        >
-          W
+        <div className="w-8 h-8 rounded-xl shrink-0 shadow-sm mt-0.5">
+          <svg viewBox="0 0 32 32" className="w-full h-full rounded-xl">
+            <rect width="32" height="32" rx="7" fill="#6C63FF"/>
+            <path d="M5,8 L10.5,24 L16,14.5 L21.5,24 L27,8" fill="none" stroke="white"
+              strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
       )}
       <div
@@ -91,7 +168,7 @@ function MessageBubble({ msg }: { msg: Message }) {
         ].join(" ")}
         style={msg.role === "user" ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
       >
-        {msg.content}
+        {msg.role === "assistant" ? renderMarkdown(msg.content) : msg.content}
       </div>
       {msg.role === "user" && (
         <div className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 text-xs font-bold mt-0.5">
@@ -303,11 +380,12 @@ export default function QnA() {
 
             {loading && (
               <div className="flex gap-3 justify-start">
-                <div
-                  className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm mt-0.5"
-                  style={{ background: "linear-gradient(135deg, #6C63FF, #9C95FF)" }}
-                >
-                  W
+                <div className="w-8 h-8 rounded-xl shrink-0 shadow-sm mt-0.5">
+                  <svg viewBox="0 0 32 32" className="w-full h-full rounded-xl">
+                    <rect width="32" height="32" rx="7" fill="#6C63FF"/>
+                    <path d="M5,8 L10.5,24 L16,14.5 L21.5,24 L27,8" fill="none" stroke="white"
+                      strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </div>
                 <div className="bg-slate-50 dark:bg-zinc-800 rounded-2xl rounded-tl-sm">
                   {loadingStage ? (
@@ -347,11 +425,12 @@ export default function QnA() {
       ) : (
         /* 초기 랜딩 화면 */
         <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-sm mb-4"
-            style={{ background: "linear-gradient(135deg, #6C63FF, #9C95FF)" }}
-          >
-            W
+          <div className="w-12 h-12 mb-4">
+            <svg viewBox="0 0 32 32" className="w-full h-full rounded-2xl shadow-sm">
+              <rect width="32" height="32" rx="7" fill="#6C63FF"/>
+              <path d="M5,8 L10.5,24 L16,14.5 L21.5,24 L27,8" fill="none" stroke="white"
+                strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
           <p className="text-lg font-semibold text-slate-800 dark:text-zinc-100 mb-2 text-center">
             {t("qa_welcome_title")}
