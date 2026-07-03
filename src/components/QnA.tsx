@@ -266,6 +266,8 @@ export default function QnA() {
     setSuggestions(getRandomSuggestions(QUESTION_POOL, 3));
   };
 
+  const hasStarted = messages.length > 1 || messages.some(m => m.id !== "welcome");
+
   return (
     <div className="flex flex-col h-full max-w-5xl mx-auto w-full">
       {/* 헤더 */}
@@ -291,54 +293,85 @@ export default function QnA() {
         </div>
       </div>
 
-      {/* 채팅 영역 */}
-      <div className="flex-1 overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm p-4 space-y-4 mb-4">
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} />
-        ))}
+      {hasStarted ? (
+        <>
+          {/* 채팅 영역 */}
+          <div className="flex-1 overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm p-4 space-y-4 mb-4">
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} msg={msg} />
+            ))}
 
-        {loading && (
-          <div className="flex gap-3 justify-start">
-            <div
-              className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm mt-0.5"
-              style={{ background: "linear-gradient(135deg, #6C63FF, #9C95FF)" }}
-            >
-              W
-            </div>
-            <div className="bg-slate-50 dark:bg-zinc-800 rounded-2xl rounded-tl-sm">
-              {loadingStage ? (
-                <p className="px-4 py-3 text-xs text-slate-500 dark:text-zinc-400">{loadingStage}</p>
-              ) : (
-                <LoadingDots />
-              )}
-            </div>
+            {loading && (
+              <div className="flex gap-3 justify-start">
+                <div
+                  className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm mt-0.5"
+                  style={{ background: "linear-gradient(135deg, #6C63FF, #9C95FF)" }}
+                >
+                  W
+                </div>
+                <div className="bg-slate-50 dark:bg-zinc-800 rounded-2xl rounded-tl-sm">
+                  {loadingStage ? (
+                    <p className="px-4 py-3 text-xs text-slate-500 dark:text-zinc-400">{loadingStage}</p>
+                  ) : (
+                    <LoadingDots />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div role="alert" className="flex items-start gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+                <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {error}
+              </div>
+            )}
+
+            <div ref={bottomRef} />
           </div>
-        )}
 
-        {error && (
-          <div role="alert" className="flex items-start gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
-            <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {error}
+          {/* 추천 질문 */}
+          <div className="flex gap-2 flex-wrap shrink-0 mb-3">
+            {suggestions.map((q) => (
+              <button
+                key={q}
+                onClick={() => { setInput(q); inputRef.current?.focus(); }}
+                className="px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:border-[#6C63FF]/40 hover:text-[#4D44CC] dark:text-[#8B85FF] transition-all"
+              >
+                {q}
+              </button>
+            ))}
           </div>
-        )}
-
-        <div ref={bottomRef} />
-      </div>
-
-      {/* 추천 질문 */}
-      <div className="flex gap-2 flex-wrap shrink-0 mb-3">
-        {suggestions.map((q) => (
-          <button
-            key={q}
-            onClick={() => { setInput(q); inputRef.current?.focus(); }}
-            className="px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:border-[#6C63FF]/40 hover:text-[#4D44CC] dark:text-[#8B85FF] transition-all"
+        </>
+      ) : (
+        /* 초기 랜딩 화면 */
+        <div className="flex-1 flex flex-col items-center justify-center px-4">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-sm mb-4"
+            style={{ background: "linear-gradient(135deg, #6C63FF, #9C95FF)" }}
           >
-            {q}
-          </button>
-        ))}
-      </div>
+            W
+          </div>
+          <p className="text-lg font-semibold text-slate-800 dark:text-zinc-100 mb-2 text-center">
+            {t("qa_welcome_title")}
+          </p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400 text-center max-w-sm mb-6">
+            {t("qa_welcome_desc")}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full max-w-lg">
+            {suggestions.map((q) => (
+              <button
+                key={q}
+                onClick={() => { setInput(q); inputRef.current?.focus(); }}
+                className="card-hover px-4 py-3 rounded-xl text-left text-xs font-medium bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:text-[#4D44CC] dark:hover:text-[#8B85FF] transition-all"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 입력 영역 */}
       <div className="shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-3">
