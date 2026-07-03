@@ -220,26 +220,6 @@ export default function QnA() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // 대화가 진행될 때마다(어시스턴트 응답 완료 시) 히스토리 자동 저장/갱신
-  useEffect(() => {
-    if (!userId || messages.length < 3) return;
-    const last = messages[messages.length - 1];
-    if (last.role !== "assistant") return;
-
-    const firstUserMsg = messages.find((m) => m.id !== "welcome" && m.role === "user");
-    if (!firstUserMsg) return;
-    const title = firstUserMsg.content.slice(0, 30);
-
-    (async () => {
-      if (currentHistoryId) {
-        await updateQaHistory(currentHistoryId, title, messages);
-      } else {
-        const { id, error } = await saveQaHistory(userId, title, messages);
-        if (!error && id) setCurrentHistoryId(id);
-      }
-    })();
-  }, [messages, userId, currentHistoryId]);
-
   const loadHistories = async () => {
     let uid = userId;
     if (!uid) {
@@ -320,6 +300,21 @@ export default function QnA() {
         setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: acc } : m));
       }
       trackUsage("qa");
+
+      // 스트리밍 완료 후 히스토리 저장/갱신 (최종 메시지 배열로 1회만)
+      if (userId && acc.trim()) {
+        const finalMessages: Message[] = [...messages, userMsg, { id: assistantId, role: "assistant", content: acc }];
+        const firstUserMsg = finalMessages.find((m) => m.id !== "welcome" && m.role === "user");
+        if (firstUserMsg) {
+          const title = firstUserMsg.content.slice(0, 30);
+          if (currentHistoryId) {
+            await updateQaHistory(currentHistoryId, title, finalMessages);
+          } else {
+            const { id, error } = await saveQaHistory(userId, title, finalMessages);
+            if (!error && id) setCurrentHistoryId(id);
+          }
+        }
+      }
     } catch (e) {
       setMessages((prev) => prev.filter((m) => m.role !== "assistant" || m.content !== ""));
       setError(e instanceof Error ? e.message : t("qa_error"));
