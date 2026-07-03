@@ -227,17 +227,18 @@ export default function DocSummary() {
 
   return (
     <div className="flex flex-col gap-3 max-w-5xl mx-auto w-full flex-1 min-h-0">
-      {/* 모드 탭 — Translator와 동일 스타일 */}
+      {/* 모드 탭 */}
       <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-1.5 shadow-sm grid grid-cols-2 gap-1 shrink-0">
         {inputModes.map(({ id, labelKey, Icon }) => (
           <button
             key={id}
             onClick={() => handleModeChange(id)}
+            data-active={inputMode === id}
             className={[
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              "tab-underline w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2",
               inputMode === id
-                ? "bg-[#6C63FF] text-white shadow-sm"
-                : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
+                ? "text-[#4D44CC] dark:text-[#8B85FF] border-[#6C63FF]"
+                : "text-slate-500 dark:text-zinc-400 border-transparent hover:text-slate-700 dark:hover:text-zinc-200",
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
@@ -246,18 +247,15 @@ export default function DocSummary() {
         ))}
       </div>
 
-      {/* 입력 카드 */}
+      {/* 입력 + 요약 방식 + 생성 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
         {inputMode === "text" ? (
           <>
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
-              {t("ds_input_label")}
-            </label>
             <textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               placeholder={t("ds_input_label")}
-              className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
             />
             {textInput && (
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1.5 text-right">
@@ -267,10 +265,6 @@ export default function DocSummary() {
           </>
         ) : (
           <>
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
-              {t("ds_file_label")}
-            </label>
-
             {/* 드래그 영역 — 파일 유무와 관계없이 항상 표시 */}
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -325,37 +319,35 @@ export default function DocSummary() {
             )}
           </>
         )}
-      </div>
 
-      {/* 요약 방식 선택 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">{t("ds_style_label")}</p>
-        <div className="grid grid-cols-3 gap-2">
-          {SUMMARY_STYLES.map(({ id, Icon, labelKey, descKey }) => {
-            const isActive = summaryStyle === id;
-            return (
-              <button
-                key={id}
-                onClick={() => setSummaryStyle(id)}
-                className={[
-                  "flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border text-sm font-medium transition-all",
-                  isActive
-                    ? "text-white border-transparent shadow-md"
-                    : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                ].join(" ")}
-                style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{t(labelKey)}</span>
-                <span className={`text-xs ${isActive ? "text-white/70" : "text-slate-500 dark:text-zinc-400"}`}>
-                  {t(descKey)}
-                </span>
-              </button>
-            );
-          })}
+        {/* 요약 방식 pill 칩 */}
+        <div className="mt-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {SUMMARY_STYLES.map(({ id, Icon, labelKey }) => {
+              const isActive = summaryStyle === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setSummaryStyle(id)}
+                  className={[
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                    isActive
+                      ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]"
+                      : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                  ].join(" ")}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {t(labelKey)}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+            {t(SUMMARY_STYLES.find((s) => s.id === summaryStyle)!.descKey)}
+          </p>
         </div>
 
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-end mt-3">
           <button
             onClick={handleSummarize}
             disabled={loading || !sourceText.trim() || extracting}

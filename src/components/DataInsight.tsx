@@ -300,11 +300,12 @@ export default function DataInsight() {
           <button
             key={id}
             onClick={() => handleModeChange(id)}
+            data-active={inputMode === id}
             className={[
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              "tab-underline w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2",
               inputMode === id
-                ? "bg-[#6C63FF] text-white shadow-sm"
-                : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
+                ? "text-[#4D44CC] dark:text-[#8B85FF] border-[#6C63FF]"
+                : "text-slate-500 dark:text-zinc-400 border-transparent hover:text-slate-700 dark:hover:text-zinc-200",
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
@@ -317,14 +318,11 @@ export default function DataInsight() {
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
         {inputMode === "text" ? (
           <>
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-              {t("di_input_label")}
-            </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t("di_input_label")}
-              className="w-full h-40 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full h-40 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
             />
             <div className="flex justify-end mt-3">
               <button
@@ -343,9 +341,6 @@ export default function DataInsight() {
           </>
         ) : (
           <>
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-              {t("di_file_label")}
-            </label>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={extracting}
