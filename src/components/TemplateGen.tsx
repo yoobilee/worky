@@ -255,36 +255,34 @@ export default function TemplateGen() {
         </div>
       )}
 
-      {/* 유형 선택 */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        {TEMPLATES.map((tpl) => (
-          <button key={tpl.id} onClick={() => handleTabChange(tpl.id)}
-            className={[
-              "flex flex-col items-start gap-2 p-4 rounded-2xl border text-left transition-all",
-              selectedType === tpl.id
-                ? "border-[#6C63FF] shadow-md"
-                : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
-            ].join(" ")}
-            style={selectedType === tpl.id
-              ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" }
-              : undefined}
-          >
-            <tpl.Icon className="w-6 h-6" />
-            <span className={`text-sm font-semibold ${selectedType === tpl.id ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>
-              {t(tpl.labelKey)}
-            </span>
-          </button>
-        ))}
-      </div>
+      {/* 유형 선택 + 입력 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
 
-      {/* 입력 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-          {tFormat(t("tg_input_label"), { label: selectedLabel })}
-        </label>
+        {/* 유형 선택 pill 칩 */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {TEMPLATES.map((tpl) => {
+            const isActive = selectedType === tpl.id;
+            return (
+              <button
+                key={tpl.id}
+                onClick={() => handleTabChange(tpl.id)}
+                className={[
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                  isActive
+                    ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]"
+                    : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                ].join(" ")}
+              >
+                <tpl.Icon className="w-3.5 h-3.5" />
+                {t(tpl.labelKey)}
+              </button>
+            );
+          })}
+        </div>
+
         <textarea value={content} onChange={(e) => setContent(e.target.value)}
           placeholder={t(selectedTemplate.placeholderKey)} rows={5}
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
         />
         <div className="flex justify-end mt-3">
           <button onClick={handleGenerate} disabled={loading || !content.trim()}

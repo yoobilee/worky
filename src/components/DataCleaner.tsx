@@ -277,10 +277,7 @@ export default function DataCleaner() {
 
       {/* 입력 카드 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
-            {t("dc_input_label")}
-          </label>
+        <div className="flex justify-end mb-2">
           <button onClick={openHistory}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
             <IconHistory className="w-3.5 h-3.5" />{t("dc_history_btn")}
@@ -293,7 +290,7 @@ export default function DataCleaner() {
             ? "Name Age Department\nJohn 28 Development\nJane 32 Marketing\nAlex 25 Design\n\nPaste CSV content or table-format text here."
             : "이름 나이 부서\n홍길동 28 개발팀\n김철수 32 마케팅\n이영희 25 디자인\n\nCSV 내용이나 표 형식 텍스트를 붙여넣으세요."}
           rows={6}
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+          className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
         />
 
         <div className="flex justify-end mt-3">

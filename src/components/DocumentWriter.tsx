@@ -155,44 +155,52 @@ export default function DocumentWriter() {
   return (
     <div className="space-y-4 max-w-5xl mx-auto w-full self-start">
 
-      {/* 문서 유형 선택 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {OFFICIAL_DOCS.map((d) => {
-          const active = docType === d.id;
-          return (
-            <button key={d.id} onClick={() => handleDocTypeChange(d.id)}
-              className={[
-                "flex flex-col gap-1 p-4 rounded-2xl border text-left transition-all",
-                active ? "border-[#6C63FF] shadow-md" : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
-              ].join(" ")}
-              style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}>
-              <span className={`text-sm font-semibold ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>{t(d.labelKey)}</span>
-              <span className="text-xs text-slate-500 dark:text-zinc-400">{t(d.descKey)}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* 문서 유형 선택 + 입력 필드 카드 */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
 
-      {/* 입력 필드 카드 */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm space-y-3">
-        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300">{tFormat(t("dw_section_title"), { label: t(doc.labelKey) })}</p>
-        {doc.fields.map((field) => (
-          <div key={field.key}>
-            <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">
-              {t(field.labelKey)}
-              {field.optional
-                ? <span className="ml-1 text-slate-500">{t("dw_optional")}</span>
-                : <span className="text-red-400 ml-0.5">*</span>}
-            </label>
-            <input
-              value={fields[field.key] ?? ""}
-              onChange={(e) => setFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
-              placeholder={t(field.placeholderKey)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-            />
-          </div>
-        ))}
-        <div className="flex justify-end pt-1">
+        {/* 문서 유형 선택 pill 칩 */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+          {OFFICIAL_DOCS.map((d) => {
+            const active = docType === d.id;
+            return (
+              <button
+                key={d.id}
+                onClick={() => handleDocTypeChange(d.id)}
+                className={[
+                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                  active
+                    ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]"
+                    : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                ].join(" ")}
+              >
+                {t(d.labelKey)}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-slate-400 dark:text-zinc-500 mb-3">{t(doc.descKey)}</p>
+
+        {/* 입력 필드들 */}
+        <div className="space-y-2.5">
+          {doc.fields.map((field) => (
+            <div key={field.key}>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-zinc-400 mb-1">
+                {t(field.labelKey)}
+                {field.optional
+                  ? <span className="ml-1 text-slate-500">{t("dw_optional")}</span>
+                  : <span className="text-red-400 ml-0.5">*</span>}
+              </label>
+              <input
+                value={fields[field.key] ?? ""}
+                onChange={(e) => setFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                placeholder={t(field.placeholderKey)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end pt-3">
           <button onClick={handleGenerate} disabled={loading || requiredEmpty}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
