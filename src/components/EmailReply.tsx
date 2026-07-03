@@ -17,6 +17,8 @@ import {
   IconMailForward,
   IconMailPlus,
   IconLoader2,
+  IconCopy,
+  IconCheck,
 } from "@tabler/icons-react";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
@@ -113,21 +115,38 @@ ${senderLine}입니다.
 }
 
 function parseDrafts(raw: string): string[] {
-  const sections = raw.split(/\[초안\s*\d+\]/);
-  const drafts = sections.map((s) => s.trim()).filter((s) => s.length > 10);
-  if (drafts.length >= 2) return drafts.slice(0, 3);
+  const sections = raw.split(/\[?\s*초안\s*\d+\s*\]?[:\s]*/g);
+  let drafts = sections.map((s) => s.trim()).filter((s) => s.length > 10);
+
+  if (drafts.length < 2) {
+    const greetingSplit = raw.split(/(?=안녕하세요)/).filter((s) => s.trim().length > 10);
+    if (greetingSplit.length >= 2) drafts = greetingSplit.map((s) => s.trim());
+  }
+
+  if (drafts.length >= 2) {
+    const result = drafts.slice(0, 3);
+    if (result.length < 3) console.warn("[parseDrafts] 초안이 예상보다 적게 파싱됨:", result.length, raw);
+    return result;
+  }
 
   try {
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);
-      if (Array.isArray(parsed.drafts) && parsed.drafts.length > 0)
-        return parsed.drafts.slice(0, 3);
+      if (Array.isArray(parsed.drafts) && parsed.drafts.length > 0) {
+        const result = parsed.drafts.slice(0, 3);
+        if (result.length < 3) console.warn("[parseDrafts] 초안이 예상보다 적게 파싱됨:", result.length, raw);
+        return result;
+      }
     }
   } catch {}
 
   const trimmed = raw.trim();
-  if (trimmed.length > 0) return [trimmed];
+  if (trimmed.length > 0) {
+    console.warn("[parseDrafts] 초안이 예상보다 적게 파싱됨:", 1, raw);
+    return [trimmed];
+  }
+  console.warn("[parseDrafts] 초안이 예상보다 적게 파싱됨:", 0, raw);
   return [];
 }
 
@@ -452,11 +471,7 @@ export default function EmailReply() {
                     onClick={() => handleCopy(newResult)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    {newCopied ? t("copied") : t("er_copy")}
+                    {newCopied ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("copied")}</> : <><IconCopy className="w-3.5 h-3.5" />{t("er_copy")}</>}
                   </button>
                 </div>
               </div>
@@ -575,11 +590,7 @@ export default function EmailReply() {
                         onClick={() => handleCopy(draft, i)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        {copiedIndex === i ? t("copied") : t("er_copy")}
+                        {copiedIndex === i ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("copied")}</> : <><IconCopy className="w-3.5 h-3.5" />{t("er_copy")}</>}
                       </button>
                     </div>
                   </div>
