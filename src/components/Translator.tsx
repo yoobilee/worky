@@ -8,7 +8,7 @@ import { trackUsage } from "@/lib/usageStats";
 import {
   IconWorld,
   IconPencil,
-  IconArrowDown,
+  IconArrowRight,
   IconChevronDown,
   IconCopy,
   IconCheck,
@@ -191,11 +191,12 @@ export default function Translator() {
           <button
             key={id}
             onClick={() => handleModeChange(id)}
+            data-active={mode === id}
             className={[
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors",
+              "tab-underline w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2",
               mode === id
-                ? "bg-[#6C63FF] text-white shadow-sm"
-                : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
+                ? "text-[#4D44CC] dark:text-[#8B85FF] border-[#6C63FF]"
+                : "text-slate-500 dark:text-zinc-400 border-transparent hover:text-slate-700 dark:hover:text-zinc-200",
             ].join(" ")}
           >
             <Icon className="w-4 h-4" />
@@ -206,45 +207,31 @@ export default function Translator() {
 
       {/* ── 번역 모드 ── */}
       {mode === "translate" && (
-        <>
-          {/* 언어 방향 선택 카드 */}
-          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
+        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
 
-            {/* 출발 언어 (5탭) */}
-            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">{t("tr_label_from")}</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {SOURCE_OPTIONS.map(({ code, labelKey }) => {
-                const isActive = sourceLang === code;
-                return (
-                  <button
-                    key={code}
-                    onClick={() => handleSourceChange(code)}
-                    className={[
-                      "py-2 px-1 rounded-xl border text-xs font-medium transition-all",
-                      isActive
-                        ? "text-white border-transparent shadow-sm"
-                        : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                    ].join(" ")}
-                    style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-                  >
-                    {t(labelKey)}
-                  </button>
-                );
-              })}
-            </div>
+          {/* 언어 선택 줄 */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-3">
+            {SOURCE_OPTIONS.map(({ code, labelKey }) => {
+              const isActive = sourceLang === code;
+              return (
+                <button
+                  key={code}
+                  onClick={() => handleSourceChange(code)}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                    isActive
+                      ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]"
+                      : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                  ].join(" ")}
+                >
+                  {t(labelKey)}
+                </button>
+              );
+            })}
 
-            {/* 방향 아이콘 + 방향 텍스트 */}
-            <div className="flex flex-col items-center gap-1 my-3">
-              <IconArrowDown className="w-4 h-4 text-slate-300 dark:text-zinc-600" />
-              <span className="text-[11px] text-slate-500 dark:text-zinc-400">
-                {sourceLang === "auto"
-                  ? tFormat(t("tr_direction_auto"), { lang: t(LANG_OPTIONS.find((l) => l.code === targetLang)!.labelKey) })
-                  : tFormat(t("tr_direction_manual"), { src: t(SOURCE_OPTIONS.find((s) => s.code === sourceLang)!.labelKey), tgt: t(LANG_OPTIONS.find((l) => l.code === targetLang)!.labelKey) })}
-              </span>
-            </div>
+            <IconArrowRight className="w-3.5 h-3.5 text-slate-300 dark:text-zinc-600 shrink-0 mx-0.5" />
 
-            {/* 도착 언어 드롭다운 */}
-            <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">{t("tr_label_to")}</p>
+            {/* 도착 언어 드롭다운 (pill) */}
             <div className="relative">
               {/* 드롭다운 오버레이 (외부 클릭 닫기) */}
               {dropdownOpen && (
@@ -252,16 +239,16 @@ export default function Translator() {
               )}
               <button
                 onClick={() => setDropdownOpen((v) => !v)}
-                className="relative z-10 w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:border-[#6C63FF]/50 transition-all"
+                className="relative z-10 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] hover:bg-[#6C63FF]/15 transition-all"
               >
-                <span>{t(LANG_OPTIONS.find((l) => l.code === targetLang)!.labelKey)}</span>
+                {t(LANG_OPTIONS.find((l) => l.code === targetLang)!.labelKey)}
                 <IconChevronDown
-                  className={`w-4 h-4 text-slate-500 dark:text-zinc-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+                  className={`w-3 h-3 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
               {dropdownOpen && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg z-20 overflow-hidden">
+                <div className="absolute top-full mt-1 left-0 z-20 min-w-[140px] bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-lg overflow-hidden">
                   {TARGET_MAP[sourceLang].options.map((code) => {
                     const langOpt = LANG_OPTIONS.find((l) => l.code === code)!;
                     const isActive = targetLang === code;
@@ -270,15 +257,15 @@ export default function Translator() {
                         key={code}
                         onClick={() => { setTargetLang(code); setDropdownOpen(false); }}
                         className={[
-                          "w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors",
+                          "w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors",
                           isActive
                             ? "font-semibold bg-[#6C63FF]/8 dark:bg-[#6C63FF]/10"
                             : "text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
                         ].join(" ")}
                         style={isActive ? { color: "#6C63FF" } : undefined}
                       >
-                        <span className="w-3.5 shrink-0">
-                          {isActive && <IconCheck className="w-3.5 h-3.5" />}
+                        <span className="w-3 shrink-0">
+                          {isActive && <IconCheck className="w-3 h-3" />}
                         </span>
                         {t(langOpt.labelKey)}
                       </button>
@@ -290,92 +277,79 @@ export default function Translator() {
           </div>
 
           {/* 입력 */}
-          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
-              {t("tr_input_translate")}
-            </label>
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t("tr_input_translate")}
-              className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-            />
-            <div className="flex justify-end mt-3 shrink-0">
-              <button
-                onClick={handleRun}
-                disabled={loading || !input.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                {loading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("tr_loading_translate")}</>
-                ) : (
-                  <><IconWorld className="w-4 h-4" />{t("tr_run_translate")}</>
-                )}
-              </button>
-            </div>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={t("tr_placeholder_translate")}
+            className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
+          />
+          <div className="flex justify-end mt-3 shrink-0">
+            <button
+              onClick={handleRun}
+              disabled={loading || !input.trim()}
+              className="btn-press flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+            >
+              {loading ? (
+                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("tr_loading_translate")}</>
+              ) : (
+                <><IconWorld className="w-4 h-4" />{t("tr_run_translate")}</>
+              )}
+            </button>
           </div>
-        </>
+        </div>
       )}
 
       {/* ── 톤 다듬기 모드 ── */}
       {mode === "refine" && (
-        <>
-          {/* 톤 선택 */}
-          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">{t("tr_label_tone")}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {TONES.map(({ id, labelKey, descKey }) => {
-                const isActive = tone === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setTone(id)}
-                    className={[
-                      "flex flex-col items-center gap-1 py-3 px-2 rounded-xl border text-sm font-medium transition-all",
-                      isActive
-                        ? "text-white border-transparent shadow-sm"
-                        : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                    ].join(" ")}
-                    style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-                  >
-                    <span>{t(labelKey)}</span>
-                    <span className={`text-[11px] ${isActive ? "text-white/70" : "text-slate-500 dark:text-zinc-400"}`}>
-                      {t(descKey)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
+
+          {/* 톤 선택 줄 */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-1">
+            {TONES.map(({ id, labelKey }) => {
+              const isActive = tone === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setTone(id)}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                    isActive
+                      ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]"
+                      : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                  ].join(" ")}
+                >
+                  {t(labelKey)}
+                </button>
+              );
+            })}
           </div>
+          <p className="text-xs text-slate-400 dark:text-zinc-500 mb-3">
+            {t(TONES.find((tn) => tn.id === tone)!.descKey)}
+          </p>
 
           {/* 입력 */}
-          <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col shrink-0">
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2 shrink-0">
-              {t("tr_input_polish")}
-            </label>
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t("tr_input_polish")}
-              className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-            />
-            <div className="flex justify-end mt-3">
-              <button
-                onClick={handleRun}
-                disabled={loading || !input.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                {loading ? (
-                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("tr_loading_polish")}</>
-                ) : (
-                  <><IconSparkles className="w-4 h-4" />{t("tr_run_polish")}</>
-                )}
-              </button>
-            </div>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={t("tr_placeholder_polish")}
+            className="w-full h-48 min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
+          />
+          <div className="flex justify-end mt-3">
+            <button
+              onClick={handleRun}
+              disabled={loading || !input.trim()}
+              className="btn-press flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+            >
+              {loading ? (
+                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("tr_loading_polish")}</>
+              ) : (
+                <><IconSparkles className="w-4 h-4" />{t("tr_run_polish")}</>
+              )}
+            </button>
           </div>
-        </>
+        </div>
       )}
 
       {/* 에러 */}
