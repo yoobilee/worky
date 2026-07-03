@@ -284,94 +284,90 @@ export default function ContentCreator() {
       {/* ── 보고 메시지 ── */}
       {activeTab === "report" && (
         <>
-          {/* 작업 내용 */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-              {t("cc_label_work")}
-            </label>
+          {/* 입력 + 말투 샘플 + 톤 선택 + 생성 */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
             <textarea value={workInput} onChange={(e) => setWorkInput(e.target.value)} rows={4}
               placeholder={t("cc_work_placeholder")}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
             />
-          </div>
 
-          {/* 내 말투 샘플 */}
-          <div className="rounded-2xl border border-[#6C63FF]/40 shadow-sm overflow-hidden bg-[#6C63FF]/[0.04] dark:bg-[#6C63FF]/[0.08]">
-            <button type="button" onClick={() => setSampleOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-5 py-4 text-left">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">{t("cc_label_sample")}</span>
-                <span className={[
-                  "text-[10px] font-semibold px-2 py-0.5 rounded-full",
-                  customToneSample.trim()
-                    ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
-                    : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400",
-                ].join(" ")}>
-                  {customToneSample.trim() ? t("cc_custom_set") : t("cc_custom_unset")}
-                </span>
-              </div>
-              <IconChevronDown className={`w-4 h-4 text-slate-500 dark:text-zinc-400 transition-transform duration-200 ${sampleOpen ? "rotate-180" : ""}`} />
-            </button>
-            <div style={{ maxHeight: sampleOpen ? "280px" : "0px", opacity: sampleOpen ? 1 : 0 }}
-              className="overflow-hidden transition-all duration-300 ease-in-out">
-              <div className="px-5 pt-1 pb-5">
-                <textarea value={customToneSample} onChange={(e) => handleCustomToneChange(e.target.value)} rows={3}
-                  placeholder={t("cc_sample_placeholder")}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                />
-                <div className="mt-3 flex items-center justify-between">
-                  <button type="button" disabled={!customToneSample.trim()}
-                    onClick={() => setUseCustomTone((v) => !v)}
-                    className={`flex items-center gap-2 ${!customToneSample.trim() ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
-                    <span className={[
-                      "w-4 h-4 rounded flex items-center justify-center border-2 transition-all shrink-0",
-                      useCustomTone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
-                    ].join(" ")}>
-                      {useCustomTone && <IconCheck className="w-2.5 h-2.5 text-white" />}
-                    </span>
-                    <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">{t("cc_custom_use")}</span>
-                  </button>
-                  {useCustomTone && <p className="text-xs text-[#4D44CC] dark:text-[#8B85FF]/70">{t("cc_custom_hint")}</p>}
+            {/* 내 말투 샘플 */}
+            <div className="mt-3 rounded-xl border border-[#6C63FF]/40 overflow-hidden bg-[#6C63FF]/[0.04] dark:bg-[#6C63FF]/[0.08]">
+              <button type="button" onClick={() => setSampleOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 text-left">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">{t("cc_label_sample")}</span>
+                  <span className={[
+                    "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                    customToneSample.trim()
+                      ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
+                      : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400",
+                  ].join(" ")}>
+                    {customToneSample.trim() ? t("cc_custom_set") : t("cc_custom_unset")}
+                  </span>
+                </div>
+                <IconChevronDown className={`w-4 h-4 text-slate-500 dark:text-zinc-400 transition-transform duration-200 ${sampleOpen ? "rotate-180" : ""}`} />
+              </button>
+              <div style={{ maxHeight: sampleOpen ? "280px" : "0px", opacity: sampleOpen ? 1 : 0 }}
+                className="overflow-hidden transition-all duration-300 ease-in-out">
+                <div className="px-4 pt-1 pb-4">
+                  <textarea value={customToneSample} onChange={(e) => handleCustomToneChange(e.target.value)} rows={3}
+                    placeholder={t("cc_sample_placeholder")}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
+                  />
+                  <div className="mt-3 flex items-center justify-between">
+                    <button type="button" disabled={!customToneSample.trim()}
+                      onClick={() => setUseCustomTone((v) => !v)}
+                      className={`flex items-center gap-2 ${!customToneSample.trim() ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+                      <span className={[
+                        "w-4 h-4 rounded flex items-center justify-center border-2 transition-all shrink-0",
+                        useCustomTone ? "bg-[#6C63FF] border-[#6C63FF]" : "border-slate-300 dark:border-zinc-600",
+                      ].join(" ")}>
+                        {useCustomTone && <IconCheck className="w-2.5 h-2.5 text-white" />}
+                      </span>
+                      <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">{t("cc_custom_use")}</span>
+                    </button>
+                    {useCustomTone && <p className="text-xs text-[#4D44CC] dark:text-[#8B85FF]/70">{t("cc_custom_hint")}</p>}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* 톤 선택 */}
-          <div style={{ maxHeight: useCustomTone ? 0 : "300px", opacity: useCustomTone ? 0 : 1 }}
-            className="overflow-hidden transition-all duration-300 ease-in-out">
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">{t("cc_label_tone")}</p>
-              <div className="grid grid-cols-3 gap-3">
+            {/* 톤 선택 pill 칩 */}
+            <div style={{ maxHeight: useCustomTone ? 0 : "100px", opacity: useCustomTone ? 0 : 1 }}
+              className="overflow-hidden transition-all duration-300 ease-in-out">
+              <div className="flex flex-wrap items-center gap-1.5 mt-3">
                 {TONES.map((toneItem) => {
                   const active = tone === toneItem.id;
                   return (
                     <button key={toneItem.id} onClick={() => setTone(toneItem.id)}
                       className={[
-                        "flex flex-col gap-1.5 p-4 rounded-2xl border text-left transition-all",
-                        active ? "border-[#6C63FF] shadow-md" : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
-                      ].join(" ")}
-                      style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}>
-                      <span className={`text-sm font-semibold ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>{t(toneItem.labelKey)}</span>
-                      <span className="text-xs text-slate-500 dark:text-zinc-400">{t(toneItem.descKey)}</span>
+                        "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                        active
+                          ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]"
+                          : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                      ].join(" ")}>
+                      {t(toneItem.labelKey)}
                     </button>
                   );
                 })}
               </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+                {t(TONES.find((tn) => tn.id === tone)!.descKey)}
+              </p>
             </div>
-          </div>
 
-          {/* 생성 버튼 */}
-          <div className="flex justify-end">
-            <button onClick={handleReportGenerate} disabled={reportLoading || !workInput.trim()}
-              className="btn-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-              {reportLoading ? (
-                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
-              ) : (
-                <><IconSend className="w-4 h-4" />{t("cc_generate_report")}</>
-              )}
-            </button>
+            <div className="flex justify-end mt-3">
+              <button onClick={handleReportGenerate} disabled={reportLoading || !workInput.trim()}
+                className="btn-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+                {reportLoading ? (
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
+                ) : (
+                  <><IconSend className="w-4 h-4" />{t("cc_generate_report")}</>
+                )}
+              </button>
+            </div>
           </div>
 
           {reportError && (
@@ -408,14 +404,14 @@ export default function ContentCreator() {
       {/* ── 인스타 게시글 ── */}
       {activeTab === "instagram" && (
         <>
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm space-y-4">
 
             {/* 거래처 선택 */}
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">{t("cc_label_client")}</label>
               <div className="relative">
                 <button type="button" onClick={() => setInstaClientOpen((v) => !v)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40">
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-left transition focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20">
                   <span className={instaClientId ? "text-slate-800 dark:text-zinc-100" : "text-slate-500 dark:text-zinc-400"}>
                     {selectedClientName ?? t("cc_client_direct")}
                   </span>
@@ -448,13 +444,10 @@ export default function ContentCreator() {
             </div>
 
             {/* 게시글 내용 */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">{t("cc_label_content")}</label>
-              <textarea value={instaContent} onChange={(e) => setInstaContent(e.target.value)} rows={3}
-                placeholder={t("cc_content_placeholder")}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-              />
-            </div>
+            <textarea value={instaContent} onChange={(e) => setInstaContent(e.target.value)} rows={3}
+              placeholder={t("cc_content_placeholder")}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
+            />
 
             {/* 해시태그 */}
             <div>
@@ -476,43 +469,44 @@ export default function ContentCreator() {
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commitInstaTag(); } }}
                 onBlur={commitInstaTag}
                 placeholder={instaClientId && instaHashtags.length === 0 ? t("cc_keyword_no_client") : t("cc_keyword_placeholder")}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
               />
             </div>
-          </div>
 
-          {/* 톤 선택 */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">{t("cc_label_tone")}</p>
-            <div className="grid grid-cols-3 gap-3">
-              {INSTA_TONES.map((instaItem) => {
-                const active = instaTone === instaItem.id;
-                return (
-                  <button key={instaItem.id} onClick={() => setInstaTone(instaItem.id)}
-                    className={[
-                      "flex flex-col gap-1.5 p-4 rounded-2xl border text-left transition-all",
-                      active ? "border-[#6C63FF] shadow-md" : "border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-[#6C63FF]/40 hover:shadow-sm",
-                    ].join(" ")}
-                    style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}>
-                    <span className={`text-sm font-semibold ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>{t(instaItem.labelKey)}</span>
-                    <span className="text-xs text-slate-500 dark:text-zinc-400">{t(instaItem.descKey)}</span>
-                  </button>
-                );
-              })}
+            {/* 톤 선택 pill 칩 */}
+            <div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {INSTA_TONES.map((instaItem) => {
+                  const active = instaTone === instaItem.id;
+                  return (
+                    <button key={instaItem.id} onClick={() => setInstaTone(instaItem.id)}
+                      className={[
+                        "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                        active
+                          ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]"
+                          : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                      ].join(" ")}>
+                      {t(instaItem.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+                {t(INSTA_TONES.find((it) => it.id === instaTone)!.descKey)}
+              </p>
             </div>
-          </div>
 
-          {/* 생성 버튼 */}
-          <div className="flex justify-end">
-            <button onClick={handleInstaGenerate} disabled={instaLoading || !instaContent.trim()}
-              className="btn-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
-              {instaLoading ? (
-                <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
-              ) : (
-                <><IconBrandInstagram className="w-4 h-4" />{t("cc_generate_insta")}</>
-              )}
-            </button>
+            <div className="flex justify-end">
+              <button onClick={handleInstaGenerate} disabled={instaLoading || !instaContent.trim()}
+                className="btn-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+                {instaLoading ? (
+                  <><IconLoader2 className="w-4 h-4 animate-spin text-white" />{t("generating")}</>
+                ) : (
+                  <><IconBrandInstagram className="w-4 h-4" />{t("cc_generate_insta")}</>
+                )}
+              </button>
+            </div>
           </div>
 
           {instaError && (

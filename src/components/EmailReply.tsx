@@ -382,7 +382,7 @@ export default function EmailReply() {
                 value={newTo}
                 onChange={(e) => setNewTo(e.target.value)}
                 placeholder="example@email.com"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
               />
             </div>
             <div>
@@ -392,7 +392,7 @@ export default function EmailReply() {
                 value={newSubject}
                 onChange={(e) => setNewSubject(e.target.value)}
                 placeholder={t("er_ph_subject")}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
               />
             </div>
             <div>
@@ -402,7 +402,7 @@ export default function EmailReply() {
                 onChange={(e) => setNewContent(e.target.value)}
                 placeholder={t("er_ph_body_hint")}
                 rows={4}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
               />
               <p className="mt-1.5 text-xs text-slate-500 dark:text-zinc-400">
                 {t("er_hint")}
@@ -479,45 +479,41 @@ export default function EmailReply() {
       {activeTab === "reply" && (
         <>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
-            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-              {t("er_label_received")}
-            </label>
             <textarea
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
               placeholder={t("er_ph_received")}
-              className="w-full h-52 px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="w-full h-52 px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:border-[#6C63FF] focus:ring-1 focus:ring-[#6C63FF]/20 transition"
             />
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm shrink-0">
-            <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">{t("er_label_tone")}</p>
-            <div className="grid grid-cols-5 gap-2">
-              {TONES.map((tone) => {
-                const isActive = selectedTone === tone.id;
-                return (
-                  <button
-                    key={tone.id}
-                    onClick={() => setSelectedTone(tone.id)}
-                    className={[
-                      "flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border text-sm font-medium transition-all",
-                      isActive
-                        ? "text-white border-transparent shadow-md"
-                        : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-[#6C63FF]/40 hover:bg-slate-50 dark:hover:bg-zinc-800",
-                    ].join(" ")}
-                    style={isActive ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-                  >
-                    <tone.Icon className="w-5 h-5" />
-                    <span>{t(tone.labelKey)}</span>
-                    <span className={`text-xs ${isActive ? "text-white/70" : "text-slate-500 dark:text-zinc-400"}`}>
-                      {t(tone.descKey)}
-                    </span>
-                  </button>
-                );
-              })}
+            {/* 톤 선택 pill 칩 */}
+            <div className="mt-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {TONES.map((tone) => {
+                  const isActive = selectedTone === tone.id;
+                  return (
+                    <button
+                      key={tone.id}
+                      onClick={() => setSelectedTone(tone.id)}
+                      className={[
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                        isActive
+                          ? "bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]"
+                          : "text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800",
+                      ].join(" ")}
+                    >
+                      <tone.Icon className="w-3.5 h-3.5" />
+                      {t(tone.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+                {t(TONES.find((tn) => tn.id === selectedTone)!.descKey)}
+              </p>
             </div>
 
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-end mt-3">
               <button
                 onClick={handleReplyGenerate}
                 disabled={replyLoading || !emailInput.trim()}
