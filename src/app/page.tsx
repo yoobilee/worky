@@ -693,7 +693,7 @@ export default function HomePage() {
       </div>
 
       {/* ── 하단 그리드 ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 items-stretch flex-1 min-h-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 items-stretch sm:flex-1 sm:min-h-0">
 
         {/* 이번 주 활동 */}
         {(() => {
@@ -713,7 +713,7 @@ export default function HomePage() {
           const totalUsed = counts.reduce((a, b) => a + b, 0);
 
           return (
-            <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 min-h-0 overflow-hidden">
+            <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 sm:min-h-0 sm:overflow-hidden">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <IconChartBar className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
@@ -770,7 +770,7 @@ export default function HomePage() {
         })()}
 
         {/* 다가오는 일정 — 3티어 */}
-        <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 min-h-0 overflow-hidden">
+        <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 sm:min-h-0 sm:overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <IconCalendar className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
@@ -816,7 +816,7 @@ export default function HomePage() {
         </div>
 
         {/* 오늘의 팁 — 3티어 */}
-        <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-4 flex flex-col overflow-hidden">
+        <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-4 flex flex-col sm:overflow-hidden">
           <div className="flex items-center gap-2 mb-3">
             <IconBulb className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("daily_tip")}</span>

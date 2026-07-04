@@ -410,11 +410,11 @@ export default function TodoMemo() {
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 min-h-0 flex flex-col lg:flex-row gap-5 lg:gap-0">
+      <div ref={containerRef} className="lg:flex-1 lg:min-h-0 flex flex-col lg:flex-row gap-5 lg:gap-0">
 
         {/* 할 일 목록 */}
         <div
-          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4 h-full min-w-0 overflow-hidden"
+          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4 min-h-[320px] lg:h-full lg:min-h-0 min-w-0 overflow-hidden"
           style={isLargeScreen ? { width: `calc(${leftRatio * 100}% - 6px)`, flexShrink: 0 } : undefined}
         >
 
@@ -618,7 +618,7 @@ export default function TodoMemo() {
 
         {/* 메모 (날짜 무관) */}
         <div
-          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-3 h-full min-w-0 overflow-hidden"
+          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-3 min-h-[320px] lg:h-full lg:min-h-0 min-w-0 overflow-hidden"
           style={isLargeScreen ? { width: `calc(${(1 - leftRatio) * 100}% - 6px)`, flexShrink: 0 } : undefined}
         >
 
