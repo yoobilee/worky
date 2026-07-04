@@ -477,6 +477,7 @@ export default function QnA() {
       <HelpButton
         title={t("help_qa_title")}
         steps={[
+          { step: t("help_qa_0_step"), desc: t("help_qa_0_desc") },
           { step: t("help_qa_1_step"), desc: t("help_qa_1_desc") },
           { step: t("help_qa_2_step"), desc: t("help_qa_2_desc") },
           { step: t("help_qa_3_step"), desc: t("help_qa_3_desc") },
