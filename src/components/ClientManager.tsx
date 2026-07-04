@@ -1049,12 +1049,12 @@ export default function ClientManager() {
       })()}
 
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-y-2">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("client_list")}</h2>
           <span className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("client_total"), { n: total })}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* 뷰 모드 토글 */}
           <div className="flex items-center gap-0.5 p-0.5 rounded-xl border border-slate-200 dark:border-zinc-700">
             <button
@@ -1119,10 +1119,10 @@ export default function ClientManager() {
           </button>
           <button
             onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); }}
-            className="btn-press flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
+            className="btn-press shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
             style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
           >
-            <IconPlus className="w-4 h-4" />{t("client_add")}
+            <IconPlus className="w-4 h-4 shrink-0" /><span className="whitespace-nowrap">{t("client_add")}</span>
           </button>
         </div>
       </div>

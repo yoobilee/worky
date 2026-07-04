@@ -545,13 +545,14 @@ export default function HomePage() {
       )}
 
       {/* ── 핵심 지표 3개 ── */}
-      <div className="grid grid-cols-3 gap-2 shrink-0">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
         <Link
           href="/todo"
-          className="card-hover rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+          className="card-hover min-w-0 rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
         >
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-            <IconListCheck className="w-3.5 h-3.5" /> {t("home_metric_todos_left")}
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5 min-w-0">
+            <IconListCheck className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate min-w-0">{t("home_metric_todos_left")}</span>
           </span>
           {!dataLoaded ? (
             <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />
@@ -562,10 +563,11 @@ export default function HomePage() {
 
         <Link
           href="/calendar"
-          className="card-hover rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+          className="card-hover min-w-0 rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
         >
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-            <IconCalendar className="w-3.5 h-3.5" /> {t("home_metric_events_today")}
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5 min-w-0">
+            <IconCalendar className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate min-w-0">{t("home_metric_events_today")}</span>
           </span>
           {!dataLoaded ? (
             <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />
@@ -576,10 +578,10 @@ export default function HomePage() {
 
         <Link
           href="/settings"
-          className="card-hover rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
+          className="card-hover min-w-0 rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
         >
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-            {t("home_metric_leave_left")}
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5 min-w-0">
+            <span className="truncate min-w-0">{t("home_metric_leave_left")}</span>
           </span>
           {!dataLoaded ? (
             <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />

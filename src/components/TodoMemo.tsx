@@ -641,13 +641,13 @@ export default function TodoMemo() {
             </div>
           </div>
 
-          <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
+          <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1 overflow-hidden">
             {MEMO_TABS.map(({ id, labelKey }) => (
               <button
                 key={id}
                 onClick={() => handleTabChange(id)}
                 className={[
-                  "py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap min-w-0",
+                  "px-1 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap truncate min-w-0",
                   memoTab === id
                     ? "bg-[#6C63FF] text-white shadow-sm"
                     : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
