@@ -414,7 +414,7 @@ export default function TodoMemo() {
 
         {/* 할 일 목록 */}
         <div
-          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm flex flex-col gap-4 min-h-[320px] lg:h-full lg:min-h-0 min-w-0 overflow-hidden"
+          className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 sm:p-5 shadow-sm flex flex-col gap-4 min-h-[320px] lg:h-full lg:min-h-0 min-w-0"
           style={isLargeScreen ? { width: `calc(${leftRatio * 100}% - 6px)`, flexShrink: 0 } : undefined}
         >
 
@@ -529,12 +529,12 @@ export default function TodoMemo() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addTodo()}
               placeholder={t("todo_add_placeholder")}
-              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+              className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
             />
             <button
               onClick={addTodo}
               disabled={!input.trim()}
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 whitespace-nowrap shrink-0 min-w-fit"
+              className="px-3.5 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 whitespace-nowrap shrink-0 min-w-fit"
               style={{ background: "var(--primary)" }}
             >
               {t("todo_add_btn")}
@@ -542,7 +542,7 @@ export default function TodoMemo() {
           </div>
 
           {/* 목록 */}
-          <div className="space-y-2 max-h-72 overflow-y-auto">
+          <div className="space-y-2 flex-1 min-h-0 overflow-y-auto">
             {todos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-slate-300 dark:text-zinc-600">
                 <svg className="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
