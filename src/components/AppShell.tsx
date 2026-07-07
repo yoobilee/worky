@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, createContext } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import NotificationBell from "./NotificationBell";
@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { MENU_LOCALE_MAP } from "@/lib/menuSettings";
 import type { TranslationKey } from "@/lib/i18n/translations";
+
+export const HelpSlotContext = createContext<HTMLDivElement | null>(null);
 
 const ROUTE_DESC_MAP: Record<string, TranslationKey> = {
   "/":          "desc_home",
@@ -57,6 +59,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState<"checking" | "connected" | "error">("checking");
   const [userId, setUserId] = useState<string | null>(null);
+  const [slotNode, setSlotNode] = useState<HTMLDivElement | null>(null);
+  const slotRef = useCallback((node: HTMLDivElement | null) => {
+    setSlotNode(node);
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -117,6 +123,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <HelpSlotContext.Provider value={slotNode}>
     <div className="flex h-full overflow-hidden">
       {/* 모바일 오버레이 */}
       {sidebarOpen && (
@@ -164,6 +171,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {t("ai_processing")}
               </span>
             )}
+            <div ref={slotRef} className="flex items-center gap-3" />
             <div className="hidden lg:block"><NotificationBell userId={userId} /></div>
           </div>
         </div>
@@ -173,5 +181,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+    </HelpSlotContext.Provider>
   );
 }
