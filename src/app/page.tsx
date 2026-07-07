@@ -1062,7 +1062,12 @@ function SpeedDial() {
 
       {/* 바로가기 목록 */}
       {open && (
-        <div className="relative overflow-visible">
+        <div
+          className="relative overflow-visible rounded-2xl px-2"
+          style={{
+            background: isDark ? "rgba(15,15,19,0.6)" : "rgba(248,248,250,0.6)",
+          }}
+        >
           {/* 상단 fade */}
           {!atTop && (
             <div
@@ -1083,8 +1088,12 @@ function SpeedDial() {
             className="flex flex-col items-end gap-1.5 overflow-y-auto overflow-x-visible [&::-webkit-scrollbar]:hidden pt-2 pb-0.5 pr-1.5 -mr-1.5"
             style={{ maxHeight: "260px", scrollbarWidth: "none" }}
           >
-          {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }) => (
-            <div key={href} className="flex items-center gap-2">
+          {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }, index) => (
+            <div
+              key={href}
+              className="flex items-center gap-2 animate-result-in"
+              style={{ animationDelay: `${index * 30}ms` }}
+            >
               <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-200 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
                 {name}
               </span>
@@ -1100,7 +1109,11 @@ function SpeedDial() {
             </div>
           ))}
           {customLinks.map((link, i) => (
-            <div key={link.url + i} className="group flex items-center gap-2">
+            <div
+              key={link.url + i}
+              className="group flex items-center gap-2 animate-result-in"
+              style={{ animationDelay: `${(DEFAULT_SPEED_LINKS.length + i) * 30}ms` }}
+            >
               <button
                 onClick={() => removeLink(i)}
                 className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] shadow opacity-0 group-hover:opacity-100 transition-opacity leading-none shrink-0"
