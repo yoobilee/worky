@@ -1065,20 +1065,6 @@ function SpeedDial() {
       {/* 바로가기 목록 */}
       {open && (
         <div className="relative overflow-visible">
-          {/* 상단 fade */}
-          {!atTop && (
-            <div
-              className="absolute top-0 inset-x-0 h-10 pointer-events-none z-10"
-              style={{ background: `linear-gradient(to bottom, ${isDark ? "#0F0F13" : "#F8F8FA"}, transparent)` }}
-            />
-          )}
-          {/* 하단 fade */}
-          {!atBottom && (
-            <div
-              className="absolute bottom-0 inset-x-0 h-10 pointer-events-none z-10"
-              style={{ background: `linear-gradient(to top, ${isDark ? "#0F0F13" : "#F8F8FA"}, transparent)` }}
-            />
-          )}
           <div
             ref={scrollRef}
             onScroll={handleScroll}
