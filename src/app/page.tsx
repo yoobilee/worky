@@ -1065,7 +1065,7 @@ function SpeedDial() {
       {/* 바로가기 목록 */}
       {open && (
         <div
-          className="relative overflow-visible rounded-2xl px-2"
+          className="relative overflow-hidden rounded-2xl px-2"
           style={{
             background: isDark ? "rgba(15,15,19,0.6)" : "rgba(248,248,250,0.6)",
           }}
@@ -1087,7 +1087,7 @@ function SpeedDial() {
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex flex-col items-end gap-1.5 overflow-y-auto overflow-x-visible [&::-webkit-scrollbar]:hidden pt-2 pb-0.5 pr-1.5 -mr-1.5"
+            className="flex flex-col items-end gap-1.5 overflow-y-auto overflow-x-visible [&::-webkit-scrollbar]:hidden pt-2 pb-0.5 pl-2 pr-1.5 -mr-1.5"
             style={{ maxHeight: "260px", scrollbarWidth: "none" }}
           >
           {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }, index) => (
