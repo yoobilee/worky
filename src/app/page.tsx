@@ -1065,7 +1065,7 @@ function SpeedDial() {
       {/* 바로가기 목록 */}
       {open && (
         <div
-          className="relative overflow-hidden rounded-2xl px-2"
+          className="relative overflow-hidden rounded-2xl px-2 w-fit"
           style={{
             background: isDark ? "rgba(15,15,19,0.6)" : "rgba(248,248,250,0.6)",
           }}
