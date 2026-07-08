@@ -713,7 +713,7 @@ export default function HomePage() {
           const totalUsed = counts.reduce((a, b) => a + b, 0);
 
           return (
-            <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 sm:min-h-0 sm:overflow-hidden">
+            <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 sm:min-h-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <IconChartBar className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
@@ -738,31 +738,33 @@ export default function HomePage() {
                   <p className="text-sm text-slate-500 dark:text-zinc-400">{t("home_no_activity")}</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {FEATURES.map(({ key, labelKey }, i) => {
-                    const count  = counts[i];
-                    const isMax  = count === maxCount && count > 0;
-                    const pct    = Math.round((count / maxCount) * 100);
-                    return (
-                      <div key={key} className="flex items-center gap-2">
-                        <span className={`text-xs w-[88px] shrink-0 truncate ${isMax ? "font-semibold text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`}>
-                          {t(labelKey)}
-                        </span>
-                        <div className="flex-1 h-2 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${pct}%`,
-                              background: count > 0 ? (isMax ? "linear-gradient(90deg,#6C63FF,#8B85FF)" : "#6C63FF80") : "transparent",
-                            }}
-                          />
+                <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+                  <div className="space-y-2">
+                    {FEATURES.map(({ key, labelKey }, i) => {
+                      const count  = counts[i];
+                      const isMax  = count === maxCount && count > 0;
+                      const pct    = Math.round((count / maxCount) * 100);
+                      return (
+                        <div key={key} className="flex items-center gap-2">
+                          <span className={`text-xs w-[88px] shrink-0 truncate ${isMax ? "font-semibold text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`}>
+                            {t(labelKey)}
+                          </span>
+                          <div className="flex-1 h-2 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${pct}%`,
+                                background: count > 0 ? (isMax ? "linear-gradient(90deg,#6C63FF,#8B85FF)" : "#6C63FF80") : "transparent",
+                              }}
+                            />
+                          </div>
+                          <span className={`text-xs w-6 text-right shrink-0 ${count > 0 ? "text-slate-600 dark:text-zinc-300" : "text-slate-300 dark:text-zinc-700"}`}>
+                            {count > 0 ? count : ""}
+                          </span>
                         </div>
-                        <span className={`text-xs w-6 text-right shrink-0 ${count > 0 ? "text-slate-600 dark:text-zinc-300" : "text-slate-300 dark:text-zinc-700"}`}>
-                          {count > 0 ? count : ""}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
