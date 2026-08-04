@@ -380,7 +380,7 @@ export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
             </p>
             {aiStatus === "connected" && (
               <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 whitespace-nowrap">
-                llama-4-scout
+                gpt-oss-120b
               </p>
             )}
           </div>

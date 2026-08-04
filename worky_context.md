@@ -9,8 +9,8 @@
 - **기술 스택:** Next.js 15.3.9 (App Router), React 19, TypeScript, Tailwind CSS 4, Groq API, Vercel
 
 ## AI 모델
-- **모델:** `meta-llama/llama-4-scout-17b-16e-instruct` (Groq)
-- **변경 이유:** 기존 llama-3.3-70b-versatile이 한국어 번역 시 한자/일본어/러시아어 혼용 문제 발생
+- **모델:** `openai/gpt-oss-120b` (Groq)
+- **변경 이유:** Groq에서 llama-4-scout 모델 제공이 중단되어 gpt-oss-120b로 교체
 - **스트리밍:** `/api/groq`에 `stream: true` 옵션 지원. 단순 텍스트 결과(템플릿, 번역, 요약, 이메일 등)는
   청크 단위로 실시간 렌더링. JSON 파싱이 필요한 결과(데이터 분석, 이메일 답장 초안, Q&A 1차 판단)는
   스트리밍 완료 후 한 번에 파싱. Q&A 실제 답변은 청크마다 메시지 content를 갱신해 타이핑 효과 구현.

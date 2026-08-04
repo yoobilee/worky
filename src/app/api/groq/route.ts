@@ -15,6 +15,8 @@ interface RequestBody {
   stream?: boolean;
 }
 
+const DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b";
+
 const KOREAN_RULES = `
 
 You must respond ONLY in Korean (한국어). Do not use any Chinese characters (한자), Japanese, Russian, Greek, or any other language mixed in. Use pure, natural modern Korean only.
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     if (stream === true) {
       const completionStream = await groq.chat.completions.create({
-        model: model ?? "meta-llama/llama-4-scout-17b-16e-instruct",
+        model: model ?? DEFAULT_GROQ_MODEL,
         messages: fullMessages,
         stream: true,
         ...(max_tokens ? { max_tokens } : {}),
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
     }
 
     const completion = await groq.chat.completions.create({
-      model: model ?? "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: model ?? DEFAULT_GROQ_MODEL,
       messages: fullMessages,
       ...(max_tokens ? { max_tokens } : {}),
     });

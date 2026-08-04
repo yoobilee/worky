@@ -2,14 +2,14 @@
 
 ## 프로젝트 개요
 신입사원(외국인 포함)을 위한 AI 기반 업무 보조 웹 앱.
-Groq API(LLaMA 4 Scout)를 활용해 데이터 정리, 문서 작성, Q&A 등 18개 기능을 제공한다.
+Groq API(gpt-oss-120b)를 활용해 데이터 정리, 문서 작성, Q&A 등 18개 기능을 제공한다.
 버전: v1.4.0 / 배포: https://worky-ai.vercel.app
 
 ## 기술 스택
 - Framework: Next.js 15.3.9 (App Router), React 19
 - Language: TypeScript
 - Styling: Tailwind CSS 4
-- AI: Groq API (meta-llama/llama-4-scout-17b-16e-instruct, 스트리밍 지원)
+- AI: Groq API (openai/gpt-oss-120b, 스트리밍 지원)
 - DB/Auth: Supabase (Google OAuth, PKCE)
 - 배포: Vercel
 
