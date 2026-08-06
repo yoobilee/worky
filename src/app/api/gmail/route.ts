@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
   try {
@@ -6,6 +7,15 @@ export async function POST(req: NextRequest) {
 
     if (!to || !subject || !body || !accessToken) {
       return NextResponse.json({ error: "필수 파라미터가 누락되었습니다." }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email === "guest@worky-demo.com") {
+      return NextResponse.json(
+        { error: "게스트 체험 계정에서는 이메일 발송이 제한됩니다" },
+        { status: 400 }
+      );
     }
 
     // RFC 2822 형식으로 이메일 작성

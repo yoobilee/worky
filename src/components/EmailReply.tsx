@@ -322,6 +322,11 @@ export default function EmailReply() {
     try {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email === "guest@worky-demo.com") {
+        setSendModal(null);
+        showToast(false, t("er_toast_guest_blocked"));
+        return;
+      }
       const accessToken = session?.provider_token;
       if (!accessToken) {
         setSendModal(null);

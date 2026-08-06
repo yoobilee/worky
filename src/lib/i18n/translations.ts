@@ -849,6 +849,8 @@ export const translations = {
     login_guest_button: "게스트로 체험하기",
     login_guest_loading: "체험 계정으로 연결 중...",
     login_guest_error: "게스트 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+    er_toast_guest_blocked: "게스트 체험 계정에서는 이메일 발송이 제한됩니다.",
+    guest_mode_badge: "체험 모드",
   },
   en: {
     home: "Home",
@@ -1698,6 +1700,8 @@ export const translations = {
     login_guest_button: "Try as Guest",
     login_guest_loading: "Connecting to demo account...",
     login_guest_error: "Guest login failed. Please try again in a moment.",
+    er_toast_guest_blocked: "Email sending is disabled for the guest demo account.",
+    guest_mode_badge: "Demo Mode",
   },
 } as const;
 

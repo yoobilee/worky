@@ -59,6 +59,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState<"checking" | "connected" | "error">("checking");
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [slotNode, setSlotNode] = useState<HTMLDivElement | null>(null);
   const slotRef = useCallback((node: HTMLDivElement | null) => {
     setSlotNode(node);
@@ -68,6 +69,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
+      setUserEmail(data.user?.email ?? null);
     });
   }, []);
 
@@ -116,6 +118,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const title    = titleKey ? t(titleKey) : pathname === "/settings" ? t("sidebar_settings") : "Worky";
   const desc     = ROUTE_DESC_MAP[pathname] ? t(ROUTE_DESC_MAP[pathname]) : "";
   const aiChip   = ROUTE_AI_CHIP[pathname] ?? false;
+  const isGuest  = userEmail === "guest@worky-demo.com";
 
   // 로그인 페이지는 레이아웃 없이 children만 렌더링
   if (pathname === "/login") {
@@ -169,6 +172,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
                 {t("ai_processing")}
+              </span>
+            )}
+            {isGuest && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                {t("guest_mode_badge")}
               </span>
             )}
             <div ref={slotRef} className="flex items-center gap-3" />
