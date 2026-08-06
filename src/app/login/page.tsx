@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 export default function LoginPage() {
+  const { t } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -23,6 +27,22 @@ export default function LoginPage() {
       setError("로그인 중 오류가 발생했습니다. 다시 시도해 주세요.");
       setLoading(false);
     }
+  };
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    setGuestError(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: "guest@worky-demo.com",
+      password: "WorkyGuest2026!",
+    });
+    if (error) {
+      setGuestError(t("login_guest_error"));
+      setGuestLoading(false);
+      return;
+    }
+    window.location.href = "/";
   };
 
   return (
@@ -88,6 +108,27 @@ export default function LoginPage() {
               </svg>
             )}
             {loading ? "연결 중..." : "Google로 계속하기"}
+          </button>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-slate-200 dark:bg-zinc-700" />
+            <span className="text-xs text-slate-400 dark:text-zinc-500">{t("login_or_divider")}</span>
+            <div className="flex-1 h-px bg-slate-200 dark:bg-zinc-700" />
+          </div>
+
+          {guestError && (
+            <div className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm text-center">
+              {guestError}
+            </div>
+          )}
+
+          <button
+            onClick={handleGuestLogin}
+            disabled={guestLoading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-transparent font-medium text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ color: "var(--primary)" }}
+          >
+            {guestLoading ? t("login_guest_loading") : t("login_guest_button")}
           </button>
         </div>
 

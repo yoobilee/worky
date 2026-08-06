@@ -845,6 +845,10 @@ export const translations = {
     tg_ph_minutes: "예: 2024 Q1 마케팅 전략 회의. 참석자: 마케팅팀 5명. 주요 안건: 신규 채널 발굴, 예산 배분.",
     tg_ph_plan: "예: 사내 온보딩 프로그램 개선 기획. 현재 2주 과정을 1달로 확대, 멘토링 시스템 도입.",
     fo_ph_input: "예: 전체적으로 톤이 너무 밝아요. 로고 크기 줄여주세요. 폰트가 마음에 안 들어요.",
+    login_or_divider: "또는",
+    login_guest_button: "게스트로 체험하기",
+    login_guest_loading: "체험 계정으로 연결 중...",
+    login_guest_error: "게스트 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
   },
   en: {
     home: "Home",
@@ -1690,6 +1694,10 @@ export const translations = {
     tg_ph_minutes: "e.g. 2024 Q1 Marketing Strategy Meeting. Attendees: 5 from Marketing. Agenda: new channels, budget allocation.",
     tg_ph_plan: "e.g. Onboarding program improvement plan. Extending from 2 weeks to 1 month, introducing mentoring system.",
     fo_ph_input: "e.g. The overall tone is too bright. Please reduce the logo size. I don't like the font.",
+    login_or_divider: "or",
+    login_guest_button: "Try as Guest",
+    login_guest_loading: "Connecting to demo account...",
+    login_guest_error: "Guest login failed. Please try again in a moment.",
   },
 } as const;
 
