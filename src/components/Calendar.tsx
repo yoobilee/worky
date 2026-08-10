@@ -383,7 +383,7 @@ function RepeatPicker({ value, onValueChange, endDate, onEndDateChange }: Repeat
                 </button>
               </div>
               {useEndDate ? (
-                <DatePickerInput value={endDate} onChange={onEndDateChange} forceDown />
+                <DatePickerInput value={endDate} onChange={onEndDateChange} />
               ) : (
                 <p className="text-[11px] text-slate-500 dark:text-zinc-400">{t("repeat_max_hint")}</p>
               )}
@@ -601,7 +601,7 @@ export default function CalendarComponent() {
       </div>
 
       {/* 일정 목록 */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="max-h-[280px] overflow-y-auto">
         {selectedEvents.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-zinc-400 mb-4">{t("no_events_msg")}</p>
         ) : (
@@ -719,6 +719,8 @@ export default function CalendarComponent() {
           </button>
         </div>
       </div>
+
+      <div className="flex-1" />
     </>
   );
 

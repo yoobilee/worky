@@ -51,13 +51,16 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
   }, [open]);
 
   const computePos = (rect: DOMRect) => {
-    if (forceDown) {
-      return { top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 256) };
-    }
     const estimatedHeight = 340;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const openUpward = spaceBelow < estimatedHeight + 16 && rect.top > estimatedHeight + 16;
-    const top = openUpward ? rect.top - estimatedHeight - 4 : rect.bottom + 4;
+    let top: number;
+    if (forceDown) {
+      top = rect.bottom + 4;
+    } else {
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpward = spaceBelow < estimatedHeight + 16 && rect.top > estimatedHeight + 16;
+      top = openUpward ? rect.top - estimatedHeight - 4 : rect.bottom + 4;
+    }
+    top = Math.max(8, Math.min(top, window.innerHeight - estimatedHeight - 8));
     return { top, left: rect.left, width: Math.max(rect.width, 256) };
   };
 
