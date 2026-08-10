@@ -75,6 +75,16 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
   }, [open]);
 
   useEffect(() => {
+    if (!open) return;
+    const recalc = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (rect) setPos(computePos(rect));
+    };
+    window.addEventListener("scroll", recalc, true);
+    return () => window.removeEventListener("scroll", recalc, true);
+  }, [open]);
+
+  useEffect(() => {
     if (!yearPickerOpen || !yearListRef.current) return;
     const btn = yearListRef.current.querySelector(`[data-year="${year}"]`) as HTMLElement | null;
     if (btn) btn.scrollIntoView({ block: "center" });
