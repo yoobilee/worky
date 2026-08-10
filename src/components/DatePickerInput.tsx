@@ -52,12 +52,12 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
 
   const computePos = (rect: DOMRect) => {
     if (forceDown) {
-      return { top: rect.bottom + 4 + window.scrollY, left: rect.left, width: Math.max(rect.width, 256) };
+      return { top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 256) };
     }
     const estimatedHeight = 340;
     const spaceBelow = window.innerHeight - rect.bottom;
     const openUpward = spaceBelow < estimatedHeight + 16 && rect.top > estimatedHeight + 16;
-    const top = (openUpward ? rect.top - estimatedHeight - 4 : rect.bottom + 4) + window.scrollY;
+    const top = openUpward ? rect.top - estimatedHeight - 4 : rect.bottom + 4;
     return { top, left: rect.left, width: Math.max(rect.width, 256) };
   };
 
@@ -114,7 +114,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
   const popover = open && pos ? (
     <div
       ref={popoverRef}
-      style={{ position: "absolute", top: pos.top, left: pos.left, width: pos.width, zIndex: 50 }}
+      style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 50 }}
       className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-3"
     >
       <div className="flex items-center justify-between mb-2 px-1">
