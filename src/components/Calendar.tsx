@@ -444,6 +444,7 @@ export default function CalendarComponent() {
   const [editTime,        setEditTime]        = useState("");
   const [editLocation,    setEditLocation]    = useState("");
   const [editLocationUrl, setEditLocationUrl] = useState<string | undefined>(undefined);
+  const [showAddForm,     setShowAddForm]     = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -470,6 +471,7 @@ export default function CalendarComponent() {
 
   useEffect(() => {
     if (selected) setDisplayed(selected);
+    setShowAddForm(false);
   }, [selected]);
 
   const prevMonth = () => { month === 0  ? (setYear(y => y-1), setMonth(11)) : setMonth(m => m-1); };
@@ -489,6 +491,7 @@ export default function CalendarComponent() {
   const resetForm = () => {
     setFormTitle(""); setFormTime(""); setFormLocation(""); setFormLocationUrl(undefined);
     setFormRepeat("none"); setFormRepeatEnd("");
+    setShowAddForm(false);
   };
 
   const buildRepeatDates = (start: string, end: string | null, repeat: RepeatType, maxCount: number): string[] => {
@@ -601,7 +604,7 @@ export default function CalendarComponent() {
       </div>
 
       {/* 일정 목록 */}
-      <div className="max-h-[280px] overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {selectedEvents.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-zinc-400 mb-4">{t("no_events_msg")}</p>
         ) : (
@@ -684,43 +687,65 @@ export default function CalendarComponent() {
       </div>
 
       {/* 일정 추가 폼 */}
-      <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800 shrink-0">
-        <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">{t("event_add_section")}</p>
-        <input
-          value={formTitle}
-          onChange={e => setFormTitle(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleAdd()}
-          placeholder={t("event_title_ph")}
-          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <TimePickerInput value={formTime} onChange={setFormTime} />
-          <LocationInput
-            value={formLocation}
-            onChange={setFormLocation}
-            urlValue={formLocationUrl}
-            onUrlChange={setFormLocationUrl}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            <RepeatPicker
-              value={formRepeat}
-              onValueChange={(v) => { setFormRepeat(v); if (v === "none") setFormRepeatEnd(""); }}
-              endDate={formRepeatEnd}
-              onEndDateChange={setFormRepeatEnd}
-            />
-          </div>
-          <button onClick={handleAdd} disabled={!formTitle.trim()}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 shrink-0"
-            style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+      <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 shrink-0">
+        {!showAddForm ? (
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium text-[#4D44CC] dark:text-[#8B85FF] hover:bg-[#6C63FF]/10 transition"
+          >
             <IconPlus className="w-4 h-4" />
-            {t("add")}
+            {t("event_add_section")}
           </button>
-        </div>
+        ) : (
+          <div className="space-y-2 animate-result-in">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">{t("event_add_section")}</p>
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                aria-label={t("cal_close")}
+                className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+              >
+                <IconX className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <input
+              value={formTitle}
+              onChange={e => setFormTitle(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleAdd()}
+              placeholder={t("event_title_ph")}
+              autoFocus
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <TimePickerInput value={formTime} onChange={setFormTime} />
+              <LocationInput
+                value={formLocation}
+                onChange={setFormLocation}
+                urlValue={formLocationUrl}
+                onUrlChange={setFormLocationUrl}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <RepeatPicker
+                  value={formRepeat}
+                  onValueChange={(v) => { setFormRepeat(v); if (v === "none") setFormRepeatEnd(""); }}
+                  endDate={formRepeatEnd}
+                  onEndDateChange={setFormRepeatEnd}
+                />
+              </div>
+              <button onClick={handleAdd} disabled={!formTitle.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 shrink-0"
+                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}>
+                <IconPlus className="w-4 h-4" />
+                {t("add")}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      <div className="flex-1" />
     </>
   );
 
