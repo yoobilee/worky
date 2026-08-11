@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core", "puppeteer"],
+  outputFileTracingIncludes: {
+    "/api/export-pdf": [
+      "./.next/static/css/**/*.css",
+      "./node_modules/pretendard/dist/web/static/woff2/*.woff2",
+      "./node_modules/@sparticuz/chromium/bin/**",
+    ],
+  },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports

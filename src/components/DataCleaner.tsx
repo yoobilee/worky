@@ -1,6 +1,7 @@
 "use client";
 
 import HelpButton from "./HelpButton";
+import PdfDownloadButton from "./PdfDownloadButton";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IconLoader2, IconSparkles, IconHistory, IconTrash, IconX } from "@tabler/icons-react";
@@ -136,6 +137,7 @@ export default function DataCleaner() {
   const [showHistory,   setShowHistory]   = useState(false);
   const [history,       setHistory]       = useState<DataCleanerHistoryEntry[]>([]);
   const resultRef = useRef<HTMLDivElement>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -352,9 +354,14 @@ export default function DataCleaner() {
                 </svg>
                 {t("dc_csv_download")}
               </button>
+              <PdfDownloadButton
+                targetRef={tableWrapRef}
+                filename={`데이터정리_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.pdf`}
+              />
             </div>
           </div>
           <div
+            ref={tableWrapRef}
             className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 [&_table]:w-full [&_table]:text-sm [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-white [&_td]:px-4 [&_td]:py-2.5 [&_td]:text-slate-700 dark:[&_td]:text-zinc-300 [&_tr:nth-child(even)_td]:bg-slate-50 dark:[&_tr:nth-child(even)_td]:bg-zinc-800/50"
           >
             <style>{`
