@@ -147,6 +147,7 @@ export default function TodoMemo() {
 
   // 패널 비율 복원 + 화면 크기 감지
   useEffect(() => {
+    console.log("test debug");
     const saved = localStorage.getItem(LEFT_RATIO_KEY);
     if (saved) {
       const ratio = parseFloat(saved);
