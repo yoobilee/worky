@@ -9,17 +9,24 @@ interface EditableResultProps {
   children: React.ReactNode;
   rows?: number;
   textareaClassName?: string;
+  onEditingChange?: (editing: boolean) => void;
 }
 
 export default function EditableResult({
-  value, onChange, children, rows = 10, textareaClassName = "",
+  value, onChange, children, rows = 10, textareaClassName = "", onEditingChange,
 }: EditableResultProps) {
   const [editing, setEditing] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const startEdit = () => {
     setEditing(true);
+    onEditingChange?.(true);
     setTimeout(() => taRef.current?.focus(), 0);
+  };
+
+  const stopEdit = () => {
+    setEditing(false);
+    onEditingChange?.(false);
   };
 
   if (editing) {
@@ -28,7 +35,7 @@ export default function EditableResult({
         ref={taRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={() => setEditing(false)}
+        onBlur={stopEdit}
         rows={rows}
         className={`w-full px-4 py-3 rounded-xl border-2 border-[#6C63FF]/60 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 resize-none focus:outline-none leading-relaxed ${textareaClassName}`}
       />

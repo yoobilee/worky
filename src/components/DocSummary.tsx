@@ -2,6 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
+import PdfDownloadButton from "./PdfDownloadButton";
 import { useState, useRef, useEffect } from "react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
@@ -134,8 +135,10 @@ export default function DocSummary() {
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultRef    = useRef<HTMLDivElement>(null);
+  const contentRef   = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -387,25 +390,32 @@ export default function DocSummary() {
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
               {tFormat(t("ds_result_title"), { style: t(SUMMARY_STYLES.find((s) => s.id === summaryStyle)!.labelKey) })}
             </span>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-            >
-              {copied ? (
-                <>
-                  <IconCheck className="w-3.5 h-3.5 text-emerald-500" />
-                  {t("copied")}
-                </>
-              ) : (
-                <>
-                  <IconCopy className="w-3.5 h-3.5" />
-                  {t("copy")}
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
+              >
+                {copied ? (
+                  <>
+                    <IconCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    {t("copied")}
+                  </>
+                ) : (
+                  <>
+                    <IconCopy className="w-3.5 h-3.5" />
+                    {t("copy")}
+                  </>
+                )}
+              </button>
+              <PdfDownloadButton
+                targetRef={contentRef}
+                disabled={isEditing}
+                filename={`요약_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.pdf`}
+              />
+            </div>
           </div>
-          <EditableResult value={result} onChange={setResult} rows={14}>
-            <div className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+          <EditableResult value={result} onChange={setResult} rows={14} onEditingChange={setIsEditing}>
+            <div ref={contentRef} className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
               {renderMarkdown(result)}
             </div>
           </EditableResult>

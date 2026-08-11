@@ -8,15 +8,16 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 interface PdfDownloadButtonProps {
   targetRef: RefObject<HTMLElement | null>;
   filename: string;
+  disabled?: boolean;
 }
 
-export default function PdfDownloadButton({ targetRef, filename }: PdfDownloadButtonProps) {
+export default function PdfDownloadButton({ targetRef, filename, disabled = false }: PdfDownloadButtonProps) {
   const { t } = useLocale();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
 
   const handleDownload = async () => {
-    if (!targetRef.current) return;
+    if (!targetRef.current || disabled) return;
     setLoading(true);
     try {
       const res = await fetch("/api/export-pdf", {
@@ -45,7 +46,7 @@ export default function PdfDownloadButton({ targetRef, filename }: PdfDownloadBu
   return (
     <button
       onClick={handleDownload}
-      disabled={loading}
+      disabled={loading || disabled}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {loading ? (

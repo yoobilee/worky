@@ -2,6 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
+import PdfDownloadButton from "./PdfDownloadButton";
 import { useState, useEffect, useRef } from "react";
 import {
   IconFileCertificate, IconCopy, IconCheck, IconLoader2,
@@ -95,7 +96,9 @@ export default function DocumentWriter() {
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
   const [copied,    setCopied]    = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -228,15 +231,22 @@ export default function DocumentWriter() {
         <div ref={resultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{tFormat(t("dw_result_title"), { label: t(doc.labelKey) })}</h2>
-            <button onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
-              {copied
-                ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("copied")}</>
-                : <><IconCopy className="w-3.5 h-3.5" />{t("copy")}</>}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+                {copied
+                  ? <><IconCheck className="w-3.5 h-3.5 text-emerald-500" />{t("copied")}</>
+                  : <><IconCopy className="w-3.5 h-3.5" />{t("copy")}</>}
+              </button>
+              <PdfDownloadButton
+                targetRef={contentRef}
+                disabled={isEditing}
+                filename={`공문서_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.pdf`}
+              />
+            </div>
           </div>
-          <EditableResult value={result} onChange={setResult} rows={16}>
-            <div className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed space-y-1.5">
+          <EditableResult value={result} onChange={setResult} rows={16} onEditingChange={setIsEditing}>
+            <div ref={contentRef} className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed space-y-1.5">
               {result.split("\n").map((line, i) => {
                 if (line.startsWith("### ")) return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-2 first:mt-0">{parseInline(line.slice(4))}</p>;
                 if (line.startsWith("## "))  return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{parseInline(line.slice(3))}</p>;

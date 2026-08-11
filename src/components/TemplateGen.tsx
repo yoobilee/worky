@@ -2,6 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
+import PdfDownloadButton from "./PdfDownloadButton";
 import { useState, useEffect, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import { IconReport, IconNotes, IconBulb, IconAlertTriangle, IconLoader2 } from "@tabler/icons-react";
@@ -148,7 +149,9 @@ export default function TemplateGen() {
   const [error, setError]               = useState("");
   const [copied, setCopied]             = useState(false);
   const [pendingTab, setPendingTab]     = useState<TemplateType | null>(null);
+  const [isEditing, setIsEditing]       = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -330,10 +333,15 @@ export default function TemplateGen() {
                 </svg>
                 다운로드
               </button>
+              <PdfDownloadButton
+                targetRef={contentRef}
+                disabled={isEditing}
+                filename={`템플릿_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.pdf`}
+              />
             </div>
           </div>
-          <EditableResult value={result} onChange={setResult} rows={16} textareaClassName="font-mono">
-            <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800">
+          <EditableResult value={result} onChange={setResult} rows={16} textareaClassName="font-mono" onEditingChange={setIsEditing}>
+            <div ref={contentRef} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800">
               {renderMarkdown(result)}
             </div>
           </EditableResult>
