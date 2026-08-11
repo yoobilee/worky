@@ -2,18 +2,52 @@ name: Claude Review Response
 on:
   pull_request_review:
     types: [submitted]
+  issue_comment:
+    types: [created]
 
 jobs:
   respond:
-    if: github.event.review.user.login == 'coderabbitai[bot]'
+    if: >
+      (github.event_name == 'pull_request_review' && github.event.review.user.login == 'coderabbitai[bot]') ||
+      (github.event_name == 'issue_comment' && github.event.comment.user.login == 'coderabbitai[bot]' && github.event.issue.pull_request)
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     steps:
+      - name: PR 정보 조회
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER_REVIEW: ${{ github.event.pull_request.number }}
+          PR_REF_REVIEW: ${{ github.event.pull_request.head.ref }}
+          PR_URL_REVIEW: ${{ github.event.pull_request.html_url }}
+          PR_TITLE_REVIEW: ${{ github.event.pull_request.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request_review" ]; then
+            NUMBER="$PR_NUMBER_REVIEW"
+            REF="$PR_REF_REVIEW"
+            URL="$PR_URL_REVIEW"
+            TITLE="$PR_TITLE_REVIEW"
+          else
+            NUMBER="$ISSUE_NUMBER"
+            REF=$(gh pr view "$NUMBER" --repo "$REPO" --json headRefName -q .headRefName)
+            URL="$ISSUE_URL"
+            TITLE="$ISSUE_TITLE"
+          fi
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ steps.pr.outputs.ref }}
 
       - name: Claude Code 리뷰 처리
         id: claude
@@ -24,7 +58,7 @@ jobs:
             --max-turns 10
           prompt: |
             이 PR에 CodeRabbit이 남긴 리뷰를 확인해줘:
-            ${{ github.event.review.body }}
+            ${{ github.event_name == 'pull_request_review' && github.event.review.body || github.event.comment.body }}
 
             아래 원칙에 따라 처리해:
             1. CodeRabbit이 지적한 문제가 없으면(승인/문제없음) 그대로 종료
@@ -57,10 +91,13 @@ jobs:
         if: steps.parse.outputs.has_issues == 'true'
         env:
           SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          SUMMARY: ${{ steps.parse.outputs.summary }}
         run: |
-          jq -n --arg url "${{ github.event.pull_request.html_url }}" \
-                --arg title "${{ github.event.pull_request.title }}" \
-                --arg summary "${{ steps.parse.outputs.summary }}" \
+          jq -n --arg url "$PR_URL" \
+                --arg title "$PR_TITLE" \
+                --arg summary "$SUMMARY" \
             '{text: ("*<" + $url + "|" + $title + ">*\n" + $summary)}' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
 
@@ -68,10 +105,13 @@ jobs:
         if: steps.parse.outputs.needs_human == 'true'
         env:
           SLACK_EXCEPTION_WEBHOOK_URL: ${{ secrets.SLACK_EXCEPTION_WEBHOOK_URL }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          SUMMARY: ${{ steps.parse.outputs.summary }}
         run: |
-          jq -n --arg url "${{ github.event.pull_request.html_url }}" \
-                --arg title "${{ github.event.pull_request.title }}" \
-                --arg summary "${{ steps.parse.outputs.summary }}" \
+          jq -n --arg url "$PR_URL" \
+                --arg title "$PR_TITLE" \
+                --arg summary "$SUMMARY" \
             '{text: ("⚠️ *확인 필요* <" + $url + "|" + $title + ">\n" + $summary)}' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_EXCEPTION_WEBHOOK_URL"
 
@@ -79,4 +119,5 @@ jobs:
         if: steps.parse.outputs.needs_human != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr merge --auto --squash "${{ github.event.pull_request.number }}"
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: gh pr merge --auto --squash "$PR_NUMBER"
