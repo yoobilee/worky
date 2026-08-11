@@ -65,6 +65,14 @@ src/
 - 한국어 UI 기본, 새 텍스트는 다국어 키로 작성
 
 ## 작업 규칙
-- 작업 완료 후 항상 git add, commit, push까지 자동으로 해줘
+- 작업 완료 후: 새 브랜치(feature/설명 또는 fix/설명)를 만들어 commit+push, 
+  PR을 오픈한다 (master에 직접 push 금지)
+- PR이 열리면 빌드 체크(GitHub Actions)와 CodeRabbit 리뷰가 자동 실행됨
+- CodeRabbit 리뷰 후 Claude Code 에이전트(GitHub Actions)가 자동 처리:
+  안전하게 고칠 수 있으면 자동 수정 후 빌드 통과 시 merge, 판단이 필요하면 
+  merge 보류하고 Slack(#worky-검증-특이사항)으로 알림
+- merge가 일어나면 항상 #worky-activity에 요약 알림, 발견된 결함은 
+  #worky-issues에 기록
 - 커밋 메시지는 변경 내용을 한국어로 요약
-- 새 버전 배포 시: CHANGELOG.md 갱신 → package.json version 갱신 → git tag vX.Y.Z → git push origin vX.Y.Z
+- 새 버전 배포 시: CHANGELOG.md 갱신 → package.json version 갱신 → 
+  git tag vX.Y.Z → git push origin vX.Y.Z (master에 merge된 이후 진행)
