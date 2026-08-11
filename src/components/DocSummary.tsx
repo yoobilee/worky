@@ -100,6 +100,10 @@ function renderMarkdown(text: string): React.ReactNode {
   return <div className="space-y-0.5">{nodes}</div>;
 }
 
+function formatPdfDate(d: Date): string {
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
 async function extractTextFromPDF(file: File): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist");
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -139,6 +143,7 @@ export default function DocSummary() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultRef    = useRef<HTMLDivElement>(null);
   const contentRef   = useRef<HTMLDivElement>(null);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -385,6 +390,7 @@ export default function DocSummary() {
 
       {/* 결과 */}
       {result ? (
+        <>
         <div ref={resultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
@@ -408,7 +414,7 @@ export default function DocSummary() {
                 )}
               </button>
               <PdfDownloadButton
-                targetRef={contentRef}
+                targetRef={pdfContentRef}
                 disabled={isEditing}
                 filename={`요약_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.pdf`}
               />
@@ -420,6 +426,12 @@ export default function DocSummary() {
             </div>
           </EditableResult>
         </div>
+        <div ref={pdfContentRef} className="hidden">
+          <h1 className="text-lg font-bold mb-1">{t(SUMMARY_STYLES.find((s) => s.id === summaryStyle)!.labelKey)}</h1>
+          <p className="text-xs text-slate-500 mb-4">{tFormat(t("pdf_generated_on"), { date: formatPdfDate(new Date()) })}</p>
+          <div>{renderMarkdown(result)}</div>
+        </div>
+        </>
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconSparkles className="w-8 h-8 text-slate-300 dark:text-zinc-600" />

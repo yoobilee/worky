@@ -20,10 +20,13 @@ export default function PdfDownloadButton({ targetRef, filename, disabled = fals
     if (!targetRef.current || disabled) return;
     setLoading(true);
     try {
+      const node = targetRef.current.cloneNode(true) as HTMLElement;
+      node.classList.remove("hidden");
+
       const res = await fetch("/api/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ html: targetRef.current.outerHTML, filename }),
+        body: JSON.stringify({ html: node.outerHTML, filename }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

@@ -22,6 +22,22 @@ function parseInline(text: string): React.ReactNode {
   );
 }
 
+function renderMarkdown(text: string): React.ReactNode {
+  return text.split("\n").map((line, i) => {
+    if (line.startsWith("### ")) return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-2 first:mt-0">{parseInline(line.slice(4))}</p>;
+    if (line.startsWith("## "))  return <p key={i} className="font-bold text-slate-800 dark:text-zinc-100 mt-3 first:mt-0">{parseInline(line.slice(3))}</p>;
+    if (line.startsWith("* ") || line.startsWith("- ")) return (
+      <p key={i} className="flex gap-1.5"><span className="text-[#4D44CC] dark:text-[#8B85FF] shrink-0">•</span><span>{parseInline(line.slice(2))}</span></p>
+    );
+    if (!line.trim()) return <div key={i} className="h-1" />;
+    return <p key={i}>{parseInline(line)}</p>;
+  });
+}
+
+function formatPdfDate(d: Date): string {
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
 type OfficialDocType = "approval" | "official_doc" | "expense" | "cooperation";
 
 interface OfficialField { key: string; labelKey: TranslationKey; placeholderKey: TranslationKey; optional?: boolean; }
@@ -99,6 +115,7 @@ export default function DocumentWriter() {
   const [isEditing, setIsEditing] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -228,6 +245,7 @@ export default function DocumentWriter() {
 
       {/* 결과 */}
       {result ? (
+        <>
         <div ref={resultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{tFormat(t("dw_result_title"), { label: t(doc.labelKey) })}</h2>
@@ -239,7 +257,7 @@ export default function DocumentWriter() {
                   : <><IconCopy className="w-3.5 h-3.5" />{t("copy")}</>}
               </button>
               <PdfDownloadButton
-                targetRef={contentRef}
+                targetRef={pdfContentRef}
                 disabled={isEditing}
                 filename={`공문서_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.pdf`}
               />
@@ -259,6 +277,12 @@ export default function DocumentWriter() {
             </div>
           </EditableResult>
         </div>
+        <div ref={pdfContentRef} className="hidden">
+          <h1 className="text-lg font-bold mb-1">{t(doc.labelKey)}</h1>
+          <p className="text-xs text-slate-500 mb-4">{tFormat(t("pdf_generated_on"), { date: formatPdfDate(new Date()) })}</p>
+          <div>{renderMarkdown(result)}</div>
+        </div>
+        </>
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconFileCertificate className="w-8 h-8 text-slate-300 dark:text-zinc-600" />

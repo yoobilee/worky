@@ -87,6 +87,10 @@ function renderMarkdown(text: string): React.ReactNode {
   return <div className="space-y-0.5">{nodes}</div>;
 }
 
+function formatPdfDate(d: Date): string {
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
 type TemplateType = "report" | "meeting" | "plan";
 
 import type { TranslationKey } from "@/lib/i18n/translations";
@@ -152,6 +156,7 @@ export default function TemplateGen() {
   const [isEditing, setIsEditing]       = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -312,6 +317,7 @@ export default function TemplateGen() {
 
       {/* 결과 */}
       {result ? (
+        <>
         <div ref={resultRef} className="animate-result-in bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
@@ -334,7 +340,7 @@ export default function TemplateGen() {
                 다운로드
               </button>
               <PdfDownloadButton
-                targetRef={contentRef}
+                targetRef={pdfContentRef}
                 disabled={isEditing}
                 filename={`템플릿_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.pdf`}
               />
@@ -346,6 +352,12 @@ export default function TemplateGen() {
             </div>
           </EditableResult>
         </div>
+        <div ref={pdfContentRef} className="hidden">
+          <h1 className="text-lg font-bold mb-1">{selectedLabel}</h1>
+          <p className="text-xs text-slate-500 mb-4">{tFormat(t("pdf_generated_on"), { date: formatPdfDate(new Date()) })}</p>
+          <div>{renderMarkdown(result)}</div>
+        </div>
+        </>
       ) : (
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconNotes className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
