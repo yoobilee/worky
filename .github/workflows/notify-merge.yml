@@ -1,0 +1,19 @@
+name: Notify Merge to Activity Channel
+on:
+  pull_request:
+    types: [closed]
+    branches: [master]
+
+jobs:
+  notify:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack 알림
+        env:
+          SLACK_ACTIVITY_WEBHOOK_URL: ${{ secrets.SLACK_ACTIVITY_WEBHOOK_URL }}
+        run: |
+          jq -n --arg url "${{ github.event.pull_request.html_url }}" \
+                --arg title "${{ github.event.pull_request.title }}" \
+            '{text: ("✅ *반영 완료* <" + $url + "|" + $title + ">")}' | \
+            curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ACTIVITY_WEBHOOK_URL"
