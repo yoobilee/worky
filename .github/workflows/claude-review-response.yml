@@ -65,12 +65,13 @@ jobs:
       - name: Claude Code 리뷰 처리
         id: claude
         if: steps.pr.outputs.is_fork != 'true'
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: "coderabbitai[bot]"
           claude_args: |
-            --max-turns 10
+            --max-turns 20
             --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"summary":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","summary"]}'
           prompt: |
             이 PR에 CodeRabbit이 남긴 리뷰를 확인해줘:
@@ -90,16 +91,29 @@ jobs:
 
       - name: 결과 파싱 및 분기
         id: parse
-        if: steps.pr.outputs.is_fork != 'true'
+        if: always() && steps.pr.outputs.is_fork != 'true'
         env:
+          CLAUDE_OUTCOME: ${{ steps.claude.outcome }}
           STRUCTURED_OUTPUT: ${{ steps.claude.outputs.structured_output }}
         run: |
+          # fail-closed: Claude 에이전트 스텝이 성공하지 않았으면(실패, 취소 등)
+          # structured_output 파싱을 시도하지 않고 바로 안전한 값으로 처리
+          if [ "$CLAUDE_OUTCOME" != "success" ]; then
+            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"summary":"Claude 에이전트 처리 실패(예: 턴 수 초과 등) - 자동 판단 불가, 확인 필요"}'
           # fail-closed: structured_output이 비어있거나 스키마(4개 필드 모두 정확한 타입)를
           # 만족하지 않으면 needsHuman=true, hasIssues=true로 안전하게 처리
-          if [ -n "$STRUCTURED_OUTPUT" ] && echo "$STRUCTURED_OUTPUT" | jq -e \
+          elif [ -n "$STRUCTURED_OUTPUT" ] && echo "$STRUCTURED_OUTPUT" | jq -e \
             '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.summary | type) == "string"' \
             > /dev/null 2>&1; then
-            PARSED="$STRUCTURED_OUTPUT"
+            # fail-closed: 이슈가 있는데(hasIssues=true) 고치지도 않았고(fixed=false)
+            # 사람 확인도 불필요(needsHuman=false)하다는 모순된 결과는 무효 처리
+            if echo "$STRUCTURED_OUTPUT" | jq -e \
+              '.hasIssues == true and .fixed == false and .needsHuman == false' \
+              > /dev/null 2>&1; then
+              PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"summary":"검증 실패: 이슈가 있는데 해결되지 않았음에도 사람 확인이 불필요하다고 판단됨 - 안전을 위해 확인 필요로 전환"}'
+            else
+              PARSED="$STRUCTURED_OUTPUT"
+            fi
           else
             PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"summary":"자동 판단 실패, 확인 필요"}'
           fi
@@ -113,7 +127,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: 이슈 채널 알림 (결함 있었던 경우)
-        if: steps.pr.outputs.is_fork != 'true' && steps.parse.outputs.has_issues == 'true'
+        if: always() && steps.pr.outputs.is_fork != 'true' && steps.parse.outputs.has_issues == 'true'
         env:
           SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
           PR_URL: ${{ steps.pr.outputs.url }}
@@ -127,7 +141,7 @@ jobs:
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
 
       - name: 특이사항 알림 (사람 판단 필요한 경우)
-        if: steps.pr.outputs.is_fork != 'true' && steps.parse.outputs.needs_human == 'true'
+        if: always() && steps.pr.outputs.is_fork != 'true' && steps.parse.outputs.needs_human == 'true'
         env:
           SLACK_EXCEPTION_WEBHOOK_URL: ${{ secrets.SLACK_EXCEPTION_WEBHOOK_URL }}
           PR_URL: ${{ steps.pr.outputs.url }}
