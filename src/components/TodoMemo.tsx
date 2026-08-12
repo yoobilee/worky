@@ -144,6 +144,7 @@ export default function TodoMemo() {
   const selectedDateRef = useRef<string>(selectedDate);
   const containerRef    = useRef<HTMLDivElement>(null);
   const leftRatioRef    = useRef(leftRatio);
+  const unusedTestVariable = "이건 안 쓰이는 변수예요";
 
   // 패널 비율 복원 + 화면 크기 감지
   useEffect(() => {
