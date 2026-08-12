@@ -8,7 +8,8 @@ on:
 jobs:
   respond:
     if: >
-      (github.event_name == 'pull_request_review' && github.event.review.user.login == 'coderabbitai[bot]') ||
+      (github.event_name == 'pull_request_review' && github.event.review.user.login == 'coderabbitai[bot]' &&
+       github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) ||
       (github.event_name == 'issue_comment' && github.event.comment.user.login == 'coderabbitai[bot]' && github.event.issue.pull_request)
     runs-on: ubuntu-latest
     permissions:
@@ -26,6 +27,8 @@ jobs:
           PR_REF_REVIEW: ${{ github.event.pull_request.head.ref }}
           PR_URL_REVIEW: ${{ github.event.pull_request.html_url }}
           PR_TITLE_REVIEW: ${{ github.event.pull_request.title }}
+          PR_HEAD_REPO_REVIEW: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_BASE_REPO_REVIEW: ${{ github.event.pull_request.base.repo.full_name }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
@@ -35,23 +38,33 @@ jobs:
             REF="$PR_REF_REVIEW"
             URL="$PR_URL_REVIEW"
             TITLE="$PR_TITLE_REVIEW"
+            if [ "$PR_HEAD_REPO_REVIEW" = "$PR_BASE_REPO_REVIEW" ]; then
+              IS_FORK="false"
+            else
+              IS_FORK="true"
+            fi
           else
             NUMBER="$ISSUE_NUMBER"
             REF=$(gh pr view "$NUMBER" --repo "$REPO" --json headRefName -q .headRefName)
             URL="$ISSUE_URL"
             TITLE="$ISSUE_TITLE"
+            IS_FORK=$(gh pr view "$NUMBER" --repo "$REPO" --json isCrossRepository -q .isCrossRepository)
           fi
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "is_fork=$IS_FORK" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
+        if: steps.pr.outputs.is_fork != 'true'
         with:
           ref: ${{ steps.pr.outputs.ref }}
+          persist-credentials: false
 
       - name: Claude Code 리뷰 처리
         id: claude
+        if: steps.pr.outputs.is_fork != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -76,6 +89,7 @@ jobs:
 
       - name: 결과 파싱 및 분기
         id: parse
+        if: steps.pr.outputs.is_fork != 'true'
         env:
           CLAUDE_RESULT: ${{ steps.claude.outputs.result }}
         run: |
@@ -84,12 +98,12 @@ jobs:
           else
             PARSED='{"hasIssues":false,"fixed":false,"needsHuman":true,"summary":"결과 파싱 실패, 수동 확인 필요"}'
           fi
-          echo "needs_human=$(echo "$PARSED" | jq -r '.needsHuman // true')" >> "$GITHUB_OUTPUT"
-          echo "has_issues=$(echo "$PARSED" | jq -r '.hasIssues // false')" >> "$GITHUB_OUTPUT"
-          echo "summary=$(echo "$PARSED" | jq -r '.summary // "요약 없음"')" >> "$GITHUB_OUTPUT"
+          echo "needs_human=$(echo "$PARSED" | jq -r 'if .needsHuman == null then true else .needsHuman end')" >> "$GITHUB_OUTPUT"
+          echo "has_issues=$(echo "$PARSED" | jq -r 'if .hasIssues == null then false else .hasIssues end')" >> "$GITHUB_OUTPUT"
+          echo "summary=$(echo "$PARSED" | jq -r 'if .summary == null then "요약 없음" else .summary end')" >> "$GITHUB_OUTPUT"
 
       - name: 이슈 채널 알림 (결함 있었던 경우)
-        if: steps.parse.outputs.has_issues == 'true'
+        if: steps.pr.outputs.is_fork != 'true' && steps.parse.outputs.has_issues == 'true'
         env:
           SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
           PR_URL: ${{ steps.pr.outputs.url }}
@@ -103,7 +117,7 @@ jobs:
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
 
       - name: 특이사항 알림 (사람 판단 필요한 경우)
-        if: steps.parse.outputs.needs_human == 'true'
+        if: steps.pr.outputs.is_fork != 'true' && steps.parse.outputs.needs_human == 'true'
         env:
           SLACK_EXCEPTION_WEBHOOK_URL: ${{ secrets.SLACK_EXCEPTION_WEBHOOK_URL }}
           PR_URL: ${{ steps.pr.outputs.url }}
@@ -117,7 +131,7 @@ jobs:
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_EXCEPTION_WEBHOOK_URL"
 
       - name: 자동 merge 요청 (사람 판단 불필요한 경우만)
-        if: steps.parse.outputs.needs_human != 'true'
+        if: steps.pr.outputs.is_fork != 'true' && steps.parse.outputs.needs_human != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
