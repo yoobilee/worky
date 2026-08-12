@@ -88,7 +88,7 @@ jobs:
           claude_args: |
             --max-turns 20
             --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*)"
-            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"summary":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","summary"]}'
+            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","issueSummary","humanReviewReason"]}'
           prompt: |
             이 PR에 CodeRabbit이 남긴 리뷰를 확인해줘:
             ${{ github.event_name == 'pull_request_review' && github.event.review.body || github.event.comment.body }}
@@ -104,8 +104,12 @@ jobs:
                - 여러 가지 해석이 가능하거나 설계 판단이 필요한 지적
             4. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
                완료해서 이 브랜치에 반영해. 커밋 메시지는 한국어로 변경 내용을 요약해.
-            5. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman, summary
-               4개 필드 모두 필수)를 정확히 지켜서 결과를 출력해
+            5. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
+               issueSummary, humanReviewReason 5개 필드 모두 필수)를 정확히
+               지켜서 결과를 출력해. issueSummary에는 어떤 결함을 발견했고
+               고쳤는지 여부만 사실 위주로 작성하고, humanReviewReason에는
+               왜 사람이 직접 판단해야 하는지 이유를 작성해 (사람 판단이
+               필요 없으면 빈 문자열로 둬)
 
       - name: 결과 파싱 및 분기
         id: parse
@@ -118,16 +122,23 @@ jobs:
           # trap이 이 안전한 값을 그대로 출력한다
           NEEDS_HUMAN=true
           HAS_ISSUES=true
-          SUMMARY="파싱 스크립트가 완료되지 못함 - 확인 필요"
+          ISSUE_SUMMARY=""
+          HUMAN_REVIEW_REASON="파싱 스크립트가 완료되지 못함 - 확인 필요"
 
           write_result() {
-            delimiter=$(openssl rand -hex 8)
             echo "needs_human=$NEEDS_HUMAN" >> "$GITHUB_OUTPUT"
             echo "has_issues=$HAS_ISSUES" >> "$GITHUB_OUTPUT"
+            delimiter1=$(openssl rand -hex 8)
             {
-              echo "summary<<$delimiter"
-              echo "$SUMMARY"
-              echo "$delimiter"
+              echo "issue_summary<<$delimiter1"
+              echo "$ISSUE_SUMMARY"
+              echo "$delimiter1"
+            } >> "$GITHUB_OUTPUT"
+            delimiter2=$(openssl rand -hex 8)
+            {
+              echo "human_review_reason<<$delimiter2"
+              echo "$HUMAN_REVIEW_REASON"
+              echo "$delimiter2"
             } >> "$GITHUB_OUTPUT"
           }
           trap write_result EXIT
@@ -135,23 +146,26 @@ jobs:
           # fail-closed: Claude 에이전트 스텝이 성공하지 않았으면(실패, 취소 등)
           # structured_output 파싱을 시도하지 않고 바로 안전한 값으로 처리
           if [ "$CLAUDE_OUTCOME" != "success" ]; then
-            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"summary":"Claude 에이전트 처리 실패(예: 턴 수 초과 등) - 자동 판단 불가, 확인 필요"}'
-          # fail-closed: structured_output이 비어있거나 스키마(4개 필드 모두 정확한 타입)를
+            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"Claude 에이전트 처리 자체가 실패함(예: 턴 수 초과 등) - 자동 판단 불가, 확인 필요"}'
+          # fail-closed: structured_output이 비어있거나 스키마(5개 필드 모두 정확한 타입)를
           # 만족하지 않으면 needsHuman=true, hasIssues=true로 안전하게 처리
           elif [ -n "$STRUCTURED_OUTPUT" ] && echo "$STRUCTURED_OUTPUT" | jq -e \
-            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.summary | type) == "string"' \
+            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string"' \
             > /dev/null 2>&1; then
             # fail-closed: 이슈가 있는데(hasIssues=true) 고치지도 않았고(fixed=false)
-            # 사람 확인도 불필요(needsHuman=false)하다는 모순된 결과는 무효 처리
+            # 사람 확인도 불필요(needsHuman=false)하다는 모순된 결과는 무효 처리.
+            # hasIssues/fixed/issueSummary는 신뢰할 수 있으므로 그대로 보존하고
+            # needsHuman과 humanReviewReason만 안전한 값으로 덮어쓴다.
             if echo "$STRUCTURED_OUTPUT" | jq -e \
               '.hasIssues == true and .fixed == false and .needsHuman == false' \
               > /dev/null 2>&1; then
-              PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"summary":"검증 실패: 이슈가 있는데 해결되지 않았음에도 사람 확인이 불필요하다고 판단됨 - 안전을 위해 확인 필요로 전환"}'
+              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
+                '.needsHuman = true | .humanReviewReason = "검증 실패: 이슈가 있는데 해결되지 않았음에도 사람 확인이 불필요하다고 판단됨 - 안전을 위해 확인 필요로 전환"')
             else
               PARSED="$STRUCTURED_OUTPUT"
             fi
           else
-            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"summary":"자동 판단 실패, 확인 필요"}'
+            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"자동 판단 실패, 확인 필요"}'
           fi
 
           # jq 실패가 조용히 묻히지 않도록 각각 독립된 대입문으로 계산한다 -
@@ -159,7 +173,8 @@ jobs:
           # -e가 이를 감지하지 못한다
           NEEDS_HUMAN=$(echo "$PARSED" | jq -r '.needsHuman')
           HAS_ISSUES=$(echo "$PARSED" | jq -r '.hasIssues')
-          SUMMARY=$(echo "$PARSED" | jq -r '.summary')
+          ISSUE_SUMMARY=$(echo "$PARSED" | jq -r '.issueSummary')
+          HUMAN_REVIEW_REASON=$(echo "$PARSED" | jq -r '.humanReviewReason')
 
       - name: 실제 git 상태 검증
         id: verify
@@ -169,21 +184,29 @@ jobs:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           PARSE_OUTCOME: ${{ steps.parse.outcome }}
           PARSE_NEEDS_HUMAN: ${{ steps.parse.outputs.needs_human }}
-          PARSE_SUMMARY: ${{ steps.parse.outputs.summary }}
+          PARSE_ISSUE_SUMMARY: ${{ steps.parse.outputs.issue_summary }}
+          PARSE_HUMAN_REVIEW_REASON: ${{ steps.parse.outputs.human_review_reason }}
         run: |
           # Claude의 자기 보고(fixed:true 등)를 그대로 믿지 않고 실제 git 상태로 재검증.
           # 기본 bash -e 동작을 그대로 사용: 아래 명령 중 하나라도 실패하면 스크립트가
           # 즉시 종료되고, trap이 지금까지 설정된 기본값(fail-closed)을 그대로 출력한다.
           NEEDS_HUMAN=true
-          SUMMARY="git 상태 검증 스크립트가 완료되지 못함 - 확인 필요"
+          ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
+          HUMAN_REVIEW_REASON="git 상태 검증 스크립트가 완료되지 못함 - 확인 필요"
 
           write_result() {
-            delimiter=$(openssl rand -hex 8)
             echo "needs_human=$NEEDS_HUMAN" >> "$GITHUB_OUTPUT"
+            delimiter1=$(openssl rand -hex 8)
             {
-              echo "summary<<$delimiter"
-              echo "$SUMMARY"
-              echo "$delimiter"
+              echo "issue_summary<<$delimiter1"
+              echo "$ISSUE_SUMMARY"
+              echo "$delimiter1"
+            } >> "$GITHUB_OUTPUT"
+            delimiter2=$(openssl rand -hex 8)
+            {
+              echo "human_review_reason<<$delimiter2"
+              echo "$HUMAN_REVIEW_REASON"
+              echo "$delimiter2"
             } >> "$GITHUB_OUTPUT"
           }
           trap write_result EXIT
@@ -207,14 +230,19 @@ jobs:
           # 경우 - 는 전부 사람 확인 필요 경로로 보낸다.
           if [ "$MISMATCH" = "true" ]; then
             NEEDS_HUMAN=true
-            SUMMARY="$(printf '%s\n\nClaude 자기 보고와 실제 git 상태 불일치 - 확인 필요' "$PARSE_SUMMARY")"
+            if [ -n "$PARSE_HUMAN_REVIEW_REASON" ]; then
+              HUMAN_REVIEW_REASON="$(printf '%s\n\nClaude 자기 보고와 실제 git 상태 불일치 - 확인 필요' "$PARSE_HUMAN_REVIEW_REASON")"
+            else
+              HUMAN_REVIEW_REASON="Claude 자기 보고와 실제 git 상태 불일치 - 확인 필요"
+            fi
           elif [ "$PARSE_OUTCOME" = "success" ] && [ "$PARSE_NEEDS_HUMAN" = "false" ]; then
             NEEDS_HUMAN=false
-            SUMMARY="$(printf '%s\n\ngit 상태 검증 통과' "$PARSE_SUMMARY")"
+            HUMAN_REVIEW_REASON=""
           else
             NEEDS_HUMAN=true
-            SUMMARY="$PARSE_SUMMARY"
+            HUMAN_REVIEW_REASON="$PARSE_HUMAN_REVIEW_REASON"
           fi
+          ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
 
       - name: 이슈 채널 알림 (결함 있었던 경우)
         if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outputs.has_issues != 'false'
@@ -222,7 +250,7 @@ jobs:
           SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
           PR_URL: ${{ steps.pr.outputs.url }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
-          SUMMARY: ${{ steps.verify.outputs.summary }}
+          SUMMARY: ${{ steps.verify.outputs.issue_summary }}
         run: |
           jq -n --arg url "$PR_URL" \
                 --arg title "$PR_TITLE" \
@@ -236,7 +264,7 @@ jobs:
           SLACK_EXCEPTION_WEBHOOK_URL: ${{ secrets.SLACK_EXCEPTION_WEBHOOK_URL }}
           PR_URL: ${{ steps.pr.outputs.url }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
-          SUMMARY: ${{ steps.verify.outputs.summary }}
+          SUMMARY: ${{ steps.verify.outputs.human_review_reason }}
         run: |
           jq -n --arg url "$PR_URL" \
                 --arg title "$PR_TITLE" \
@@ -249,4 +277,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
-        run: gh pr merge --auto --squash "$PR_NUMBER"
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
+        run: |
+          # heredoc/이스케이프 없이 파일로 넘겨 특수문자·줄바꿈 이슈를 피한다
+          BODY_TEXT="${ISSUE_SUMMARY:-특이사항 없음}"
+          {
+            echo "## 검증 결과"
+            echo
+            echo "$BODY_TEXT"
+            echo
+            echo "## 처리 방식"
+            echo "CodeRabbit 자동 리뷰 + Claude Code 에이전트 자동 검증"
+          } > /tmp/merge_body.md
+          gh pr merge --auto --squash --subject "$PR_TITLE" --body-file /tmp/merge_body.md "$PR_NUMBER"
