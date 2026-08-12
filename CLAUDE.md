@@ -74,5 +74,6 @@ src/
 - merge가 일어나면 항상 #worky-activity에 요약 알림, 발견된 결함은 
   #worky-issues에 기록
 - 커밋 메시지는 변경 내용을 한국어로 요약
-- 새 버전 배포 시: CHANGELOG.md 갱신 → package.json version 갱신 → 
+- 새 버전 배포 시: CHANGELOG.md 갱신 → PATCH_NOTES.md 갱신 (사용자 체감
+  변경사항만, CHANGELOG와 별도) → package.json version 갱신 → 
   git tag vX.Y.Z → git push origin vX.Y.Z (master에 merge된 이후 진행)
