@@ -11,9 +11,24 @@ jobs:
     steps:
       - name: Slack 알림
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_ACTIVITY_WEBHOOK_URL: ${{ secrets.SLACK_ACTIVITY_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          jq -n --arg url "${{ github.event.pull_request.html_url }}" \
-                --arg title "${{ github.event.pull_request.title }}" \
-            '{text: ("✅ *반영 완료* <" + $url + "|" + $title + ">")}' | \
+          MERGE_SHA=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json mergeCommit -q .mergeCommit.oid)
+          COMMIT_MESSAGE=$(gh api "repos/$REPO/commits/$MERGE_SHA" --jq .commit.message)
+
+          # Slack 메시지 길이 제한(약 3000자)을 넘으면 잘라내는 안전장치
+          MAX_LEN=3000
+          if [ "${#COMMIT_MESSAGE}" -gt "$MAX_LEN" ]; then
+            COMMIT_MESSAGE="${COMMIT_MESSAGE:0:$MAX_LEN}... (이하 생략)"
+          fi
+
+          jq -n --arg title "$PR_TITLE" \
+                --arg body "$COMMIT_MESSAGE" \
+                --arg url "$PR_URL" \
+            '{text: ("✅ 반영 완료: " + $title + "\n\n" + $body + "\n\n🔗 " + $url)}' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ACTIVITY_WEBHOOK_URL"
