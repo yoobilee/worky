@@ -9,7 +9,7 @@
 
 CREATE TABLE IF NOT EXISTS public.issues (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id              uuid NOT NULL REFERENCES auth.users(id),
+  user_id              uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   source               text NOT NULL CHECK (source IN ('auto-pipeline', 'manual')),
   title                text NOT NULL,
   description          text NOT NULL,
@@ -35,3 +35,12 @@ CREATE POLICY "본인 이슈만 삽입" ON public.issues
 ALTER TABLE public.user_settings
   ADD COLUMN IF NOT EXISTS github_pat  text,
   ADD COLUMN IF NOT EXISTS github_repo text;
+
+-- issues 테이블은 이 마이그레이션 이전에 이미 SQL Editor에서 생성되어
+-- ON DELETE 옵션 없이 운영 중이었으므로, 라이브 테이블의 기존 제약조건도
+-- CASCADE로 맞춰준다 (CREATE TABLE IF NOT EXISTS는 이미 존재하는 테이블의
+-- 제약조건을 바꾸지 않으므로 별도 ALTER 필요)
+ALTER TABLE public.issues
+  DROP CONSTRAINT IF EXISTS issues_user_id_fkey,
+  ADD CONSTRAINT issues_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES auth.users(id) ON DELETE CASCADE;
