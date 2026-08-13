@@ -231,12 +231,17 @@ export type Database = {
       }
       issues: {
         Row: {
+          actual_behavior: string | null
           created_at: string
           description: string
+          environment: string | null
+          expected_behavior: string | null
+          frequency: string | null
           github_issue_number: number | null
           github_issue_url: string | null
           id: string
           repo: string
+          repro_steps: Json
           severity: string | null
           source: string
           status: string
@@ -244,12 +249,17 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          actual_behavior?: string | null
           created_at?: string
           description: string
+          environment?: string | null
+          expected_behavior?: string | null
+          frequency?: string | null
           github_issue_number?: number | null
           github_issue_url?: string | null
           id?: string
           repo: string
+          repro_steps?: Json
           severity?: string | null
           source: string
           status?: string
@@ -257,12 +267,17 @@ export type Database = {
           user_id: string
         }
         Update: {
+          actual_behavior?: string | null
           created_at?: string
           description?: string
+          environment?: string | null
+          expected_behavior?: string | null
+          frequency?: string | null
           github_issue_number?: number | null
           github_issue_url?: string | null
           id?: string
           repo?: string
+          repro_steps?: Json
           severity?: string | null
           source?: string
           status?: string

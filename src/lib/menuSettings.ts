@@ -12,6 +12,7 @@ export const OPTIONAL_MENU_ITEMS = [
   { href: "/insight",   label: "데이터 분석" },
   { href: "/glossary",  label: "용어집" },
   { href: "/feedback",  label: "피드백 정리" },
+  { href: "/issues",    label: "이슈 정리" },
 ] as const;
 
 export const ALWAYS_VISIBLE_ITEMS = [
@@ -105,4 +106,5 @@ export const MENU_LOCALE_MAP: Record<string, TranslationKey> = {
   "/insight":   "menu_insight",
   "/glossary":  "menu_glossary",
   "/feedback":  "menu_feedback",
+  "/issues":    "menu_issues",
 };

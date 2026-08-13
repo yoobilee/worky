@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconAddressBook, IconEdit, IconFileText, IconMessageCheck, IconLogout } from "@tabler/icons-react";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconAddressBook, IconEdit, IconFileText, IconMessageCheck, IconLogout, IconBug } from "@tabler/icons-react";
 import { loadMenuOrder, MENU_ORDER_EVENT } from "@/lib/menuSettings";
 import { useTheme } from "./ThemeProvider";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -155,6 +155,11 @@ const navItems = [
     href: "/feedback",
     label: "피드백 정리",
     icon: <IconMessageCheck className="w-4 h-4" />,
+  },
+  {
+    href: "/issues",
+    label: "이슈 정리",
+    icon: <IconBug className="w-4 h-4" />,
   },
 ];
 
