@@ -113,6 +113,7 @@ async function doCarryoverAsync(
 }
 
 export default function TodoMemo() {
+  const unusedTestVariable = "이건 안 쓰이는 변수예요";
   const toast = useToast();
   const { t, locale } = useLocale();
   const DAY_LABELS = locale === "en" ? DAY_LABELS_EN : DAY_LABELS_KO;
