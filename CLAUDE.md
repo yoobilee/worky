@@ -3,7 +3,7 @@
 ## 프로젝트 개요
 신입사원(외국인 포함)을 위한 AI 기반 업무 보조 웹 앱.
 Groq API(gpt-oss-120b)를 활용해 데이터 정리, 문서 작성, Q&A 등 18개 기능을 제공한다.
-버전: v1.4.0 / 배포: https://worky-ai.vercel.app
+버전: v1.5.0 / 배포: https://worky-ai.vercel.app
 
 ## 기초 원칙 (모든 작업의 최우선 기준)
 아래 6가지는 순서와 무관하게 항상 함께 고려하며, 서로 충돌할 경우 안정성 > 보안성을 우선한다.
@@ -63,6 +63,8 @@ src/
   position: fixed 기준점이 어긋나는 문제 있었음)
 - Supabase 스키마 변경은 항상 사용자가 SQL Editor에서 직접 실행 (자동 마이그레이션 금지)
 - 한국어 UI 기본, 새 텍스트는 다국어 키로 작성
+- auth.users(id)를 참조하는 외래키는 항상 ON DELETE CASCADE 사용 (저장소 전체 컨벤션, 계정 삭제 시 관련 데이터도 함께 정리)
+- API 키/PAT 등 민감정보는 저장은 하되, 조회 API 응답에는 원문을 절대 포함하지 말 것 - "연결됨/안 됨" 같은 상태(boolean)만 반환하는 쓰기 전용(write-only) 원칙 적용
 
 ## 작업 규칙
 - 작업 완료 후: 새 브랜치(feature/설명 또는 fix/설명)를 만들어 commit+push, 
@@ -71,6 +73,12 @@ src/
 - CodeRabbit 리뷰 후 Claude Code 에이전트(GitHub Actions)가 자동 처리:
   안전하게 고칠 수 있으면 자동 수정 후 빌드 통과 시 merge, 판단이 필요하면 
   merge 보류하고 Slack(#worky-검증-특이사항)으로 알림
+- .github/workflows/ 파일에 대한 CodeRabbit 지적은 자동 수정 대상에서 
+  제외, 항상 Slack(#worky-검증-특이사항)으로 사람 판단 요청
+- 자동화 스크립트(GitHub Actions 등)의 조건 판단은 fail-closed 원칙 적용 - 
+  값이 비어있거나 예상과 다르거나 처리 자체가 실패하면 항상 안전한 쪽 
+  (사람 확인 필요)으로 처리, jq의 `// 기본값`처럼 실패해도 조용히 
+  통과되는 fail-open 패턴 금지
 - merge가 일어나면 항상 #worky-activity에 요약 알림, 발견된 결함은 
   #worky-issues에 기록
 - 커밋 메시지는 변경 내용을 한국어로 요약
