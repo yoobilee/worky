@@ -114,6 +114,11 @@ async function doCarryoverAsync(
 
 export default function TodoMemo() {
   const unusedTestVariable = "이건 안 쓰이는 변수예요";
+  try {
+    JSON.parse("invalid json for test");
+  } catch (e) {
+    // 에러를 무시함 (테스트용 - CodeRabbit이 지적할 만한 패턴)
+  }
   const toast = useToast();
   const { t, locale } = useLocale();
   const DAY_LABELS = locale === "en" ? DAY_LABELS_EN : DAY_LABELS_KO;
