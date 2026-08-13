@@ -244,6 +244,81 @@ jobs:
           fi
           ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
 
+      - name: GitHub Issue 자동 등록
+        id: create_issue
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outputs.has_issues != 'false'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
+        run: |
+          BODY_TEXT=$(printf '%s\n\n---\nPR: %s' "$ISSUE_SUMMARY" "$PR_URL")
+
+          ISSUE_URL=$(gh issue create --repo yoobilee/worky \
+            --title "$PR_TITLE" \
+            --body "$BODY_TEXT")
+
+          if [ -z "$ISSUE_URL" ]; then
+            echo "::error::GitHub Issue 생성 실패 (URL을 받지 못함)"
+            exit 1
+          fi
+
+          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
+          echo "issue_url=$ISSUE_URL" >> "$GITHUB_OUTPUT"
+          echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "GitHub Issue 생성됨: $ISSUE_URL"
+
+      - name: Supabase issues 테이블 기록
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outputs.has_issues != 'false'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
+          GH_ISSUE_NUMBER: ${{ steps.create_issue.outputs.issue_number }}
+          GH_ISSUE_URL: ${{ steps.create_issue.outputs.issue_url }}
+        run: |
+          # Worky 자체 이슈 - 소유자 계정 고정
+          USER_ID="5a2804b4-4ecb-435c-b039-0cbc6e57837c"
+
+          PAYLOAD=$(jq -n \
+            --arg user_id "$USER_ID" \
+            --arg title "$PR_TITLE" \
+            --arg description "$ISSUE_SUMMARY" \
+            --arg repo "yoobilee/worky" \
+            --arg github_issue_number "$GH_ISSUE_NUMBER" \
+            --arg github_issue_url "$GH_ISSUE_URL" \
+            '{
+              user_id: $user_id,
+              source: "auto-pipeline",
+              title: $title,
+              description: $description,
+              repo: $repo,
+              github_issue_number: (if $github_issue_number == "" then null else ($github_issue_number | tonumber) end),
+              github_issue_url: (if $github_issue_url == "" then null else $github_issue_url end),
+              status: "open"
+            }')
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${SUPABASE_URL}/rest/v1/issues" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "$PAYLOAD")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP Status: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::Supabase issues 기록 실패 (HTTP $HTTP_CODE): $BODY"
+            exit 1
+          fi
+          echo "Supabase issues 테이블 기록 완료"
+
       - name: 이슈 채널 알림 (결함 있었던 경우)
         if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outputs.has_issues != 'false'
         env:
