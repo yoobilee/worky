@@ -7,7 +7,7 @@ import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronLeft, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
   IconGripVertical, IconHelp, IconMessageCircle, IconCalendarEvent,
-  IconBell, IconBellOff, IconWorld, IconBrandGithub,
+  IconBell, IconBellOff, IconWorld, IconBrandGithub, IconAlertTriangle,
 } from "@tabler/icons-react";
 import {
   loadNotificationSettings, saveNotificationSettings,
@@ -1039,7 +1039,7 @@ export default function SettingsPage() {
                   "flex items-center gap-2 px-4 py-2.5 rounded-xl border",
                   githubConnected
                     ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-                    : "bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700",
+                    : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800",
                 ].join(" ")}>
                   {githubConnected ? (
                     <>
@@ -1049,7 +1049,10 @@ export default function SettingsPage() {
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">{t("github_not_connected")}</p>
+                    <>
+                      <IconAlertTriangle className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">{t("github_not_connected")}</p>
+                    </>
                   )}
                 </div>
               )}
