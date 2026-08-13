@@ -7,7 +7,7 @@ import {
   IconUser, IconDeviceFloppy, IconCheck, IconChevronLeft, IconApps,
   IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
   IconGripVertical, IconHelp, IconMessageCircle, IconCalendarEvent,
-  IconBell, IconBellOff, IconWorld,
+  IconBell, IconBellOff, IconWorld, IconBrandGithub,
 } from "@tabler/icons-react";
 import {
   loadNotificationSettings, saveNotificationSettings,
@@ -26,12 +26,13 @@ import { createClient } from "@/lib/supabase/client";
 import { getSettings, upsertSettings, type CustomGreeting } from "@/lib/db/settings";
 import DatePickerInput from "@/components/DatePickerInput";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { tFormat } from "@/lib/i18n/translations";
 
 const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
 
 type GreetingMode = "basic" | "time" | "day";
-type SettingsSection = "info" | "leave" | "greeting" | "job" | "menu" | "help" | "notif" | "language";
+type SettingsSection = "info" | "leave" | "greeting" | "job" | "menu" | "help" | "notif" | "language" | "github";
 
 const GREETING_TIME_PERIODS: { id: string; label: string }[] = [
   { id: "오전", label: "오전" },
@@ -142,6 +143,12 @@ export default function SettingsPage() {
   const [notifSettings,    setNotifSettings]    = useState<NotificationSettings>({ eventNotif: true, ddayNotif: true });
   const [activeSection,    setActiveSection]    = useState<SettingsSection>("info");
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
+  const [githubConnected,     setGithubConnected]     = useState(false);
+  const [githubRepoStatus,    setGithubRepoStatus]    = useState<string | null>(null);
+  const [githubStatusLoading, setGithubStatusLoading] = useState(true);
+  const [githubPatInput,      setGithubPatInput]      = useState("");
+  const [githubRepoInput,     setGithubRepoInput]     = useState("");
+  const [githubSaving,        setGithubSaving]        = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -200,6 +207,43 @@ export default function SettingsPage() {
       setHydrated(true);
     });
   }, []);
+
+  const fetchGithubStatus = () => {
+    setGithubStatusLoading(true);
+    return fetch("/api/settings/github")
+      .then((res) => res.json())
+      .then((data: { connected?: boolean; repo?: string | null }) => {
+        setGithubConnected(Boolean(data.connected));
+        setGithubRepoStatus(data.repo ?? null);
+      })
+      .catch(() => {})
+      .finally(() => setGithubStatusLoading(false));
+  };
+
+  useEffect(() => {
+    fetchGithubStatus();
+  }, []);
+
+  const handleGithubSave = async () => {
+    if (!githubPatInput.trim() || !githubRepoInput.trim()) return;
+    setGithubSaving(true);
+    try {
+      const res = await fetch("/api/settings/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pat: githubPatInput.trim(), repo: githubRepoInput.trim() }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(t("github_save_success"));
+      setGithubPatInput("");
+      setGithubRepoInput("");
+      await fetchGithubStatus();
+    } catch {
+      toast.error(t("github_save_error"));
+    } finally {
+      setGithubSaving(false);
+    }
+  };
 
   const handleChange = (field: keyof SenderInfo, value: string) => {
     setInfo((prev) => ({ ...prev, [field]: value }));
@@ -345,6 +389,7 @@ export default function SettingsPage() {
     { key: "menu",     label: t("settings_section_menu"),     icon: IconApps },
     { key: "help",     label: t("settings_section_help"),     icon: IconHelp },
     { key: "language", label: t("settings_language"),         icon: IconWorld },
+    { key: "github",   label: t("settings_section_github"),   icon: IconBrandGithub },
     ...(notifPermission !== "unsupported"
       ? [{ key: "notif" as SettingsSection, label: t("settings_section_notif"), icon: IconBell }]
       : []),
@@ -974,6 +1019,73 @@ export default function SettingsPage() {
                     {l === "ko" ? "한국어" : "English"}
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* GitHub 연동 */}
+          {activeSection === "github" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
+                  <IconBrandGithub className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
+                </div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_github")}</p>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("github_desc")}</p>
+
+              {!githubStatusLoading && (
+                <div className={[
+                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border",
+                  githubConnected
+                    ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+                    : "bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700",
+                ].join(" ")}>
+                  {githubConnected ? (
+                    <>
+                      <IconCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                        {tFormat(t("github_connected_msg"), { repo: githubRepoStatus ?? "" })}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">{t("github_not_connected")}</p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("github_pat_label")}</label>
+                <input
+                  type="password"
+                  value={githubPatInput}
+                  onChange={(e) => setGithubPatInput(e.target.value)}
+                  placeholder={t("github_pat_placeholder")}
+                  autoComplete="off"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("github_repo_label")}</label>
+                <input
+                  value={githubRepoInput}
+                  onChange={(e) => setGithubRepoInput(e.target.value)}
+                  placeholder={t("github_repo_placeholder")}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                />
+              </div>
+
+              <div className="flex items-center justify-end">
+                <button
+                  onClick={handleGithubSave}
+                  disabled={githubSaving || !githubPatInput.trim() || !githubRepoInput.trim()}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
+                >
+                  <IconDeviceFloppy className="w-4 h-4" />
+                  {t("save")}
+                </button>
               </div>
             </div>
           )}

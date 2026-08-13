@@ -229,6 +229,48 @@ export type Database = {
         }
         Relationships: []
       }
+      issues: {
+        Row: {
+          created_at: string
+          description: string
+          github_issue_number: number | null
+          github_issue_url: string | null
+          id: string
+          repo: string
+          severity: string | null
+          source: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          github_issue_number?: number | null
+          github_issue_url?: string | null
+          id?: string
+          repo: string
+          severity?: string | null
+          source: string
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          github_issue_number?: number | null
+          github_issue_url?: string | null
+          id?: string
+          repo?: string
+          severity?: string | null
+          source?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       members: {
         Row: {
           birthday: string | null
@@ -424,6 +466,8 @@ export type Database = {
           custom_field_keys: Json | null
           custom_greeting: Json | null
           employment_type: string | null
+          github_pat: string | null
+          github_repo: string | null
           granted_leaves: number | null
           help_button: boolean | null
           id: string
@@ -445,6 +489,8 @@ export type Database = {
           custom_field_keys?: Json | null
           custom_greeting?: Json | null
           employment_type?: string | null
+          github_pat?: string | null
+          github_repo?: string | null
           granted_leaves?: number | null
           help_button?: boolean | null
           id?: string
@@ -466,6 +512,8 @@ export type Database = {
           custom_field_keys?: Json | null
           custom_greeting?: Json | null
           employment_type?: string | null
+          github_pat?: string | null
+          github_repo?: string | null
           granted_leaves?: number | null
           help_button?: boolean | null
           id?: string
