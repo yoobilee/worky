@@ -244,18 +244,145 @@ jobs:
           fi
           ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
 
-      - name: 이슈 채널 알림 (결함 있었던 경우)
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outputs.has_issues != 'false'
+      - name: GitHub Issue 자동 등록
+        id: github_issue
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outcome == 'success' && steps.parse.outputs.has_issues == 'true'
+        continue-on-error: true
         env:
-          SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          EVENT_NAME: ${{ github.event_name }}
+          REVIEW_ID_REVIEW: ${{ github.event.review.id }}
+          REVIEW_ID_COMMENT: ${{ github.event.comment.id }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
           PR_URL: ${{ steps.pr.outputs.url }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
+          ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request_review" ]; then
+            REVIEW_ID="$REVIEW_ID_REVIEW"
+          else
+            REVIEW_ID="$REVIEW_ID_COMMENT"
+          fi
+
+          # 같은 리뷰/코멘트에 대해 워크플로우가 재실행되어도 이슈가 중복
+          # 생성되지 않도록, 이슈 본문에 심어둔 마커로 기존 이슈를 먼저 찾는다
+          MARKER="<!-- worky-auto-issue:pr-${PR_NUMBER}-review-${REVIEW_ID} -->"
+
+          EXISTING=$(gh issue list --repo yoobilee/worky --search "$MARKER in:body" --state all --json number,url --jq '.[0]')
+
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            ISSUE_NUMBER=$(echo "$EXISTING" | jq -r '.number')
+            ISSUE_URL=$(echo "$EXISTING" | jq -r '.url')
+            echo "이미 등록된 이슈를 재사용: $ISSUE_URL"
+            echo "issue_created=false" >> "$GITHUB_OUTPUT"
+          else
+            BODY_TEXT=$(printf '%s\n\n%s\n\nPR: %s' "$MARKER" "$ISSUE_SUMMARY" "$PR_URL")
+
+            ISSUE_URL=$(gh issue create --repo yoobilee/worky \
+              --title "$PR_TITLE" \
+              --body "$BODY_TEXT")
+
+            if [ -z "$ISSUE_URL" ]; then
+              echo "::error::GitHub Issue 생성 실패 (URL을 받지 못함)"
+              exit 1
+            fi
+
+            ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
+            echo "GitHub Issue 생성됨: $ISSUE_URL"
+            echo "issue_created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "issue_url=$ISSUE_URL" >> "$GITHUB_OUTPUT"
+          echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Supabase issues 테이블 기록
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outcome == 'success' && steps.parse.outputs.has_issues == 'true'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
+          GH_ISSUE_NUMBER: ${{ steps.github_issue.outputs.issue_number }}
+          GH_ISSUE_URL: ${{ steps.github_issue.outputs.issue_url }}
+        run: |
+          # Worky 자체 이슈 - 소유자 계정 고정
+          USER_ID="5a2804b4-4ecb-435c-b039-0cbc6e57837c"
+
+          if [ -z "$GH_ISSUE_NUMBER" ]; then
+            echo "GitHub Issue 번호가 없어(이전 스텝 실패 등) Supabase 기록을 건너뜁니다."
+            exit 0
+          fi
+
+          # 마이그레이션 없이 애플리케이션 레벨에서 중복 삽입을 막기 위해
+          # 동일 github_issue_number 레코드가 이미 있는지 먼저 확인한다
+          EXISTING=$(curl -s -w "\n%{http_code}" -G "${SUPABASE_URL}/rest/v1/issues" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --data-urlencode "github_issue_number=eq.${GH_ISSUE_NUMBER}" \
+            --data-urlencode "select=id")
+
+          EXISTING_HTTP_CODE=$(echo "$EXISTING" | tail -1)
+          EXISTING_BODY=$(echo "$EXISTING" | sed '$d')
+
+          if [ "$EXISTING_HTTP_CODE" -ge 400 ]; then
+            echo "::error::Supabase issues 중복 확인 실패 (HTTP $EXISTING_HTTP_CODE): $EXISTING_BODY"
+            exit 1
+          fi
+
+          EXISTING_COUNT=$(echo "$EXISTING_BODY" | jq 'length')
+          if [ "$EXISTING_COUNT" -gt 0 ]; then
+            echo "이미 Supabase에 기록된 이슈(#$GH_ISSUE_NUMBER) - 중복 삽입 건너뜀"
+            exit 0
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg user_id "$USER_ID" \
+            --arg title "$PR_TITLE" \
+            --arg description "$ISSUE_SUMMARY" \
+            --arg repo "yoobilee/worky" \
+            --argjson github_issue_number "$GH_ISSUE_NUMBER" \
+            --arg github_issue_url "$GH_ISSUE_URL" \
+            '{
+              user_id: $user_id,
+              source: "auto-pipeline",
+              title: $title,
+              description: $description,
+              repo: $repo,
+              github_issue_number: $github_issue_number,
+              github_issue_url: (if $github_issue_url == "" then null else $github_issue_url end),
+              status: "open"
+            }')
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${SUPABASE_URL}/rest/v1/issues" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "$PAYLOAD")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP Status: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::Supabase issues 기록 실패 (HTTP $HTTP_CODE): $BODY"
+            exit 1
+          fi
+          echo "Supabase issues 테이블 기록 완료"
+
+      - name: 이슈 채널 알림 (결함 있었던 경우)
+        if: always() && steps.github_issue.outcome == 'success' && steps.github_issue.outputs.issue_url != ''
+        env:
+          SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
+          ISSUE_URL: ${{ steps.github_issue.outputs.issue_url }}
+          ISSUE_NUMBER: ${{ steps.github_issue.outputs.issue_number }}
           SUMMARY: ${{ steps.verify.outputs.issue_summary }}
         run: |
-          jq -n --arg url "$PR_URL" \
-                --arg title "$PR_TITLE" \
+          jq -n --arg issue_url "$ISSUE_URL" \
+                --arg issue_number "$ISSUE_NUMBER" \
                 --arg summary "$SUMMARY" \
-            '{text: ("*<" + $url + "|" + $title + ">*\n" + $summary)}' | \
+            '{text: ("🐞 <" + $issue_url + "|GitHub Issue #" + $issue_number + "> 등록됨\n\n" + $summary)}' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
 
       - name: 특이사항 알림 (사람 판단 필요한 경우)
