@@ -16,11 +16,19 @@ export async function GET() {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
+  console.log("[sync] start, user:", user.id);
+
   const { data: settings, error: settingsError } = await supabase
     .from("user_settings")
     .select("github_pat, github_repo")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  console.log("[sync] settings:", {
+    repo: settings?.github_repo,
+    patLength: settings?.github_pat?.length ?? 0,
+    settingsError,
+  });
 
   if (settingsError) {
     return NextResponse.json({ error: "GitHub 설정 조회 중 오류가 발생했습니다." }, { status: 500 });
@@ -42,6 +50,8 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(MAX_ISSUES_PER_SYNC);
 
+  console.log("[sync] openIssues count:", openIssues?.length, "numbers:", openIssues?.map((i) => i.github_issue_number));
+
   if (issuesError) {
     return NextResponse.json({ error: "이슈 목록 조회 중 오류가 발생했습니다." }, { status: 500 });
   }
@@ -61,8 +71,12 @@ export async function GET() {
           },
           cache: "no-store",
         });
-        if (!res.ok) return null;
+        if (!res.ok) {
+          console.log("[sync] github issue", issue.github_issue_number, "status:", res.status, "ok:", res.ok);
+          return null;
+        }
         const ghIssue = (await res.json()) as { state?: string; updated_at?: string };
+        console.log("[sync] github issue", issue.github_issue_number, "status:", res.status, "ok:", res.ok, "state:", ghIssue.state);
         if (ghIssue.state !== "closed") return null;
         return { id: issue.id, updatedAt: ghIssue.updated_at };
       } catch {
@@ -70,6 +84,8 @@ export async function GET() {
       }
     })
   );
+
+  console.log("[sync] closed candidates:", closedOnGithub.filter(Boolean).length);
 
   let updated = 0;
   for (const item of closedOnGithub) {
@@ -84,8 +100,12 @@ export async function GET() {
       .eq("id", item.id)
       .eq("status", "open");
 
+    console.log("[sync] db update", item.id, "error:", error, "count:", count);
+
     if (!error && count) updated += count;
   }
+
+  console.log("[sync] final updated:", updated);
 
   return NextResponse.json({ updated });
 }
