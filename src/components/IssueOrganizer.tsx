@@ -114,6 +114,12 @@ export default function IssueOrganizer() {
       .finally(() => setGithubStatusLoading(false));
   }, []);
 
+  // 웹훅 누락 등에 대비한 안전망. UI를 블로킹하지 않고 조용히 호출하며,
+  // 실패해도 무시한다 — 변경 사항은 Realtime 구독이 자연스럽게 반영한다.
+  useEffect(() => {
+    fetch("/api/issues/sync").catch(() => {});
+  }, []);
+
   const loadMyIssues = async () => {
     setMyIssuesLoading(true);
     try {
