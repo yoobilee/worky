@@ -68,7 +68,8 @@ export async function GET() {
         const ghIssue = (await res.json()) as { state?: string; updated_at?: string };
         if (ghIssue.state !== "closed") return null;
         return { id: issue.id, updatedAt: ghIssue.updated_at };
-      } catch {
+      } catch (error) {
+        console.error("[sync] github request failed", { issueNumber: issue.github_issue_number, error });
         return null;
       }
     })
@@ -87,9 +88,9 @@ export async function GET() {
       .eq("id", item.id)
       .eq("status", "open");
 
-    if (error || !count) {
+    if (error) {
       console.error("[sync] db update failed or no-op", { issueId: item.id, error, count });
-    } else {
+    } else if (count) {
       updated += count;
     }
   }
