@@ -373,13 +373,18 @@ GROQ_API_KEY=
 # Supabase — https://supabase.com
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
 # 카카오 API — https://developers.kakao.com
 KAKAO_REST_API_KEY=
 NEXT_PUBLIC_KAKAO_MAP_KEY=
+
+# 배포 URL (GitHub 웹훅 콜백 주소로 사용)
+NEXT_PUBLIC_SITE_URL=
 ```
 
 > `GROQ_API_KEY`는 서버 사이드(`/api/groq`)에서만 사용되며 클라이언트에 노출되지 않습니다.
+> `SUPABASE_SERVICE_ROLE_KEY`는 RLS를 우회하는 관리자 권한 키로, GitHub 웹훅 처리(`/api/webhooks/github`)에서만 사용되며 절대 클라이언트에 노출되지 않습니다.
 
 ### Google OAuth 설정
 
