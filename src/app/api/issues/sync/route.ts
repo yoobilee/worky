@@ -61,7 +61,10 @@ export async function GET() {
           },
           cache: "no-store",
         });
-        if (!res.ok) return null;
+        if (!res.ok) {
+          console.error("[sync] github api failed", { issueNumber: issue.github_issue_number, status: res.status });
+          return null;
+        }
         const ghIssue = (await res.json()) as { state?: string; updated_at?: string };
         if (ghIssue.state !== "closed") return null;
         return { id: issue.id, updatedAt: ghIssue.updated_at };
@@ -84,7 +87,11 @@ export async function GET() {
       .eq("id", item.id)
       .eq("status", "open");
 
-    if (!error && count) updated += count;
+    if (error || !count) {
+      console.error("[sync] db update failed or no-op", { issueId: item.id, error, count });
+    } else {
+      updated += count;
+    }
   }
 
   return NextResponse.json({ updated });
