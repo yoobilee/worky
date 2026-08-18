@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   IconBug, IconLoader2, IconAlertTriangle, IconBrandGithub,
   IconExternalLink, IconCircleCheck, IconClipboardList, IconDeviceDesktop, IconRepeat,
@@ -97,6 +98,9 @@ export default function IssueOrganizer() {
 
   const [myIssues,        setMyIssues]        = useState<MyIssue[]>([]);
   const [myIssuesLoading,  setMyIssuesLoading] = useState(true);
+  const [statusFilter,    setStatusFilter]    = useState<"all" | "open" | "closed">("all");
+  const [realtimeError,   setRealtimeError]   = useState(false);
+  const initialLoadDoneRef = useRef(false);
 
   useEffect(() => {
     if (hasResult) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -108,6 +112,12 @@ export default function IssueOrganizer() {
       .then((data: { connected?: boolean }) => setGithubConnected(Boolean(data.connected)))
       .catch(() => {})
       .finally(() => setGithubStatusLoading(false));
+  }, []);
+
+  // 웹훅 누락 등에 대비한 안전망. UI를 블로킹하지 않고 조용히 호출하며,
+  // 실패해도 무시한다 — 변경 사항은 Realtime 구독이 자연스럽게 반영한다.
+  useEffect(() => {
+    fetch("/api/issues/sync").catch(() => {});
   }, []);
 
   const loadMyIssues = async () => {
@@ -124,10 +134,54 @@ export default function IssueOrganizer() {
     }
   };
 
+  // 구독을 먼저 시작하고, SUBSCRIBED가 확인된 뒤에 초기 목록을 조회한다.
+  // (조회를 먼저 하면 조회~구독 사이의 공백 시간에 발생한 업데이트를 놓칠 수 있음)
   useEffect(() => {
-    loadMyIssues();
+    const supabase = createClient();
+    let channel: RealtimeChannel | null = null;
+
+    const runInitialLoad = () => {
+      if (initialLoadDoneRef.current) return;
+      initialLoadDoneRef.current = true;
+      loadMyIssues();
+    };
+
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) {
+        runInitialLoad();
+        return;
+      }
+      channel = supabase
+        .channel(`issues-status-${uid}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "issues", filter: `user_id=eq.${uid}` },
+          (payload: { new: { id: string; status: string } }) => {
+            const updated = payload.new;
+            setMyIssues((prev) =>
+              prev.map((issue) => (issue.id === updated.id ? { ...issue, status: updated.status } : issue))
+            );
+          }
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            setRealtimeError(false);
+            runInitialLoad();
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            setRealtimeError(true);
+            runInitialLoad();
+          }
+        });
+    });
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const filteredIssues = myIssues.filter((issue) => statusFilter === "all" || issue.status === statusFilter);
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -375,9 +429,43 @@ export default function IssueOrganizer() {
         </div>
       )}
 
+      {/* 실시간 동기화 연결 실패 안내 */}
+      {realtimeError && (
+        <div role="alert" className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
+          <IconAlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          {t("io_realtime_error")}
+        </div>
+      )}
+
       {/* 내가 등록한 이슈 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-        <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3">{t("io_my_issues_title")}</p>
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">{t("io_my_issues_title")}</p>
+          <div className="flex items-center gap-1" role="tablist">
+            {([
+              { id: "all" as const,    label: t("io_filter_all") },
+              { id: "open" as const,   label: t("io_status_open") },
+              { id: "closed" as const, label: t("io_status_closed") },
+            ]).map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={statusFilter === id}
+                data-active={statusFilter === id}
+                onClick={() => setStatusFilter(id)}
+                className={[
+                  "tab-underline px-2.5 py-1 text-xs font-medium transition-colors border-b-2",
+                  statusFilter === id
+                    ? "text-[#4D44CC] dark:text-[#8B85FF] border-[#6C63FF]"
+                    : "text-slate-400 dark:text-zinc-500 border-transparent hover:text-slate-600 dark:hover:text-zinc-300",
+                ].join(" ")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         {myIssuesLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -386,17 +474,23 @@ export default function IssueOrganizer() {
           </div>
         ) : myIssues.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-zinc-500">{t("io_my_issues_empty")}</p>
+        ) : filteredIssues.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-zinc-500">{t("io_my_issues_filter_empty")}</p>
         ) : (
           <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
-            {myIssues.map((issue) => (
+            {filteredIssues.map((issue) => (
               <div key={issue.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className={[
-                    "shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                    "shrink-0 flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full",
                     issue.status === "open"
                       ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
                       : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400",
                   ].join(" ")}>
+                    <span className={[
+                      "w-1.5 h-1.5 rounded-full shrink-0",
+                      issue.status === "open" ? "bg-emerald-500 dark:bg-emerald-400" : "bg-slate-400 dark:bg-zinc-500",
+                    ].join(" ")} />
                     {issue.status === "open" ? t("io_status_open") : t("io_status_closed")}
                   </span>
                   <p className="text-sm text-slate-700 dark:text-zinc-200 truncate">{issue.title}</p>

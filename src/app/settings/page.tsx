@@ -26,7 +26,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getSettings, upsertSettings, type CustomGreeting } from "@/lib/db/settings";
 import DatePickerInput from "@/components/DatePickerInput";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import { tFormat } from "@/lib/i18n/translations";
+import { tFormat, type TranslationKey } from "@/lib/i18n/translations";
 
 const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
@@ -233,13 +233,18 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat: githubPatInput.trim(), repo: githubRepoInput.trim() }),
       });
-      if (!res.ok) throw new Error();
-      toast.success(t("github_save_success"));
+      const data = (await res.json()) as { warnings?: TranslationKey[]; error?: string };
+      if (!res.ok) throw new Error(data.error);
+      if (data.warnings?.length) {
+        data.warnings.forEach((code) => toast.error(t(code)));
+      } else {
+        toast.success(t("github_save_success"));
+      }
       setGithubPatInput("");
       setGithubRepoInput("");
       await fetchGithubStatus();
-    } catch {
-      toast.error(t("github_save_error"));
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : t("github_save_error"));
     } finally {
       setGithubSaving(false);
     }
