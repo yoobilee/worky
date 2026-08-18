@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Vercel/Next.js가 이 GET 라우트를 정적으로 캐싱하지 못하도록 명시
+export const dynamic = "force-dynamic";
+
 // 웹훅 누락 등에 대비한 안전망: 로드 시점에 GitHub의 실제 이슈 상태를
 // 재확인해 DB와 어긋난 것만 보정한다. 한 번에 너무 많은 GitHub API 호출을
 // 하지 않도록 최근 이슈 20개로 제한한다.

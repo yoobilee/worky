@@ -117,7 +117,7 @@ export default function IssueOrganizer() {
   // 웹훅 누락 등에 대비한 안전망. UI를 블로킹하지 않고 조용히 호출하며,
   // 실패해도 무시한다 — 변경 사항은 Realtime 구독이 자연스럽게 반영한다.
   useEffect(() => {
-    fetch("/api/issues/sync").catch(() => {});
+    fetch("/api/issues/sync", { cache: "no-store" }).catch(() => {});
   }, []);
 
   const loadMyIssues = async () => {
@@ -182,6 +182,12 @@ export default function IssueOrganizer() {
   }, []);
 
   const filteredIssues = myIssues.filter((issue) => statusFilter === "all" || issue.status === statusFilter);
+
+  const issueCounts = {
+    all:    myIssues.length,
+    open:   myIssues.filter((issue) => issue.status === "open").length,
+    closed: myIssues.filter((issue) => issue.status === "closed").length,
+  };
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -443,10 +449,10 @@ export default function IssueOrganizer() {
           <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">{t("io_my_issues_title")}</p>
           <div className="flex items-center gap-1" role="tablist">
             {([
-              { id: "all" as const,    label: t("io_filter_all") },
-              { id: "open" as const,   label: t("io_status_open") },
-              { id: "closed" as const, label: t("io_status_closed") },
-            ]).map(({ id, label }) => (
+              { id: "all" as const,    label: t("io_filter_all"),      count: issueCounts.all },
+              { id: "open" as const,   label: t("io_status_open"),     count: issueCounts.open },
+              { id: "closed" as const, label: t("io_status_closed"),   count: issueCounts.closed },
+            ]).map(({ id, label, count }) => (
               <button
                 key={id}
                 type="button"
@@ -455,13 +461,21 @@ export default function IssueOrganizer() {
                 data-active={statusFilter === id}
                 onClick={() => setStatusFilter(id)}
                 className={[
-                  "tab-underline px-2.5 py-1 text-xs font-medium transition-colors border-b-2",
+                  "tab-underline flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors border-b-2",
                   statusFilter === id
                     ? "text-[#4D44CC] dark:text-[#8B85FF] border-[#6C63FF]"
                     : "text-slate-400 dark:text-zinc-500 border-transparent hover:text-slate-600 dark:hover:text-zinc-300",
                 ].join(" ")}
               >
                 {label}
+                <span className={[
+                  "px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none",
+                  statusFilter === id
+                    ? "bg-[#6C63FF]/15 text-[#4D44CC] dark:text-[#8B85FF]"
+                    : "bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500",
+                ].join(" ")}>
+                  {count}
+                </span>
               </button>
             ))}
           </div>
