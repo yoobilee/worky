@@ -233,18 +233,18 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat: githubPatInput.trim(), repo: githubRepoInput.trim() }),
       });
-      const data = (await res.json()) as { warning?: TranslationKey };
-      if (!res.ok) throw new Error();
-      if (data.warning) {
-        toast.error(t(data.warning));
+      const data = (await res.json()) as { warnings?: TranslationKey[]; error?: string };
+      if (!res.ok) throw new Error(data.error);
+      if (data.warnings?.length) {
+        data.warnings.forEach((code) => toast.error(t(code)));
       } else {
         toast.success(t("github_save_success"));
       }
       setGithubPatInput("");
       setGithubRepoInput("");
       await fetchGithubStatus();
-    } catch {
-      toast.error(t("github_save_error"));
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : t("github_save_error"));
     } finally {
       setGithubSaving(false);
     }
