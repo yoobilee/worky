@@ -233,8 +233,13 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat: githubPatInput.trim(), repo: githubRepoInput.trim() }),
       });
+      const data = await res.json();
       if (!res.ok) throw new Error();
-      toast.success(t("github_save_success"));
+      if (data.warning) {
+        toast.error(data.warning);
+      } else {
+        toast.success(t("github_save_success"));
+      }
       setGithubPatInput("");
       setGithubRepoInput("");
       await fetchGithubStatus();

@@ -97,6 +97,7 @@ export default function IssueOrganizer() {
 
   const [myIssues,        setMyIssues]        = useState<MyIssue[]>([]);
   const [myIssuesLoading,  setMyIssuesLoading] = useState(true);
+  const [statusFilter,    setStatusFilter]    = useState<"all" | "open" | "closed">("all");
 
   useEffect(() => {
     if (hasResult) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -128,6 +129,36 @@ export default function IssueOrganizer() {
     loadMyIssues();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // GitHub 웹훅으로 issues.status가 바뀌면 실시간으로 목록에 반영
+  useEffect(() => {
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) return;
+      channel = supabase
+        .channel(`issues-status-${uid}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "issues", filter: `user_id=eq.${uid}` },
+          (payload: { new: { id: string; status: string } }) => {
+            const updated = payload.new;
+            setMyIssues((prev) =>
+              prev.map((issue) => (issue.id === updated.id ? { ...issue, status: updated.status } : issue))
+            );
+          }
+        )
+        .subscribe();
+    });
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const filteredIssues = myIssues.filter((issue) => statusFilter === "all" || issue.status === statusFilter);
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -377,7 +408,33 @@ export default function IssueOrganizer() {
 
       {/* 내가 등록한 이슈 */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5 shadow-sm">
-        <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3">{t("io_my_issues_title")}</p>
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">{t("io_my_issues_title")}</p>
+          <div className="flex items-center gap-1" role="tablist">
+            {([
+              { id: "all" as const,    label: t("io_filter_all") },
+              { id: "open" as const,   label: t("io_status_open") },
+              { id: "closed" as const, label: t("io_status_closed") },
+            ]).map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={statusFilter === id}
+                data-active={statusFilter === id}
+                onClick={() => setStatusFilter(id)}
+                className={[
+                  "tab-underline px-2.5 py-1 text-xs font-medium transition-colors border-b-2",
+                  statusFilter === id
+                    ? "text-[#4D44CC] dark:text-[#8B85FF] border-[#6C63FF]"
+                    : "text-slate-400 dark:text-zinc-500 border-transparent hover:text-slate-600 dark:hover:text-zinc-300",
+                ].join(" ")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         {myIssuesLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -386,17 +443,23 @@ export default function IssueOrganizer() {
           </div>
         ) : myIssues.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-zinc-500">{t("io_my_issues_empty")}</p>
+        ) : filteredIssues.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-zinc-500">{t("io_my_issues_filter_empty")}</p>
         ) : (
           <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
-            {myIssues.map((issue) => (
+            {filteredIssues.map((issue) => (
               <div key={issue.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className={[
-                    "shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                    "shrink-0 flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full",
                     issue.status === "open"
                       ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
                       : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400",
                   ].join(" ")}>
+                    <span className={[
+                      "w-1.5 h-1.5 rounded-full shrink-0",
+                      issue.status === "open" ? "bg-emerald-500 dark:bg-emerald-400" : "bg-slate-400 dark:bg-zinc-500",
+                    ].join(" ")} />
                     {issue.status === "open" ? t("io_status_open") : t("io_status_closed")}
                   </span>
                   <p className="text-sm text-slate-700 dark:text-zinc-200 truncate">{issue.title}</p>
