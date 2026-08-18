@@ -45,16 +45,34 @@ export async function POST(req: NextRequest) {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  // 이미 저장된 저장소가 있고, 그것과 다른 저장소로 바꾸는 경우에만
+  // 이전 웹훅 정보를 명시적으로 초기화한다 (처음 저장하는 경우는 해당 없음)
+  const isRepoChange = Boolean(existing?.github_repo) && existing?.github_repo !== repo;
+  const reuseExistingWebhook = existing?.github_repo === repo && Boolean(existing?.github_webhook_id);
+
+  const upsertPayload: {
+    user_id: string;
+    github_pat: string;
+    github_repo: string;
+    github_webhook_secret?: null;
+    github_webhook_id?: null;
+  } = { user_id: user.id, github_pat: pat, github_repo: repo };
+
+  if (isRepoChange) {
+    upsertPayload.github_webhook_secret = null;
+    upsertPayload.github_webhook_id = null;
+  }
+
   const { error } = await supabase
     .from("user_settings")
-    .upsert({ user_id: user.id, github_pat: pat, github_repo: repo }, { onConflict: "user_id" });
+    .upsert(upsertPayload, { onConflict: "user_id" });
 
   if (error) {
     return NextResponse.json({ error: "저장에 실패했습니다." }, { status: 500 });
   }
 
-  // 이미 같은 저장소에 웹훅이 등록돼 있으면 중복 등록하지 않음
-  if (existing?.github_repo === repo && existing?.github_webhook_id) {
+  // 같은 저장소를 재저장한 경우(설정만 다시 누른 경우)는 기존 웹훅을 재사용
+  if (reuseExistingWebhook) {
     return NextResponse.json({ success: true });
   }
 
@@ -71,8 +89,9 @@ async function registerWebhook(params: {
   siteOrigin: string;
 }): Promise<string | null> {
   const { supabase, userId, pat, repo, siteOrigin } = params;
-  const WEBHOOK_FAIL_WARNING =
-    "PAT/저장소는 저장됐지만 웹훅 등록에 실패했습니다. 이슈 상태 자동 동기화는 되지 않을 수 있습니다. GitHub PAT에 저장소 웹훅 권한이 있는지 확인해 주세요.";
+  // 프론트에서 다국어(t()) 처리할 수 있도록 코드값만 반환한다.
+  // 매핑: translations.ts의 "webhook_registration_failed" 키
+  const WEBHOOK_FAIL_WARNING = "webhook_registration_failed";
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || siteOrigin;
   const secret = randomBytes(32).toString("hex");

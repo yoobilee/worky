@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   IconBug, IconLoader2, IconAlertTriangle, IconBrandGithub,
   IconExternalLink, IconCircleCheck, IconClipboardList, IconDeviceDesktop, IconRepeat,
@@ -98,6 +99,8 @@ export default function IssueOrganizer() {
   const [myIssues,        setMyIssues]        = useState<MyIssue[]>([]);
   const [myIssuesLoading,  setMyIssuesLoading] = useState(true);
   const [statusFilter,    setStatusFilter]    = useState<"all" | "open" | "closed">("all");
+  const [realtimeError,   setRealtimeError]   = useState(false);
+  const initialLoadDoneRef = useRef(false);
 
   useEffect(() => {
     if (hasResult) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -125,19 +128,24 @@ export default function IssueOrganizer() {
     }
   };
 
-  useEffect(() => {
-    loadMyIssues();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // GitHub 웹훅으로 issues.status가 바뀌면 실시간으로 목록에 반영
+  // 구독을 먼저 시작하고, SUBSCRIBED가 확인된 뒤에 초기 목록을 조회한다.
+  // (조회를 먼저 하면 조회~구독 사이의 공백 시간에 발생한 업데이트를 놓칠 수 있음)
   useEffect(() => {
     const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let channel: RealtimeChannel | null = null;
+
+    const runInitialLoad = () => {
+      if (initialLoadDoneRef.current) return;
+      initialLoadDoneRef.current = true;
+      loadMyIssues();
+    };
 
     supabase.auth.getUser().then(({ data }) => {
       const uid = data.user?.id;
-      if (!uid) return;
+      if (!uid) {
+        runInitialLoad();
+        return;
+      }
       channel = supabase
         .channel(`issues-status-${uid}`)
         .on(
@@ -150,12 +158,21 @@ export default function IssueOrganizer() {
             );
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            setRealtimeError(false);
+            runInitialLoad();
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            setRealtimeError(true);
+            runInitialLoad();
+          }
+        });
     });
 
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredIssues = myIssues.filter((issue) => statusFilter === "all" || issue.status === statusFilter);
@@ -403,6 +420,14 @@ export default function IssueOrganizer() {
         <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-center py-10 gap-2">
           <IconBug className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
           <p className="text-sm text-slate-500 dark:text-zinc-400">{t("io_empty")}</p>
+        </div>
+      )}
+
+      {/* 실시간 동기화 연결 실패 안내 */}
+      {realtimeError && (
+        <div role="alert" className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
+          <IconAlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          {t("io_realtime_error")}
         </div>
       )}
 

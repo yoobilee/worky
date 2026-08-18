@@ -26,7 +26,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getSettings, upsertSettings, type CustomGreeting } from "@/lib/db/settings";
 import DatePickerInput from "@/components/DatePickerInput";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import { tFormat } from "@/lib/i18n/translations";
+import { tFormat, type TranslationKey } from "@/lib/i18n/translations";
 
 const SENDER_KEY  = "worky_sender_info";
 const JOB_KEY     = "worky_job_preset";
@@ -233,10 +233,10 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat: githubPatInput.trim(), repo: githubRepoInput.trim() }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as { warning?: TranslationKey };
       if (!res.ok) throw new Error();
       if (data.warning) {
-        toast.error(data.warning);
+        toast.error(t(data.warning));
       } else {
         toast.success(t("github_save_success"));
       }
