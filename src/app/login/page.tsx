@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { IconEye } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
@@ -122,12 +123,17 @@ export default function LoginPage() {
             </div>
           )}
 
+          <p className="text-center text-xs text-slate-500 dark:text-zinc-400 mb-2">
+            {t("login_guest_hint")}
+          </p>
+
           <button
             onClick={handleGuestLogin}
             disabled={guestLoading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-transparent font-medium text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#6C63FF]/20 dark:border-[#8B85FF]/20 bg-[#6C63FF]/5 dark:bg-[#8B85FF]/10 hover:bg-[#6C63FF]/10 dark:hover:bg-[#8B85FF]/15 font-medium text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ color: "var(--primary)" }}
           >
+            <IconEye className="w-4 h-4" />
             {guestLoading ? t("login_guest_loading") : t("login_guest_button")}
           </button>
         </div>
