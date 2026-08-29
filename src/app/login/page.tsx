@@ -111,6 +111,10 @@ export default function LoginPage() {
             {loading ? "연결 중..." : "Google로 계속하기"}
           </button>
 
+          <p className="mt-2 text-center text-xs text-slate-400 dark:text-zinc-500">
+            {t("login_google_restricted_note")}
+          </p>
+
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-slate-200 dark:bg-zinc-700" />
             <span className="text-xs text-slate-400 dark:text-zinc-500">{t("login_or_divider")}</span>
