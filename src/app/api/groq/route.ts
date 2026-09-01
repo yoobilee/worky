@@ -10,7 +10,7 @@ interface Message {
 interface RequestBody {
   messages:    Message[];
   systemPrompt?: string;
-  max_tokens?: number;
+  max_completion_tokens?: number;
   model?: string;
   stream?: boolean;
 }
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: RequestBody = await req.json();
-    const { messages, systemPrompt, max_tokens, model, stream } = body;
+    const { messages, systemPrompt, max_completion_tokens, model, stream } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         model: model ?? DEFAULT_GROQ_MODEL,
         messages: fullMessages,
         stream: true,
-        ...(max_tokens ? { max_tokens } : {}),
+        ...(max_completion_tokens ? { max_completion_tokens } : {}),
       });
       const encoder = new TextEncoder();
       const readable = new ReadableStream({
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     const completion = await groq.chat.completions.create({
       model: model ?? DEFAULT_GROQ_MODEL,
       messages: fullMessages,
-      ...(max_tokens ? { max_tokens } : {}),
+      ...(max_completion_tokens ? { max_completion_tokens } : {}),
     });
 
     const result = completion.choices[0]?.message?.content ?? "";
@@ -86,6 +86,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ result });
   } catch (error) {
     console.error("Groq API 오류:", error);
+
+    if (error instanceof Groq.APIError && (error.status === 429 || error.status === 413)) {
+      return NextResponse.json(
+        { error: "일시적으로 요청이 많습니다. 잠시 후 다시 시도해주세요.", code: "rate_limit" },
+        { status: error.status }
+      );
+    }
+
     return NextResponse.json(
       { error: "AI 응답 생성 중 오류가 발생했습니다." },
       { status: 500 }
