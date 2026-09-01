@@ -103,6 +103,16 @@ const components: Components = {
   ),
 };
 
+// "• "로 시작하는 줄을 CommonMark/GFM이 인식하는 "- " 불릿 마커로 정규화한다.
+// DocSummary의 "요점 정리" 스타일은 시스템 프롬프트에서 각 항목이 "• "로
+// 시작하도록 명시적으로 요청하는데(DocSummary.tsx), "•"는 CommonMark/GFM
+// 리스트 마커가 아니라서 remark-gfm이 이를 리스트로 인식하지 못하고 연속된
+// 항목들이 하나의 문단으로 뭉쳐버린다 - 기존 수제 파서는 "•"를 직접
+// 처리했었지만 react-markdown으로 교체하며 사라진 동작이라 여기서 보정한다.
+function normalizeBulletMarkers(text: string): string {
+  return text.replace(/^([ \t]*)[•‣▪] /gm, "$1- ");
+}
+
 interface MarkdownRendererProps {
   content: string;
   className?: string;
@@ -112,7 +122,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
   return (
     <div className={className ?? "space-y-0.5"}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-        {content}
+        {normalizeBulletMarkers(content)}
       </ReactMarkdown>
     </div>
   );
