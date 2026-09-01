@@ -256,9 +256,12 @@ jobs:
           NEEDS_HUMAN=true
           ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
           HUMAN_REVIEW_REASON="git 상태 검증 스크립트가 완료되지 못함 - 확인 필요"
+          DIRTY_FILES=""
+          CLAUDE_MD_ONLY="false"
 
           write_result() {
             echo "needs_human=$NEEDS_HUMAN" >> "$GITHUB_OUTPUT"
+            echo "claude_md_only=$CLAUDE_MD_ONLY" >> "$GITHUB_OUTPUT"
             delimiter1=$(openssl rand -hex 8)
             {
               echo "issue_summary<<$delimiter1"
@@ -270,6 +273,12 @@ jobs:
               echo "human_review_reason<<$delimiter2"
               echo "$HUMAN_REVIEW_REASON"
               echo "$delimiter2"
+            } >> "$GITHUB_OUTPUT"
+            delimiter3=$(openssl rand -hex 8)
+            {
+              echo "dirty_files<<$delimiter3"
+              echo "$DIRTY_FILES"
+              echo "$delimiter3"
             } >> "$GITHUB_OUTPUT"
           }
           trap write_result EXIT
@@ -289,6 +298,21 @@ jobs:
           STATUS_OUTPUT=$(git status --porcelain)
           LOCAL_HEAD=$(git rev-parse HEAD)
           REMOTE_HEAD=$(gh pr view "$PR_NUMBER" --json headRefOid -q .headRefOid)
+
+          # 변경된 파일 목록만 추출 (앞의 "XY " 상태 코드 3자 제거).
+          # claude-code-action은 신뢰할 수 없는 컨텍스트에서 프롬프트 인젝션
+          # 방지를 위해 CLAUDE.md 등 민감 경로를 origin/master 버전으로
+          # 되돌려쓰는데, 이 PR이 CLAUDE.md 자체를 수정하는 경우 그 되돌려
+          # 쓰기가 여기서 dirty 상태로 잡혀 알려진 오탐이 발생한다. dirty
+          # 파일이 CLAUDE.md 단 하나뿐일 때만(다른 파일이 섞여 있으면 실제
+          # 문제일 수 있으므로 이 판별을 적용하지 않는다) 아래 Slack 알림에
+          # 원인 추정 문구를 붙이기 위한 표시만 남긴다 - needs_human 판정
+          # 자체는 그대로 fail-closed 유지(이 판별로 알림을 끄지 않는다).
+          DIRTY_FILES=$(echo "$STATUS_OUTPUT" | cut -c4-)
+          CLAUDE_MD_ONLY="false"
+          if [ "$DIRTY_FILES" = "CLAUDE.md" ]; then
+            CLAUDE_MD_ONLY="true"
+          fi
 
           MISMATCH="false"
           if [ -n "$STATUS_OUTPUT" ]; then
@@ -471,10 +495,23 @@ jobs:
           PR_URL: ${{ steps.pr.outputs.url }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
           SUMMARY: ${{ steps.verify.outputs.human_review_reason }}
+          CLAUDE_MD_ONLY: ${{ steps.verify.outputs.claude_md_only }}
+          DIRTY_FILES: ${{ steps.verify.outputs.dirty_files }}
         run: |
+          # dirty 파일이 CLAUDE.md 하나뿐이면 claude-code-action의 보안
+          # 되돌려쓰기로 인한 알려진 오탐일 가능성이 높다는 안내를 덧붙인다
+          # (CLAUDE.md 참고). needs_human 판정 자체는 그대로 fail-closed로
+          # 유지되고, 이 안내는 사람이 더 빨리 원인을 파악하도록 돕는
+          # 참고 정보일 뿐이다.
+          if [ "$CLAUDE_MD_ONLY" = "true" ]; then
+            MESSAGE_BODY="$(printf '%s\n\n⚠️ CLAUDE.md 관련 변경 감지 - claude-code-action의 보안 되돌려쓰기로 인한 알려진 오탐일 가능성이 높습니다. 실제 코드 문제가 아닐 수 있으니 아래 git status 변경 파일 목록을 확인해주세요.\n\n변경된 파일:\n%s' "$SUMMARY" "$DIRTY_FILES")"
+          else
+            MESSAGE_BODY="$SUMMARY"
+          fi
+
           jq -n --arg url "$PR_URL" \
                 --arg title "$PR_TITLE" \
-                --arg summary "$SUMMARY" \
+                --arg summary "$MESSAGE_BODY" \
             '{text: ("⚠️ *확인 필요* <" + $url + "|" + $title + ">\n" + $summary)}' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_EXCEPTION_WEBHOOK_URL"
 

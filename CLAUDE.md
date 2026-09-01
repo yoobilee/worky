@@ -83,6 +83,11 @@ src/
   is_review_skipped 감지 로직 및 review-timeout-watchdog.yml 참고)
 - .github/workflows/ 파일에 대한 Codex 지적은 자동 수정 대상에서 
   제외, 항상 Slack(#worky-검증-특이사항)으로 사람 판단 요청
+- CLAUDE.md를 수정하는 PR에서는 claude-code-action의 프롬프트 인젝션
+  방지 기능이 CLAUDE.md를 origin/master 버전으로 되돌려쓰면서 git
+  status가 dirty로 잡혀 "자기 보고와 실제 git 상태 불일치" 알림이
+  발생할 수 있음 - 알려진 오탐(fail-closed가 의도대로 작동한 것이므로
+  안전하지만, 원인이 코드 문제가 아님을 인지하고 확인만 하면 됨)
 - 자동화 스크립트(GitHub Actions 등)의 조건 판단은 fail-closed 원칙 적용 - 
   값이 비어있거나 예상과 다르거나 처리 자체가 실패하면 항상 안전한 쪽 
   (사람 확인 필요)으로 처리, jq의 `// 기본값`처럼 실패해도 조용히 
