@@ -17,6 +17,13 @@ interface RequestBody {
 
 const DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b";
 
+// reasoning_effort는 openai/gpt-oss-120b, openai/gpt-oss-20b에서만 지원되는
+// 파라미터(groq-sdk 타입 정의 기준). 다른 모델(QnA의 judge 호출 등)에 그대로
+// 보내면 에러가 날 수 있어, 실측 확인된 이 두 모델일 때만 조건부로 넣는다.
+// 모델 비교 실측(4개 모델 x 4개 카테고리) 결과 gpt-oss-120b 단일 모델 +
+// reasoning_effort:"low" 조합이 가장 안정적이라 전역 기본값으로 채택했다.
+const REASONING_EFFORT_LOW_MODELS = new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
+
 const KOREAN_RULES = `
 
 You must respond ONLY in Korean (한국어). Do not use any Chinese characters (한자), Japanese, Russian, Greek, or any other language mixed in. Use pure, natural modern Korean only.
@@ -50,12 +57,18 @@ export async function POST(req: NextRequest) {
       ? [{ role: "system", content: systemPrompt + KOREAN_RULES }, ...messages]
       : messages;
 
+    const resolvedModel = model ?? DEFAULT_GROQ_MODEL;
+    const reasoningEffort = REASONING_EFFORT_LOW_MODELS.has(resolvedModel)
+      ? ({ reasoning_effort: "low" as const })
+      : {};
+
     if (stream === true) {
       const completionStream = await groq.chat.completions.create({
-        model: model ?? DEFAULT_GROQ_MODEL,
+        model: resolvedModel,
         messages: fullMessages,
         stream: true,
         ...(max_completion_tokens ? { max_completion_tokens } : {}),
+        ...reasoningEffort,
       });
       const encoder = new TextEncoder();
       const readable = new ReadableStream({
@@ -76,9 +89,10 @@ export async function POST(req: NextRequest) {
     }
 
     const completion = await groq.chat.completions.create({
-      model: model ?? DEFAULT_GROQ_MODEL,
+      model: resolvedModel,
       messages: fullMessages,
       ...(max_completion_tokens ? { max_completion_tokens } : {}),
+      ...reasoningEffort,
     });
 
     const result = completion.choices[0]?.message?.content ?? "";
