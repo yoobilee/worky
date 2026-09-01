@@ -70,6 +70,10 @@ src/
 - 작업 완료 후: 새 브랜치(feature/설명 또는 fix/설명)를 만들어 commit+push, 
   PR을 오픈한다 (master에 직접 push 금지)
 - PR이 열리면 빌드 체크(GitHub Actions)와 Codex(chatgpt-codex-connector) 리뷰가 자동 실행됨
+- PR 생성 직후에는 항상 `gh pr comment <PR번호> --body "@codex review"`로
+  Codex 리뷰를 명시적으로 트리거한다. Automatic review는 draft→ready 전환이나
+  PR 최초 open 시점에만 걸리고, 이미 ready 상태로 바로 생성된 PR에는 안 걸릴
+  수 있음(PR #51에서 실측 확인됨) - 자동 트리거에 의존하지 않는다
 - Codex 리뷰 후 Claude Code 에이전트(GitHub Actions)가 자동 처리:
   안전하게 고칠 수 있으면 자동 수정 후 빌드 통과 시 merge, 판단이 필요하면 
   merge 보류하고 Slack(#worky-검증-특이사항)으로 알림
