@@ -1,0 +1,112 @@
+name: Review Timeout Watchdog
+
+# 열려 있는 PR에 신뢰하는 리뷰 봇(REVIEW_BOT_LOGIN)의 리뷰/코멘트가 정해진
+# 시간 안에 전혀 도착하지 않는 경우를 감지하는 안전장치.
+#
+# claude-review-response.yml은 리뷰 봇의 코멘트/리뷰가 "도착했을 때" 그
+# 내용을 검증한다 (문제없음/스킵/실제 이슈 등). 하지만 리뷰 앱이 저장소에
+# 설치되지 않았거나, 웹훅이 실패했거나, 외부 서비스 장애 등으로 코멘트
+# 자체가 아예 오지 않으면 claude-review-response.yml은 트리거될 일이 없어
+# 아무 것도 감지하지 못한다. 이 워크플로우는 그 공백을 메우는 별도의
+# 시간 기반 안전장치이며, 코멘트 "내용"은 판단하지 않고 "도착 여부"만 본다.
+#
+# PR 이벤트 안에서 15분 sleep하는 잡 대신 주기적으로(schedule) 열린 PR을
+# 스캔하는 방식을 택했다: sleep 잡은 워크플로우 취소/러너 재시작에 취약하고
+# push가 반복될 때마다 대기 중인 잡이 쌓이지만, 짧은 주기의 schedule
+# 워크플로우는 매 실행마다 최신 상태를 다시 계산하므로 이전 실행이 어떻게
+# 됐든 자연히 복구된다 (이 저장소의 keep-alive.yml, reset-guest-demo.yml과
+# 동일한 패턴).
+on:
+  schedule:
+    - cron: '*/5 * * * *' # 5분마다 열린 PR을 스캔 (TIMEOUT_MINUTES보다 촘촘한 주기)
+  workflow_dispatch:
+
+# claude-review-response.yml과 동일한 값으로 유지할 것 (두 곳 모두 수정 필요)
+env:
+  REVIEW_BOT_LOGIN: chatgpt-codex-connector[bot]
+  TIMEOUT_MINUTES: 15
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: 리뷰 미도착 PR 감지 및 알림
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SLACK_EXCEPTION_WEBHOOK_URL: ${{ secrets.SLACK_EXCEPTION_WEBHOOK_URL }}
+        run: |
+          set -e
+
+          NOW_EPOCH=$(date -u +%s)
+          TIMEOUT_SECONDS=$(( TIMEOUT_MINUTES * 60 ))
+
+          PRS=$(gh pr list --repo "$REPO" --state open --json number,title,url,createdAt,isDraft,isCrossRepository,labels)
+
+          echo "$PRS" | jq -c '.[]' | while read -r pr; do
+            NUMBER=$(echo "$pr" | jq -r '.number')
+            TITLE=$(echo "$pr" | jq -r '.title')
+            URL=$(echo "$pr" | jq -r '.url')
+            CREATED_AT=$(echo "$pr" | jq -r '.createdAt')
+            IS_DRAFT=$(echo "$pr" | jq -r '.isDraft')
+            IS_FORK=$(echo "$pr" | jq -r '.isCrossRepository')
+
+            # 초안 PR과 fork PR은 애초에 claude-review-response.yml의 자동
+            # 처리 대상이 아니므로("리뷰가 안 왔다"는 오탐을 막기 위해)
+            # 스캔 대상에서도 제외한다
+            if [ "$IS_DRAFT" = "true" ] || [ "$IS_FORK" = "true" ]; then
+              continue
+            fi
+
+            # 이 PR에서 검증 대상이 된 코드의 기준 시각(T0): 가장 최근 커밋
+            # 시각. 새 커밋이 push되면 그 시점부터 다시 타임아웃을 계산해,
+            # push 이전의 오래된 리뷰를 "지금 코드도 검증됐다"고 오판하지
+            # 않도록 한다
+            LAST_COMMIT_AT=$(gh pr view "$NUMBER" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // empty')
+            T0="${LAST_COMMIT_AT:-$CREATED_AT}"
+
+            T0_EPOCH=$(date -u -d "$T0" +%s)
+            ELAPSED=$(( NOW_EPOCH - T0_EPOCH ))
+
+            if [ "$ELAPSED" -lt "$TIMEOUT_SECONDS" ]; then
+              continue
+            fi
+
+            # T0 이후 신뢰하는 리뷰 봇의 리뷰/코멘트가 하나라도 도착했는지만
+            # fail-closed로 확인한다 (내용 판단은 claude-review-response.yml 몫)
+            REVIEWED=$(gh pr view "$NUMBER" --repo "$REPO" --json reviews,comments \
+              --jq --arg bot "$REVIEW_BOT_LOGIN" --arg t0 "$T0" \
+              '([.reviews[]? | select(.author.login == $bot and .submittedAt > $t0)] | length) +
+               ([.comments[]? | select(.author.login == $bot and .createdAt > $t0)] | length)')
+
+            OLD_LABEL=$(echo "$pr" | jq -r '.labels[]?.name' | grep '^review-timeout:' || true)
+
+            if [ "${REVIEWED:-0}" -gt 0 ]; then
+              # 리뷰가 도착했음 - 예전에 붙었을 수 있는 타임아웃 라벨을 정리
+              if [ -n "$OLD_LABEL" ]; then
+                gh pr edit "$NUMBER" --repo "$REPO" --remove-label "$OLD_LABEL" || true
+              fi
+              continue
+            fi
+
+            # 이 커밋(SHA)에 대해 이미 알림을 보냈으면 5분마다 재알림하지 않는다
+            SHORT_SHA=$(gh pr view "$NUMBER" --repo "$REPO" --json headRefOid --jq '.headRefOid[0:7]')
+            NEW_LABEL="review-timeout:${SHORT_SHA}"
+            if [ "$OLD_LABEL" = "$NEW_LABEL" ]; then
+              continue
+            fi
+
+            if [ -n "$OLD_LABEL" ]; then
+              gh pr edit "$NUMBER" --repo "$REPO" --remove-label "$OLD_LABEL" || true
+            fi
+            gh label create "$NEW_LABEL" --repo "$REPO" --color "D93F0B" --force >/dev/null 2>&1 || true
+            gh pr edit "$NUMBER" --repo "$REPO" --add-label "$NEW_LABEL" || true
+
+            jq -n --arg url "$URL" --arg title "$TITLE" --arg minutes "$TIMEOUT_MINUTES" --arg bot "$REVIEW_BOT_LOGIN" \
+              '{text: ("⏱️ *리뷰 타임아웃* <" + $url + "|" + $title + ">\nPR이 갱신된 지 " + $minutes + "분이 지났지만 리뷰 봇(" + $bot + ")의 리뷰/코멘트가 도착하지 않았습니다. 리뷰 앱 설치 상태나 웹훅을 확인해주세요. 사람 확인이 필요합니다.")}' | \
+              curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_EXCEPTION_WEBHOOK_URL" || \
+              echo "::warning::Slack 알림 전송 실패 (PR #$NUMBER) - 다음 스캔에서 재시도됩니다"
+          done
