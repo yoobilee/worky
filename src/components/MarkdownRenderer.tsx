@@ -109,8 +109,21 @@ const components: Components = {
 // 리스트 마커가 아니라서 remark-gfm이 이를 리스트로 인식하지 못하고 연속된
 // 항목들이 하나의 문단으로 뭉쳐버린다 - 기존 수제 파서는 "•"를 직접
 // 처리했었지만 react-markdown으로 교체하며 사라진 동작이라 여기서 보정한다.
+//
+// 코드 펜스(```...```) 내부는 건드리지 않는다 - AI 응답에 코드 블록이
+// 포함되어 있고 그 안에 "• "로 시작하는 줄이 있으면(예: 다른 언어의 주석,
+// 문서 인용 등) 마크다운 파싱 전에 이 정규식이 무차별적으로 원본 코드를
+// 고쳐 써버려 화면에 표시/복사되는 내용이 실제 모델 출력과 달라지는
+// 문제가 있었다(Codex 리뷰 지적).
 function normalizeBulletMarkers(text: string): string {
-  return text.replace(/^([ \t]*)[•‣▪] /gm, "$1- ");
+  const segments = text.split(/(```[\s\S]*?```)/g);
+  return segments
+    .map((segment, i) =>
+      i % 2 === 1
+        ? segment // 홀수 인덱스는 캡처된 ```...``` 코드 펜스 - 원본 그대로 둔다
+        : segment.replace(/^([ \t]*)[•‣▪] /gm, "$1- ")
+    )
+    .join("");
 }
 
 interface MarkdownRendererProps {
