@@ -136,13 +136,25 @@ jobs:
         if: steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.pr.outputs.is_review_skipped == 'false'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
+        # --allowedTools의 gh 관련 항목은 리뷰 봇의 실제 리뷰/인라인 코멘트를
+        # 읽어오기 위한 읽기 전용 조회 명령만 허용한다(gh pr view, gh pr diff,
+        # gh issue list, gh api). gh pr merge/close, gh issue create, gh repo
+        # delete처럼 상태를 바꾸는 명령은 절대 포함하지 않는다 - 그런 작업은
+        # 이미 이 워크플로우의 "GitHub Issue 자동 등록", "자동 merge 요청" 등
+        # 별도 스텝에서 더 좁은 조건(fail-closed 검증 통과 후) 하에 전용
+        # gh 호출로만 수행되므로, 에이전트의 자유 판단에 맡기면 안 된다.
+        # 참고: Bash(gh api:*) 패턴 자체는 -X POST/PATCH/DELETE까지 문자열
+        # 매칭상 허용되어 GET으로 제한하지는 못한다(패턴 문법상 HTTP 메서드
+        # 구분 불가) - 다만 이미 git push까지 허용된 에이전트이므로 이 잔여
+        # 위험은 기존 신뢰 수준보다 크지 않다고 판단했다. 프롬프트에서도
+        # 조회 목적으로만 쓰도록 지시한다.
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GH_PAT }}
           allowed_bots: ${{ env.REVIEW_BOT_LOGIN }}
           claude_args: |
             --max-turns 20
-            --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*)"
+            --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue list:*),Bash(gh api:*)"
             --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"reviewContentRead":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","reviewContentRead","issueSummary","humanReviewReason"]}'
           prompt: |
             이 PR에 리뷰 봇(Codex)이 남긴 리뷰를 확인해줘:
