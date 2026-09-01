@@ -9,6 +9,11 @@ name: Review Timeout Watchdog
 # 자체가 아예 오지 않으면 claude-review-response.yml은 트리거될 일이 없어
 # 아무 것도 감지하지 못한다. 이 워크플로우는 그 공백을 메우는 별도의
 # 시간 기반 안전장치이며, 코멘트 "내용"은 판단하지 않고 "도착 여부"만 본다.
+# 즉 리뷰 봇이 남긴 "처리 중"(placeholder) 코멘트도 여기서는 도착으로
+# 간주한다 - 이건 실수가 아니라 의도된 스코프 분리다: placeholder/스킵
+# 안내처럼 "내용"을 보고 진짜 검증이 이뤄졌는지 판단하는 건
+# claude-review-response.yml의 역할이고, 이 워크플로우는 그보다 앞단에서
+# "애초에 아무 반응도 없는" 완전한 침묵 상태만 잡아낸다.
 #
 # PR 이벤트 안에서 15분 sleep하는 잡 대신 주기적으로(schedule) 열린 PR을
 # 스캔하는 방식을 택했다: sleep 잡은 워크플로우 취소/러너 재시작에 취약하고
@@ -76,9 +81,18 @@ jobs:
             fi
 
             # T0 이후 신뢰하는 리뷰 봇의 리뷰/코멘트가 하나라도 도착했는지만
-            # fail-closed로 확인한다 (내용 판단은 claude-review-response.yml 몫)
-            REVIEWED=$(gh pr view "$NUMBER" --repo "$REPO" --json reviews,comments \
-              --jq --arg bot "$REVIEW_BOT_LOGIN" --arg t0 "$T0" \
+            # fail-closed로 확인한다. 내용은 판단하지 않고 "도착 여부"만
+            # 본다 - placeholder("처리 중") 코멘트도 여기서는 도착으로
+            # 카운트된다. 내용을 보고 placeholder/스킵 여부를 가려내는 건
+            # claude-review-response.yml의 역할이고, 이 워치독은 코멘트/
+            # 리뷰가 아예 오지 않는 경우(리뷰 앱 미설치, 웹훅 실패 등)만
+            # 잡아내는 별도 안전장치이기 때문에 의도적으로 이렇게 둔다.
+            #
+            # gh pr view --jq는 jq 표현식 문자열 하나만 받고 --arg 같은 jq
+            # 전용 플래그를 이해하지 못해 "unknown flag: --arg"로 즉시
+            # 실패하므로, raw JSON을 먼저 받은 뒤 별도 jq 파이프로 넘긴다.
+            REVIEW_JSON=$(gh pr view "$NUMBER" --repo "$REPO" --json reviews,comments)
+            REVIEWED=$(echo "$REVIEW_JSON" | jq --arg bot "$REVIEW_BOT_LOGIN" --arg t0 "$T0" \
               '([.reviews[]? | select(.author.login == $bot and .submittedAt > $t0)] | length) +
                ([.comments[]? | select(.author.login == $bot and .createdAt > $t0)] | length)')
 
@@ -99,14 +113,21 @@ jobs:
               continue
             fi
 
-            if [ -n "$OLD_LABEL" ]; then
-              gh pr edit "$NUMBER" --repo "$REPO" --remove-label "$OLD_LABEL" || true
+            # Slack 알림을 먼저 보내고, 전송 성공이 확인된 경우에만 이
+            # 커밋에 대한 review-timeout 라벨을 남긴다. 라벨을 먼저
+            # 붙이면 Slack 전송이 실패해도 다음 스캔에서 "이미 알림
+            # 보냄"으로 오인해, 같은 커밋인 동안(다음 push 전까지)
+            # 재시도가 영구히 막히기 때문이다 - 알림 실패를 "문제없음"으로
+            # 취급하지 않는다는 이 저장소의 fail-closed 원칙과 동일한 이유.
+            if jq -n --arg url "$URL" --arg title "$TITLE" --arg minutes "$TIMEOUT_MINUTES" --arg bot "$REVIEW_BOT_LOGIN" \
+                '{text: ("⏱️ *리뷰 타임아웃* <" + $url + "|" + $title + ">\nPR이 갱신된 지 " + $minutes + "분이 지났지만 리뷰 봇(" + $bot + ")의 리뷰/코멘트가 도착하지 않았습니다. 리뷰 앱 설치 상태나 웹훅을 확인해주세요. 사람 확인이 필요합니다.")}' | \
+                curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_EXCEPTION_WEBHOOK_URL"; then
+              if [ -n "$OLD_LABEL" ]; then
+                gh pr edit "$NUMBER" --repo "$REPO" --remove-label "$OLD_LABEL" || true
+              fi
+              gh label create "$NEW_LABEL" --repo "$REPO" --color "D93F0B" --force >/dev/null 2>&1 || true
+              gh pr edit "$NUMBER" --repo "$REPO" --add-label "$NEW_LABEL" || true
+            else
+              echo "::warning::Slack 알림 전송 실패 (PR #$NUMBER) - 라벨을 남기지 않아 다음 스캔에서 재시도됩니다"
             fi
-            gh label create "$NEW_LABEL" --repo "$REPO" --color "D93F0B" --force >/dev/null 2>&1 || true
-            gh pr edit "$NUMBER" --repo "$REPO" --add-label "$NEW_LABEL" || true
-
-            jq -n --arg url "$URL" --arg title "$TITLE" --arg minutes "$TIMEOUT_MINUTES" --arg bot "$REVIEW_BOT_LOGIN" \
-              '{text: ("⏱️ *리뷰 타임아웃* <" + $url + "|" + $title + ">\nPR이 갱신된 지 " + $minutes + "분이 지났지만 리뷰 봇(" + $bot + ")의 리뷰/코멘트가 도착하지 않았습니다. 리뷰 앱 설치 상태나 웹훅을 확인해주세요. 사람 확인이 필요합니다.")}' | \
-              curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_EXCEPTION_WEBHOOK_URL" || \
-              echo "::warning::Slack 알림 전송 실패 (PR #$NUMBER) - 다음 스캔에서 재시도됩니다"
           done
