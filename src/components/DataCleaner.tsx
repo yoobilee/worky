@@ -30,19 +30,34 @@ function extractTableHtml(raw: string): string {
   return match ? match[0] : raw;
 }
 
-async function callGroqApi(text: string, systemPrompt: string): Promise<string> {
+const RATE_LIMIT_RETRY_DELAY_MS = 3000;
+
+async function callGroqApiOnce(text: string, systemPrompt: string) {
   const res = await fetch("/api/groq", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       messages: [{ role: "user", content: text }],
       systemPrompt,
-      max_tokens: 8192,
+      max_completion_tokens: 2048,
     }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
-  return data.result as string;
+  return { ok: res.ok, data };
+}
+
+async function callGroqApi(text: string, systemPrompt: string): Promise<string> {
+  const first = await callGroqApiOnce(text, systemPrompt);
+  if (first.ok) return first.data.result as string;
+
+  if (first.data.code === "rate_limit") {
+    await new Promise((r) => setTimeout(r, RATE_LIMIT_RETRY_DELAY_MS));
+    const retry = await callGroqApiOnce(text, systemPrompt);
+    if (retry.ok) return retry.data.result as string;
+    throw new Error(retry.data.error ?? "알 수 없는 오류");
+  }
+
+  throw new Error(first.data.error ?? "알 수 없는 오류");
 }
 
 async function cleanDataWithChunks(
@@ -80,7 +95,7 @@ async function cleanDataWithChunks(
       tbodyRows.push(...trs);
     }
     onProgress(i + 1, chunks.length);
-    if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 500));
+    if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
   }
 
   return `<table>${theadHtml}<tbody>${tbodyRows.join("")}</tbody></table>`;
