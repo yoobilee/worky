@@ -143,33 +143,42 @@ jobs:
           claude_args: |
             --max-turns 20
             --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*)"
-            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","issueSummary","humanReviewReason"]}'
+            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"reviewContentRead":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","reviewContentRead","issueSummary","humanReviewReason"]}'
           prompt: |
             이 PR에 리뷰 봇(Codex)이 남긴 리뷰를 확인해줘:
             ${{ github.event_name == 'pull_request_review' && github.event.review.body || github.event.comment.body }}
 
             아래 원칙에 따라 처리해:
-            1. 리뷰 내용이 "이 저장소는 리뷰를 실행하지 않았다/스킵했다/
+            1. reviewContentRead 필드: 위 리뷰 본문(그리고 필요해서 gh CLI 등으로
+               추가 조회를 시도했다면 그 결과까지 포함)을 실제로 확인해서 지적사항
+               여부를 판단할 근거가 충분하면 true로 표시해. 만약 gh CLI, 네트워크
+               접근 등 도구 호출이 차단/실패해서 리뷰의 실제 내용(인라인 코멘트 등
+               포함)을 제대로 확인하지 못했다면 - 조금이라도 확신이 안 서면 - 반드시
+               false로 표시해. 이 필드는 "확인 불가"와 "확인했더니 문제없음이
+               확실한 경우"를 구분하는 안전장치이므로 애매하면 무조건 false야.
+            2. 리뷰 내용이 "이 저장소는 리뷰를 실행하지 않았다/스킵했다/
                레이트리밋에 걸렸다" 같이 실제 코드를 검토하지 않았다는
                취지라면, 이를 절대 "문제없음"으로 해석하지 마. 이 경우
                hasIssues는 false로 두되 needsHuman은 반드시 true로,
                humanReviewReason에는 "리뷰가 실제로 수행되지 않음"이라는
                취지를 명확히 적어.
-            2. 리뷰 봇이 실제로 코드를 검토했고 지적한 문제가 없으면
-               (승인/문제없음) 그대로 종료
-            3. 안전하고 확실하게 고칠 수 있는 문제(타입 에러, 명백한 버그,
+            3. 리뷰 봇이 실제로 코드를 검토했고 지적한 문제가 없으면
+               (승인/문제없음) 그대로 종료. 단 이 경로로 hasIssues:false,
+               needsHuman:false를 낼 때는 reviewContentRead가 true인 경우에만
+               해당돼 - 리뷰를 제대로 못 읽었으면 절대 이 경로를 쓰지 마.
+            4. 안전하고 확실하게 고칠 수 있는 문제(타입 에러, 명백한 버그,
                스타일 문제 등)면 직접 코드를 수정하고 커밋해
-            4. 아래에 해당하면 절대 코드를 수정하지 말고 "사람 판단 필요"로만 분류:
+            5. 아래에 해당하면 절대 코드를 수정하지 말고 "사람 판단 필요"로만 분류:
                - Supabase 마이그레이션 파일(supabase/migrations/) 관련 지적
                - 환경변수, API 키, 인증/보안 관련 지적
                - GitHub Actions 워크플로우 파일(.github/workflows/) 자체 관련 지적
                - 여러 가지 해석이 가능하거나 설계 판단이 필요한 지적
-            5. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
+            6. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
                완료해서 이 브랜치에 반영해. 커밋 메시지는 한국어로 변경 내용을 요약해.
-            6. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
-               issueSummary, humanReviewReason 5개 필드 모두 필수)를 정확히
-               지켜서 결과를 출력해. issueSummary에는 어떤 결함을 발견했고
-               고쳤는지 여부만 사실 위주로 작성하고, humanReviewReason에는
+            7. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
+               reviewContentRead, issueSummary, humanReviewReason 6개 필드 모두
+               필수)를 정확히 지켜서 결과를 출력해. issueSummary에는 어떤 결함을
+               발견했고 고쳤는지 여부만 사실 위주로 작성하고, humanReviewReason에는
                왜 사람이 직접 판단해야 하는지 이유를 작성해 (사람 판단이
                필요 없으면 빈 문자열로 둬)
 
@@ -209,16 +218,26 @@ jobs:
           # structured_output 파싱을 시도하지 않고 바로 안전한 값으로 처리
           if [ "$CLAUDE_OUTCOME" != "success" ]; then
             PARSED='{"hasIssues":false,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"Claude 에이전트 처리 자체가 실패함 - 자동 판단 불가, GitHub Issue는 생성하지 않고 사람 확인만 요청"}'
-          # fail-closed: structured_output이 비어있거나 스키마(5개 필드 모두 정확한 타입)를
-          # 만족하지 않으면 needsHuman=true, hasIssues=true로 안전하게 처리
+          # fail-closed: structured_output이 비어있거나 스키마(6개 필드 모두 정확한 타입,
+          # reviewContentRead 포함)를 만족하지 않으면 needsHuman=true, hasIssues=true로
+          # 안전하게 처리
           elif [ -n "$STRUCTURED_OUTPUT" ] && echo "$STRUCTURED_OUTPUT" | jq -e \
-            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string"' \
+            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.reviewContentRead | type) == "boolean" and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string"' \
             > /dev/null 2>&1; then
+            # fail-closed: 리뷰 봇의 코멘트/리뷰 내용을 Claude 에이전트가 실제로
+            # 읽지 못했다면(gh CLI/네트워크 차단·실패 등) hasIssues가 무엇으로
+            # 나왔든 무조건 사람 확인 필요로 강제 전환한다. reviewContentRead는
+            # "확인 불가"와 "확인했더니 문제없음이 확실한 경우"를 구분하기 위한
+            # 필드로, 이 분기는 "확인이 됐다고 확신할 수 없는 모든 경우"를 안전한
+            # 쪽으로 보낸다 - hasIssues 판단 자체를 신뢰하지 않는다.
+            if echo "$STRUCTURED_OUTPUT" | jq -e '.reviewContentRead == false' > /dev/null 2>&1; then
+              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
+                '.needsHuman = true | .hasIssues = false | .humanReviewReason = "리뷰 봇 응답을 읽지 못해 확인이 필요합니다(네트워크/권한 차단 등)"')
             # fail-closed: 이슈가 있는데(hasIssues=true) 고치지도 않았고(fixed=false)
             # 사람 확인도 불필요(needsHuman=false)하다는 모순된 결과는 무효 처리.
             # hasIssues/fixed/issueSummary는 신뢰할 수 있으므로 그대로 보존하고
             # needsHuman과 humanReviewReason만 안전한 값으로 덮어쓴다.
-            if echo "$STRUCTURED_OUTPUT" | jq -e \
+            elif echo "$STRUCTURED_OUTPUT" | jq -e \
               '.hasIssues == true and .fixed == false and .needsHuman == false' \
               > /dev/null 2>&1; then
               PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
