@@ -259,7 +259,7 @@ export default function QnA() {
           body: JSON.stringify({
             messages: [{ role: "user", content: text }],
             systemPrompt: DATA_NEED_SYSTEM_PROMPT,
-            model: "llama-3.1-8b-instant",
+            model: "openai/gpt-oss-20b",
           }),
         });
         const judgeData = await judgeRes.json();
@@ -267,8 +267,11 @@ export default function QnA() {
           const parsed = JSON.parse(judgeData.result);
           needsData = !!parsed.needsData;
           tables = Array.isArray(parsed.tables) ? parsed.tables : [];
+        } else {
+          console.error("QnA 데이터 필요 여부 판단(judge) 호출 실패:", judgeRes.status, judgeData);
         }
-      } catch {
+      } catch (e) {
+        console.error("QnA 데이터 필요 여부 판단(judge) 호출 중 예외 발생:", e);
         needsData = false;
       }
 
