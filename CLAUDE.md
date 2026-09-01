@@ -69,11 +69,15 @@ src/
 ## 작업 규칙
 - 작업 완료 후: 새 브랜치(feature/설명 또는 fix/설명)를 만들어 commit+push, 
   PR을 오픈한다 (master에 직접 push 금지)
-- PR이 열리면 빌드 체크(GitHub Actions)와 CodeRabbit 리뷰가 자동 실행됨
-- CodeRabbit 리뷰 후 Claude Code 에이전트(GitHub Actions)가 자동 처리:
+- PR이 열리면 빌드 체크(GitHub Actions)와 Codex(chatgpt-codex-connector) 리뷰가 자동 실행됨
+- Codex 리뷰 후 Claude Code 에이전트(GitHub Actions)가 자동 처리:
   안전하게 고칠 수 있으면 자동 수정 후 빌드 통과 시 merge, 판단이 필요하면 
   merge 보류하고 Slack(#worky-검증-특이사항)으로 알림
-- .github/workflows/ 파일에 대한 CodeRabbit 지적은 자동 수정 대상에서 
+- 리뷰 봇이 "리뷰를 실행하지 않았다/스킵했다"는 취지의 안내만 남긴 경우는
+  절대 "지적사항 없음"으로 해석하지 않고 항상 사람 확인 필요로 처리 (실제
+  코드 검증 없이 자동 merge된 사고가 있었음 - claude-review-response.yml의
+  is_review_skipped 감지 로직 및 review-timeout-watchdog.yml 참고)
+- .github/workflows/ 파일에 대한 Codex 지적은 자동 수정 대상에서 
   제외, 항상 Slack(#worky-검증-특이사항)으로 사람 판단 요청
 - 자동화 스크립트(GitHub Actions 등)의 조건 판단은 fail-closed 원칙 적용 - 
   값이 비어있거나 예상과 다르거나 처리 자체가 실패하면 항상 안전한 쪽 

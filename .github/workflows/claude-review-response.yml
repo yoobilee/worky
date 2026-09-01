@@ -5,17 +5,35 @@ on:
   issue_comment:
     types: [created, edited]
 
+# 신뢰하는 리뷰 봇의 GitHub 로그인(actor).
+# TODO(확인 필요): chatgpt-codex-connector[bot]은 GitHub App bot login 네이밍
+# 관례(<app-slug>[bot])에 따른 추정값입니다. 실제 테스트 PR에서 발생하는
+# pull_request_review.review.user.login / issue_comment.comment.user.login
+# 값을 확인해 정확한 값으로 교체하세요. 이 값 하나만 바꾸면 워크플로우
+# 전체가 새 리뷰 봇을 인식합니다.
+# (review-timeout-watchdog.yml에도 동일한 값이 있으니 함께 갱신할 것)
+env:
+  REVIEW_BOT_LOGIN: chatgpt-codex-connector[bot]
+
 concurrency:
   group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
   respond:
+    # 정확한 봇 계정 비교는 env 컨텍스트를 참조할 수 없는 job 레벨 if에서는
+    # 할 수 없으므로(env는 step에서만 사용 가능), 여기서는 "봇 계정인지"만
+    # 걸러 불필요한 runner 기동을 줄이고, 정확한 REVIEW_BOT_LOGIN 비교는
+    # 아래 "PR 정보 조회" 스텝에서 fail-closed로 한 번 더 수행한다
+    # (steps.pr.outputs.is_trusted_bot으로 이후 모든 스텝을 게이팅).
     if: >
-      (github.event_name == 'pull_request_review' && github.event.review.user.login == 'coderabbitai[bot]' &&
+      (github.event_name == 'pull_request_review' &&
+       endsWith(github.event.review.user.login, '[bot]') &&
        github.event.pull_request.head.repo.full_name != '' &&
        github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) ||
-      (github.event_name == 'issue_comment' && github.event.comment.user.login == 'coderabbitai[bot]' && github.event.issue.pull_request)
+      (github.event_name == 'issue_comment' &&
+       endsWith(github.event.comment.user.login, '[bot]') &&
+       github.event.issue.pull_request)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -35,10 +53,12 @@ jobs:
           PR_HEAD_REPO_REVIEW: ${{ github.event.pull_request.head.repo.full_name }}
           PR_BASE_REPO_REVIEW: ${{ github.event.pull_request.base.repo.full_name }}
           PR_REVIEW_BODY: ${{ github.event.review.body }}
+          PR_REVIEW_ACTOR: ${{ github.event.review.user.login }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_COMMENT_BODY: ${{ github.event.comment.body }}
+          ISSUE_COMMENT_ACTOR: ${{ github.event.comment.user.login }}
         run: |
           if [ "$EVENT_NAME" = "pull_request_review" ]; then
             NUMBER="$PR_NUMBER_REVIEW"
@@ -46,6 +66,7 @@ jobs:
             URL="$PR_URL_REVIEW"
             TITLE="$PR_TITLE_REVIEW"
             BODY="$PR_REVIEW_BODY"
+            ACTOR="$PR_REVIEW_ACTOR"
             # fail-closed: 두 값이 모두 비어있어 우연히 같아지는 경우까지
             # "포크 아님"으로 통과시키지 않도록 head 값의 비어있음 여부도 확인
             if [ -n "$PR_HEAD_REPO_REVIEW" ] && [ "$PR_HEAD_REPO_REVIEW" = "$PR_BASE_REPO_REVIEW" ]; then
@@ -59,56 +80,93 @@ jobs:
             URL="$ISSUE_URL"
             TITLE="$ISSUE_TITLE"
             BODY="$ISSUE_COMMENT_BODY"
+            ACTOR="$ISSUE_COMMENT_ACTOR"
             IS_FORK=$(gh pr view "$NUMBER" --repo "$REPO" --json isCrossRepository -q .isCrossRepository)
           fi
-          # CodeRabbit이 아직 리뷰를 마치지 못한 "처리 중" placeholder 코멘트/리뷰는
-          # 실제 리뷰 내용이 없으므로 이후 스텝을 전부 건너뛴다
+
+          # job 레벨 if는 "*[bot]" 여부만 걸렀으므로, 실제로 우리가 신뢰하는
+          # 리뷰 봇(REVIEW_BOT_LOGIN)이 맞는지 여기서 정확히 재확인한다.
+          # 이 결과로 이후 모든 스텝을 게이팅해 다른 봇(vercel[bot] 등)의
+          # 코멘트가 리뷰로 오인되지 않도록 한다.
+          if [ "$ACTOR" = "$REVIEW_BOT_LOGIN" ]; then
+            IS_TRUSTED_BOT="true"
+          else
+            IS_TRUSTED_BOT="false"
+          fi
+
+          # 리뷰 봇이 아직 리뷰를 마치지 못한 "처리 중" placeholder 코멘트/리뷰는
+          # 실제 리뷰 내용이 없으므로 이후 스텝을 전부 건너뛴다 (나중에 코멘트가
+          # 실제 리뷰 내용으로 수정되면 그때 다시 트리거됨)
           case "$BODY" in
             *"Currently processing new changes"*) IS_PLACEHOLDER="true" ;;
             *) IS_PLACEHOLDER="false" ;;
           esac
+
+          # 리뷰 봇이 "리뷰를 아예 실행하지 않았다/스킵했다"는 취지의 안내만
+          # 남긴 경우를 감지한다. placeholder와 달리 이 경우는 실제 코드
+          # 검증이 다시 이뤄질 거란 보장이 없으므로 "문제없음"이 아니라 반드시
+          # 사람 확인이 필요한 상태로 처리해야 한다. (CodeRabbit이 "이
+          # 저장소는 star 10개 미만이라 리뷰를 안 한다"는 스킵 안내를
+          # "지적사항 없음"으로 오인해 PR #49가 검증 없이 자동 merge된 사고의
+          # 재발 방지 - 아래 "실제 git 상태 검증" 스텝에서 needs_human=true로
+          # 강제 처리됨)
+          BODY_LOWER=$(printf '%s' "$BODY" | tr '[:upper:]' '[:lower:]')
+          case "$BODY_LOWER" in
+            *"does not receive"*|*"skip review"*|*"skipped"*|*"rate limit"*|*"rate-limited"*) IS_REVIEW_SKIPPED="true" ;;
+            *) IS_REVIEW_SKIPPED="false" ;;
+          esac
+
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "title=$TITLE" >> "$GITHUB_OUTPUT"
           echo "is_fork=$IS_FORK" >> "$GITHUB_OUTPUT"
+          echo "is_trusted_bot=$IS_TRUSTED_BOT" >> "$GITHUB_OUTPUT"
           echo "is_placeholder=$IS_PLACEHOLDER" >> "$GITHUB_OUTPUT"
+          echo "is_review_skipped=$IS_REVIEW_SKIPPED" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
-        if: steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false'
+        if: steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.pr.outputs.is_review_skipped == 'false'
         with:
           ref: ${{ steps.pr.outputs.ref }}
           persist-credentials: false
 
       - name: Claude Code 리뷰 처리
         id: claude
-        if: steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false'
+        if: steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.pr.outputs.is_review_skipped == 'false'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GH_PAT }}
-          allowed_bots: "coderabbitai[bot]"
+          allowed_bots: ${{ env.REVIEW_BOT_LOGIN }}
           claude_args: |
             --max-turns 20
             --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*)"
             --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","issueSummary","humanReviewReason"]}'
           prompt: |
-            이 PR에 CodeRabbit이 남긴 리뷰를 확인해줘:
+            이 PR에 리뷰 봇(Codex)이 남긴 리뷰를 확인해줘:
             ${{ github.event_name == 'pull_request_review' && github.event.review.body || github.event.comment.body }}
 
             아래 원칙에 따라 처리해:
-            1. CodeRabbit이 지적한 문제가 없으면(승인/문제없음) 그대로 종료
-            2. 안전하고 확실하게 고칠 수 있는 문제(타입 에러, 명백한 버그,
+            1. 리뷰 내용이 "이 저장소는 리뷰를 실행하지 않았다/스킵했다/
+               레이트리밋에 걸렸다" 같이 실제 코드를 검토하지 않았다는
+               취지라면, 이를 절대 "문제없음"으로 해석하지 마. 이 경우
+               hasIssues는 false로 두되 needsHuman은 반드시 true로,
+               humanReviewReason에는 "리뷰가 실제로 수행되지 않음"이라는
+               취지를 명확히 적어.
+            2. 리뷰 봇이 실제로 코드를 검토했고 지적한 문제가 없으면
+               (승인/문제없음) 그대로 종료
+            3. 안전하고 확실하게 고칠 수 있는 문제(타입 에러, 명백한 버그,
                스타일 문제 등)면 직접 코드를 수정하고 커밋해
-            3. 아래에 해당하면 절대 코드를 수정하지 말고 "사람 판단 필요"로만 분류:
+            4. 아래에 해당하면 절대 코드를 수정하지 말고 "사람 판단 필요"로만 분류:
                - Supabase 마이그레이션 파일(supabase/migrations/) 관련 지적
                - 환경변수, API 키, 인증/보안 관련 지적
                - GitHub Actions 워크플로우 파일(.github/workflows/) 자체 관련 지적
                - 여러 가지 해석이 가능하거나 설계 판단이 필요한 지적
-            4. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
+            5. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
                완료해서 이 브랜치에 반영해. 커밋 메시지는 한국어로 변경 내용을 요약해.
-            5. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
+            6. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
                issueSummary, humanReviewReason 5개 필드 모두 필수)를 정확히
                지켜서 결과를 출력해. issueSummary에는 어떤 결함을 발견했고
                고쳤는지 여부만 사실 위주로 작성하고, humanReviewReason에는
@@ -117,7 +175,7 @@ jobs:
 
       - name: 결과 파싱 및 분기
         id: parse
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false'
+        if: always() && steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.pr.outputs.is_review_skipped == 'false'
         env:
           CLAUDE_OUTCOME: ${{ steps.claude.outcome }}
           STRUCTURED_OUTPUT: ${{ steps.claude.outputs.structured_output }}
@@ -182,10 +240,11 @@ jobs:
 
       - name: 실제 git 상태 검증
         id: verify
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false'
+        if: always() && steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
+          IS_REVIEW_SKIPPED: ${{ steps.pr.outputs.is_review_skipped }}
           PARSE_OUTCOME: ${{ steps.parse.outcome }}
           PARSE_NEEDS_HUMAN: ${{ steps.parse.outputs.needs_human }}
           PARSE_ISSUE_SUMMARY: ${{ steps.parse.outputs.issue_summary }}
@@ -214,6 +273,18 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           }
           trap write_result EXIT
+
+          # 리뷰 봇이 "리뷰를 실행하지 않았다/스킵했다"는 안내만 남긴 경우
+          # (PR 정보 조회 스텝에서 감지) - 코드 검증 자체가 이뤄지지 않았으므로
+          # git 상태를 볼 필요도 없이 곧바로 사람 확인 필요로 확정한다.
+          # (CodeRabbit의 "star 10개 미만이라 리뷰 안 함" 안내를 "지적사항
+          # 없음"으로 오인해 PR #49가 검증 없이 자동 merge된 사고 재발 방지)
+          if [ "$IS_REVIEW_SKIPPED" = "true" ]; then
+            NEEDS_HUMAN=true
+            ISSUE_SUMMARY=""
+            HUMAN_REVIEW_REASON="리뷰 봇이 리뷰를 실행하지 않았다는 취지의 안내(스킵/미실행/레이트리밋 등)만 남겼습니다. 실제 코드 검증이 이뤄지지 않았으므로 반드시 사람이 직접 확인해야 합니다."
+            exit 0
+          fi
 
           STATUS_OUTPUT=$(git status --porcelain)
           LOCAL_HEAD=$(git rev-parse HEAD)
@@ -390,7 +461,11 @@ jobs:
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
 
       - name: 특이사항 알림 (사람 판단 필요한 경우)
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.needs_human != 'false'
+        # steps.verify는 is_trusted_bot=='false'일 때 통째로 스킵되어
+        # outputs.needs_human이 빈 문자열이 되므로(!= 'false'가 참이 되어
+        # 버림), is_trusted_bot을 여기서도 명시적으로 확인해야 다른 봇의
+        # 코멘트(vercel[bot] 배포 알림 등)에 잘못 반응하지 않는다
+        if: always() && steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.needs_human != 'false'
         env:
           SLACK_EXCEPTION_WEBHOOK_URL: ${{ secrets.SLACK_EXCEPTION_WEBHOOK_URL }}
           PR_URL: ${{ steps.pr.outputs.url }}
@@ -419,6 +494,6 @@ jobs:
             echo "$BODY_TEXT"
             echo
             echo "## 처리 방식"
-            echo "CodeRabbit 자동 리뷰 + Claude Code 에이전트 자동 검증"
+            echo "Codex 자동 리뷰 + Claude Code 에이전트 자동 검증"
           } > /tmp/merge_body.md
           gh pr merge --auto --squash --subject "$PR_TITLE" --body-file /tmp/merge_body.md "$PR_NUMBER"
