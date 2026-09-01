@@ -49,6 +49,20 @@ jobs:
           NOW_EPOCH=$(date -u +%s)
           TIMEOUT_SECONDS=$(( TIMEOUT_MINUTES * 60 ))
 
+          # claude-review-response.yml이 보는 pull_request_review/issue_comment
+          # 웹훅 이벤트의 review.user.login / comment.user.login은 "[bot]"
+          # 접미사가 붙은 표기(예: chatgpt-codex-connector[bot])를 쓰지만,
+          # 이 워치독이 쓰는 gh pr view --json(GraphQL 기반)의 reviews/comments
+          # author.login은 같은 계정이라도 접미사 없는 표기(예:
+          # chatgpt-codex-connector)로 내려온다 - REST/웹훅과 GraphQL이 봇
+          # 계정 표기 방식을 다르게 쓰기 때문(실측 확인됨). REVIEW_BOT_LOGIN
+          # 값 자체는 claude-review-response.yml과 동일하게 "[bot]" 접미사를
+          # 포함한 값으로 유지하고, GraphQL 비교에는 여기서 접미사만 떼어낸
+          # REVIEW_BOT_LOGIN_BARE를 쓴다 (두 워크플로우가 같은 REVIEW_BOT_LOGIN
+          # 값 하나만 보고 있으면 되도록 - 접미사 유무 때문에 두 값을 따로
+          # 관리하다 또 헷갈리는 일이 없도록 한다).
+          REVIEW_BOT_LOGIN_BARE="${REVIEW_BOT_LOGIN%\[bot\]}"
+
           PRS=$(gh pr list --repo "$REPO" --state open --json number,title,url,createdAt,isDraft,isCrossRepository,labels)
 
           echo "$PRS" | jq -c '.[]' | while read -r pr; do
@@ -92,7 +106,7 @@ jobs:
             # 전용 플래그를 이해하지 못해 "unknown flag: --arg"로 즉시
             # 실패하므로, raw JSON을 먼저 받은 뒤 별도 jq 파이프로 넘긴다.
             REVIEW_JSON=$(gh pr view "$NUMBER" --repo "$REPO" --json reviews,comments)
-            REVIEWED=$(echo "$REVIEW_JSON" | jq --arg bot "$REVIEW_BOT_LOGIN" --arg t0 "$T0" \
+            REVIEWED=$(echo "$REVIEW_JSON" | jq --arg bot "$REVIEW_BOT_LOGIN_BARE" --arg t0 "$T0" \
               '([.reviews[]? | select(.author.login == $bot and .submittedAt > $t0)] | length) +
                ([.comments[]? | select(.author.login == $bot and .createdAt > $t0)] | length)')
 
