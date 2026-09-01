@@ -2,6 +2,7 @@
 
 
 import HelpButton from "./HelpButton";
+import MarkdownRenderer from "./MarkdownRenderer";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IconHistory, IconX } from "@tabler/icons-react";
@@ -10,82 +11,6 @@ import { createClient } from "@/lib/supabase/client";
 import { saveQaHistory, updateQaHistory, getQaHistories, type QaHistory } from "@/lib/db/qa_histories";
 import { fetchWorkData } from "@/lib/db/qna-context";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-
-function parseInline(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) =>
-    part.startsWith("**") && part.endsWith("**")
-      ? <strong key={i}>{part.slice(2, -2)}</strong>
-      : part
-  );
-}
-
-function renderMarkdown(text: string): React.ReactNode {
-  const lines = text.split("\n");
-  const nodes: React.ReactNode[] = [];
-  let bulletItems: React.ReactNode[] = [];
-  let orderedItems: React.ReactNode[] = [];
-  let k = 0;
-
-  const flushBullet = () => {
-    if (bulletItems.length === 0) return;
-    nodes.push(
-      <ul key={k++} className="list-disc pl-5 space-y-0.5 my-1">
-        {bulletItems.map((item, i) => (
-          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
-        ))}
-      </ul>
-    );
-    bulletItems = [];
-  };
-
-  const flushOrdered = () => {
-    if (orderedItems.length === 0) return;
-    nodes.push(
-      <ol key={k++} className="list-decimal pl-5 space-y-0.5 my-1">
-        {orderedItems.map((item, i) => (
-          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
-        ))}
-      </ol>
-    );
-    orderedItems = [];
-  };
-
-  const flushAll = () => { flushBullet(); flushOrdered(); };
-
-  for (const line of lines) {
-    const t = line.trim();
-
-    if (/^#{1,6} /.test(t)) {
-      flushAll();
-      const content = t.replace(/^#+\s+/, "");
-      const isLarge = t.startsWith("## ");
-      nodes.push(
-        <p key={k++} className={`font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1 ${isLarge ? "text-[15px]" : "text-sm"}`}>
-          {parseInline(content)}
-        </p>
-      );
-    } else if (/^[-•] /.test(t)) {
-      flushOrdered();
-      bulletItems.push(parseInline(t.slice(2)));
-    } else if (/^\d+\. /.test(t)) {
-      flushBullet();
-      orderedItems.push(parseInline(t.replace(/^\d+\.\s+/, "")));
-    } else if (t === "") {
-      flushAll();
-      nodes.push(<div key={k++} className="h-1.5" />);
-    } else {
-      flushAll();
-      nodes.push(
-        <p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">
-          {parseInline(t)}
-        </p>
-      );
-    }
-  }
-  flushAll();
-  return <div className="space-y-0.5">{nodes}</div>;
-}
 
 interface Message {
   id: string;
@@ -168,7 +93,7 @@ function MessageBubble({ msg }: { msg: Message }) {
         ].join(" ")}
         style={msg.role === "user" ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
       >
-        {msg.role === "assistant" ? renderMarkdown(msg.content) : msg.content}
+        {msg.role === "assistant" ? <MarkdownRenderer content={msg.content} /> : msg.content}
       </div>
       {msg.role === "user" && (
         <div className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 text-xs font-bold mt-0.5">

@@ -3,6 +3,7 @@
 
 import HelpButton from "./HelpButton";
 import PdfDownloadButton from "./PdfDownloadButton";
+import MarkdownRenderer from "./MarkdownRenderer";
 import { useState, useRef, useEffect } from "react";
 import EditableResult from "./EditableResult";
 import { trackUsage } from "@/lib/usageStats";
@@ -47,57 +48,6 @@ function buildSystemPrompt(style: SummaryStyle): string {
   }
   return `당신은 문서 요약 전문가입니다. 제공된 텍스트의 핵심을 단 한 문장(50자 내외)으로 요약하세요.
 가장 중요한 정보만 포함하고, 명확하고 완결된 문장으로 작성하세요. 한국어로 작성하세요.`;
-}
-
-/* ───────── 마크다운 간이 렌더러 ───────── */
-
-function parseInline(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) =>
-    part.startsWith("**") && part.endsWith("**")
-      ? <strong key={i}>{part.slice(2, -2)}</strong>
-      : part
-  );
-}
-
-function renderMarkdown(text: string): React.ReactNode {
-  const lines = text.split("\n");
-  const nodes: React.ReactNode[] = [];
-  let listItems: React.ReactNode[] = [];
-  let k = 0;
-
-  const flushList = () => {
-    if (listItems.length === 0) return;
-    nodes.push(
-      <ul key={k++} className="list-disc pl-5 space-y-0.5 my-1">
-        {listItems.map((item, i) => (
-          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
-        ))}
-      </ul>
-    );
-    listItems = [];
-  };
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("## ")) {
-      flushList();
-      nodes.push(<p key={k++} className="text-[15px] font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1">{parseInline(trimmed.slice(3))}</p>);
-    } else if (trimmed.startsWith("### ")) {
-      flushList();
-      nodes.push(<p key={k++} className="text-sm font-bold text-slate-800 dark:text-zinc-100 mt-2 mb-0.5">{parseInline(trimmed.slice(4))}</p>);
-    } else if (/^[-•*] /.test(trimmed)) {
-      listItems.push(parseInline(trimmed.slice(2)));
-    } else if (trimmed === "") {
-      flushList();
-      nodes.push(<div key={k++} className="h-1.5" />);
-    } else {
-      flushList();
-      nodes.push(<p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{parseInline(trimmed)}</p>);
-    }
-  }
-  flushList();
-  return <div className="space-y-0.5">{nodes}</div>;
 }
 
 function formatPdfDate(d: Date): string {
@@ -422,14 +372,14 @@ export default function DocSummary() {
           </div>
           <EditableResult value={result} onChange={setResult} rows={14} onEditingChange={setIsEditing}>
             <div ref={contentRef} className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-              {renderMarkdown(result)}
+              <MarkdownRenderer content={result} />
             </div>
           </EditableResult>
         </div>
         <div ref={pdfContentRef} className="hidden">
           <h1 className="text-lg font-bold mb-1">{t(SUMMARY_STYLES.find((s) => s.id === summaryStyle)!.labelKey)}</h1>
           <p className="text-xs text-slate-500 mb-4">{tFormat(t("pdf_generated_on"), { date: formatPdfDate(new Date()) })}</p>
-          <div>{renderMarkdown(result)}</div>
+          <MarkdownRenderer content={result} />
         </div>
         </>
       ) : (

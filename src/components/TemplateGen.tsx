@@ -3,6 +3,7 @@
 
 import HelpButton from "./HelpButton";
 import PdfDownloadButton from "./PdfDownloadButton";
+import MarkdownRenderer from "./MarkdownRenderer";
 import { useState, useEffect, useRef } from "react";
 import { trackUsage } from "@/lib/usageStats";
 import { IconReport, IconNotes, IconBulb, IconAlertTriangle, IconLoader2 } from "@tabler/icons-react";
@@ -10,82 +11,6 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { tFormat } from "@/lib/i18n/translations";
 import EditableResult from "@/components/EditableResult";
 import React from "react";
-
-function parseInline(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) =>
-    part.startsWith("**") && part.endsWith("**")
-      ? <strong key={i}>{part.slice(2, -2)}</strong>
-      : part
-  );
-}
-
-function renderMarkdown(text: string): React.ReactNode {
-  const lines = text.split("\n");
-  const nodes: React.ReactNode[] = [];
-  let bulletItems: React.ReactNode[] = [];
-  let orderedItems: React.ReactNode[] = [];
-  let k = 0;
-
-  const flushBullet = () => {
-    if (bulletItems.length === 0) return;
-    nodes.push(
-      <ul key={k++} className="list-disc pl-5 space-y-0.5 my-1">
-        {bulletItems.map((item, i) => (
-          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
-        ))}
-      </ul>
-    );
-    bulletItems = [];
-  };
-
-  const flushOrdered = () => {
-    if (orderedItems.length === 0) return;
-    nodes.push(
-      <ol key={k++} className="list-decimal pl-5 space-y-0.5 my-1">
-        {orderedItems.map((item, i) => (
-          <li key={i} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">{item}</li>
-        ))}
-      </ol>
-    );
-    orderedItems = [];
-  };
-
-  const flushAll = () => { flushBullet(); flushOrdered(); };
-
-  for (const line of lines) {
-    const t = line.trim();
-
-    if (/^#{1,6} /.test(t)) {
-      flushAll();
-      const content = t.replace(/^#+\s+/, "");
-      const isLarge = t.startsWith("## ");
-      nodes.push(
-        <p key={k++} className={`font-bold text-slate-900 dark:text-zinc-50 mt-3 mb-1 ${isLarge ? "text-[15px]" : "text-sm"}`}>
-          {parseInline(content)}
-        </p>
-      );
-    } else if (/^[-•] /.test(t)) {
-      flushOrdered();
-      bulletItems.push(parseInline(t.slice(2)));
-    } else if (/^\d+\. /.test(t)) {
-      flushBullet();
-      orderedItems.push(parseInline(t.replace(/^\d+\.\s+/, "")));
-    } else if (t === "") {
-      flushAll();
-      nodes.push(<div key={k++} className="h-1.5" />);
-    } else {
-      flushAll();
-      nodes.push(
-        <p key={k++} className="text-sm text-slate-800 dark:text-zinc-100 leading-relaxed">
-          {parseInline(t)}
-        </p>
-      );
-    }
-  }
-  flushAll();
-  return <div className="space-y-0.5">{nodes}</div>;
-}
 
 function formatPdfDate(d: Date): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
@@ -348,14 +273,14 @@ export default function TemplateGen() {
           </div>
           <EditableResult value={result} onChange={setResult} rows={16} textareaClassName="font-mono" onEditingChange={setIsEditing}>
             <div ref={contentRef} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800">
-              {renderMarkdown(result)}
+              <MarkdownRenderer content={result} />
             </div>
           </EditableResult>
         </div>
         <div ref={pdfContentRef} className="hidden">
           <h1 className="text-lg font-bold mb-1">{selectedLabel}</h1>
           <p className="text-xs text-slate-500 mb-4">{tFormat(t("pdf_generated_on"), { date: formatPdfDate(new Date()) })}</p>
-          <div>{renderMarkdown(result)}</div>
+          <MarkdownRenderer content={result} />
         </div>
         </>
       ) : (
