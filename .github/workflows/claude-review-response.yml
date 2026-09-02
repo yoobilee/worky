@@ -253,7 +253,7 @@ jobs:
           claude_args: |
             --max-turns 35
             --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue list:*),Bash(gh api:*)"
-            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"reviewContentRead":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","reviewContentRead","issueSummary","humanReviewReason"]}'
+            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"reviewContentRead":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"},"causeExplanation":{"type":"string"},"fixExplanation":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","reviewContentRead","issueSummary","humanReviewReason","causeExplanation","fixExplanation"]}'
           prompt: |
             이 PR에 리뷰 봇(Codex)이 남긴 리뷰/코멘트를 확인해줘:
             ${{ steps.pr.outputs.review_content_for_prompt }}
@@ -316,11 +316,19 @@ jobs:
             6. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
                완료해서 이 브랜치에 반영해. 커밋 메시지는 한국어로 변경 내용을 요약해.
             7. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
-               reviewContentRead, issueSummary, humanReviewReason 6개 필드 모두
-               필수)를 정확히 지켜서 결과를 출력해. issueSummary에는 어떤 결함을
-               발견했고 고쳤는지 여부만 사실 위주로 작성하고, humanReviewReason에는
+               reviewContentRead, issueSummary, humanReviewReason,
+               causeExplanation, fixExplanation 8개 필드 모두 필수)를 정확히
+               지켜서 결과를 출력해. issueSummary에는 어떤 결함을 발견했고
+               고쳤는지 여부만 사실 위주로 작성하고, humanReviewReason에는
                왜 사람이 직접 판단해야 하는지 이유를 작성해 (사람 판단이
-               필요 없으면 빈 문자열로 둬)
+               필요 없으면 빈 문자열로 둬). causeExplanation에는 GitHub
+               Issue 등록에 쓸 것이므로, 문제가 된 코드 스니펫(마크다운 코드
+               블록)과 함께 왜 문제인지 원인을 한국어로 설명해 작성해
+               (hasIssues:false면 빈 문자열로 둬). fixExplanation에는
+               실제로 무엇을, 어떻게 고쳤는지 수정 후 코드 스니펫과 함께
+               한국어로 작성해 - 반드시 fixed:true일 때만 채우고,
+               fixed:false면 빈 문자열로 둬(고치지 않았는데 고친 것처럼
+               쓰면 안 됨).
 
       - name: 결과 파싱 및 분기
         id: parse
@@ -335,6 +343,8 @@ jobs:
           HAS_ISSUES=true
           ISSUE_SUMMARY=""
           HUMAN_REVIEW_REASON="파싱 스크립트가 완료되지 못함 - 확인 필요"
+          CAUSE_EXPLANATION=""
+          FIX_EXPLANATION=""
 
           write_result() {
             echo "needs_human=$NEEDS_HUMAN" >> "$GITHUB_OUTPUT"
@@ -351,18 +361,30 @@ jobs:
               echo "$HUMAN_REVIEW_REASON"
               echo "$delimiter2"
             } >> "$GITHUB_OUTPUT"
+            delimiter3=$(openssl rand -hex 8)
+            {
+              echo "cause_explanation<<$delimiter3"
+              echo "$CAUSE_EXPLANATION"
+              echo "$delimiter3"
+            } >> "$GITHUB_OUTPUT"
+            delimiter4=$(openssl rand -hex 8)
+            {
+              echo "fix_explanation<<$delimiter4"
+              echo "$FIX_EXPLANATION"
+              echo "$delimiter4"
+            } >> "$GITHUB_OUTPUT"
           }
           trap write_result EXIT
 
           # fail-closed: Claude 에이전트 스텝이 성공하지 않았으면(실패, 취소 등)
           # structured_output 파싱을 시도하지 않고 바로 안전한 값으로 처리
           if [ "$CLAUDE_OUTCOME" != "success" ]; then
-            PARSED='{"hasIssues":false,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"Claude 에이전트 처리 자체가 실패함 - 자동 판단 불가, GitHub Issue는 생성하지 않고 사람 확인만 요청"}'
-          # fail-closed: structured_output이 비어있거나 스키마(6개 필드 모두 정확한 타입,
-          # reviewContentRead 포함)를 만족하지 않으면 needsHuman=true, hasIssues=true로
-          # 안전하게 처리
+            PARSED='{"hasIssues":false,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"Claude 에이전트 처리 자체가 실패함 - 자동 판단 불가, GitHub Issue는 생성하지 않고 사람 확인만 요청","causeExplanation":"","fixExplanation":""}'
+          # fail-closed: structured_output이 비어있거나 스키마(8개 필드 모두 정확한 타입,
+          # reviewContentRead/causeExplanation/fixExplanation 포함)를 만족하지 않으면
+          # needsHuman=true, hasIssues=true로 안전하게 처리
           elif [ -n "$STRUCTURED_OUTPUT" ] && echo "$STRUCTURED_OUTPUT" | jq -e \
-            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.reviewContentRead | type) == "boolean" and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string"' \
+            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.reviewContentRead | type) == "boolean" and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string" and (.causeExplanation | type) == "string" and (.fixExplanation | type) == "string"' \
             > /dev/null 2>&1; then
             # fail-closed: 리뷰 봇의 코멘트/리뷰 내용을 Claude 에이전트가 실제로
             # 읽지 못했다면(gh CLI/네트워크 차단·실패 등) hasIssues가 무엇으로
@@ -386,7 +408,7 @@ jobs:
               PARSED="$STRUCTURED_OUTPUT"
             fi
           else
-            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"자동 판단 실패, 확인 필요"}'
+            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"자동 판단 실패, 확인 필요","causeExplanation":"","fixExplanation":""}'
           fi
 
           # jq 실패가 조용히 묻히지 않도록 각각 독립된 대입문으로 계산한다 -
@@ -396,6 +418,8 @@ jobs:
           HAS_ISSUES=$(echo "$PARSED" | jq -r '.hasIssues')
           ISSUE_SUMMARY=$(echo "$PARSED" | jq -r '.issueSummary')
           HUMAN_REVIEW_REASON=$(echo "$PARSED" | jq -r '.humanReviewReason')
+          CAUSE_EXPLANATION=$(echo "$PARSED" | jq -r '.causeExplanation')
+          FIX_EXPLANATION=$(echo "$PARSED" | jq -r '.fixExplanation')
 
       - name: 실제 git 상태 검증
         id: verify
@@ -408,6 +432,8 @@ jobs:
           PARSE_NEEDS_HUMAN: ${{ steps.parse.outputs.needs_human }}
           PARSE_ISSUE_SUMMARY: ${{ steps.parse.outputs.issue_summary }}
           PARSE_HUMAN_REVIEW_REASON: ${{ steps.parse.outputs.human_review_reason }}
+          PARSE_CAUSE_EXPLANATION: ${{ steps.parse.outputs.cause_explanation }}
+          PARSE_FIX_EXPLANATION: ${{ steps.parse.outputs.fix_explanation }}
         run: |
           # Claude의 자기 보고(fixed:true 등)를 그대로 믿지 않고 실제 git 상태로 재검증.
           # 기본 bash -e 동작을 그대로 사용: 아래 명령 중 하나라도 실패하면 스크립트가
@@ -417,6 +443,14 @@ jobs:
           HUMAN_REVIEW_REASON="git 상태 검증 스크립트가 완료되지 못함 - 확인 필요"
           DIRTY_FILES=""
           CLAUDE_MD_ONLY="false"
+          # 원인 설명은 검증 결과와 무관하게(수정이 검증됐든 안됐든) Codex
+          # 지적사항 자체에 대한 설명이라 항상 유효하므로 기본값으로 그대로
+          # 이어받는다. 수정 내용 설명은 아래에서 실제 git 상태 검증을
+          # 통과했을 때만(needs_human=false) 신뢰해 채운다 - Claude가
+          # fixed:true라고 자기 보고했어도 실제로 push되지 않았거나 원격과
+          # 어긋나면(MISMATCH) 고쳤다는 내용을 이슈에 그대로 옮기면 안 된다.
+          CAUSE_EXPLANATION="$PARSE_CAUSE_EXPLANATION"
+          FIX_EXPLANATION=""
 
           write_result() {
             echo "needs_human=$NEEDS_HUMAN" >> "$GITHUB_OUTPUT"
@@ -438,6 +472,18 @@ jobs:
               echo "dirty_files<<$delimiter3"
               echo "$DIRTY_FILES"
               echo "$delimiter3"
+            } >> "$GITHUB_OUTPUT"
+            delimiter4=$(openssl rand -hex 8)
+            {
+              echo "cause_explanation<<$delimiter4"
+              echo "$CAUSE_EXPLANATION"
+              echo "$delimiter4"
+            } >> "$GITHUB_OUTPUT"
+            delimiter5=$(openssl rand -hex 8)
+            {
+              echo "fix_explanation<<$delimiter5"
+              echo "$FIX_EXPLANATION"
+              echo "$delimiter5"
             } >> "$GITHUB_OUTPUT"
           }
           trap write_result EXIT
@@ -488,6 +534,7 @@ jobs:
           # 경우 - 는 전부 사람 확인 필요 경로로 보낸다.
           if [ "$MISMATCH" = "true" ]; then
             NEEDS_HUMAN=true
+            FIX_EXPLANATION=""
             if [ -n "$PARSE_HUMAN_REVIEW_REASON" ]; then
               HUMAN_REVIEW_REASON="$(printf '%s\n\nClaude 자기 보고와 실제 git 상태 불일치 - 확인 필요' "$PARSE_HUMAN_REVIEW_REASON")"
             else
@@ -496,11 +543,14 @@ jobs:
           elif [ "$PARSE_OUTCOME" = "success" ] && [ "$PARSE_NEEDS_HUMAN" = "false" ]; then
             NEEDS_HUMAN=false
             HUMAN_REVIEW_REASON=""
+            FIX_EXPLANATION="$PARSE_FIX_EXPLANATION"
           else
             NEEDS_HUMAN=true
             HUMAN_REVIEW_REASON="$PARSE_HUMAN_REVIEW_REASON"
+            FIX_EXPLANATION=""
           fi
           ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
+          CAUSE_EXPLANATION="$PARSE_CAUSE_EXPLANATION"
 
       - name: GitHub Issue 자동 등록
         id: github_issue
@@ -512,7 +562,12 @@ jobs:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           PR_URL: ${{ steps.pr.outputs.url }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
+          REVIEW_CONTENT: ${{ steps.pr.outputs.review_content_for_prompt }}
           ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
+          CAUSE_EXPLANATION: ${{ steps.verify.outputs.cause_explanation }}
+          FIX_EXPLANATION: ${{ steps.verify.outputs.fix_explanation }}
+          NEEDS_HUMAN: ${{ steps.verify.outputs.needs_human }}
+          HUMAN_REVIEW_REASON: ${{ steps.verify.outputs.human_review_reason }}
         run: |
           # 같은 리뷰/코멘트에 대해 워크플로우가 재실행되어도(또는 같은 리뷰
           # 제출에 딸린 pull_request_review와 pull_request_review_comment
@@ -529,8 +584,28 @@ jobs:
             ISSUE_URL=$(echo "$EXISTING" | jq -r '.url')
             echo "이미 등록된 이슈를 재사용: $ISSUE_URL"
             echo "issue_created=false" >> "$GITHUB_OUTPUT"
+            echo "issue_closed=false" >> "$GITHUB_OUTPUT"
           else
-            BODY_TEXT=$(printf '%s\n\n%s\n\nPR: %s' "$MARKER" "$ISSUE_SUMMARY" "$PR_URL")
+            # needs_human=='false'(자동 수정 + "실제 git 상태 검증" 스텝의
+            # 검증까지 통과)인 경우에만, 이 시점에 "실제 수정 내용"/"검증"
+            # 섹션까지 채운 완성된 본문으로 등록하고 바로 close한다.
+            # needs_human=='true'인 경우는 아직 아무도(사람도) 고치지 않은
+            # 시점이라 완성된 내용을 만들어낼 수 없으므로, 나중에 사람이
+            # 직접 고친 뒤 채워 넣을 수 있게 빈 템플릿만 남기고 이슈는
+            # 열어둔다. Claude의 자기 보고(fixed)가 아니라 git 상태까지
+            # 재검증한 needs_human을 기준으로 판단하는 이유는 "실제 git
+            # 상태 검증" 스텝과 동일 - 자기 보고만으로는 신뢰할 수 없다.
+            if [ "$NEEDS_HUMAN" = "false" ]; then
+              COMMIT_HASH=$(git log -1 --format=%H 2>/dev/null || echo "")
+              BODY_TEXT=$(printf '%s\n\n**발견: Codex 자동 리뷰 (PR #%s)**\n자동 검증 파이프라인(claude-review-response.yml)이 Codex의 리뷰를 확인하고 자동으로 등록한 이슈입니다.\n\n**원인 / Codex 지적 내용**\n%s\n\n%s\n\n**실제 수정 내용**\n%s\n\n수정 커밋: `%s`\n반영된 PR: %s\n\n**검증**\n자동 파이프라인이 실제 git 상태 검증(커밋이 실제로 push됐는지, 원격 브랜치와 일치하는지 확인)을 통과했습니다. 이 PR의 GitHub Actions 빌드 체크(CI) 통과 후 자동 merge됩니다.\n\n자동으로 수정 및 검증이 완료되어 즉시 close합니다.' \
+                "$MARKER" "$PR_NUMBER" "$REVIEW_CONTENT" "$CAUSE_EXPLANATION" "$FIX_EXPLANATION" "$COMMIT_HASH" "$PR_URL")
+              SHOULD_CLOSE="true"
+            else
+              REASON_TEXT="${HUMAN_REVIEW_REASON:-사람 확인이 필요합니다}"
+              BODY_TEXT=$(printf '%s\n\n**발견: Codex 자동 리뷰 (PR #%s)**\n자동 검증 파이프라인(claude-review-response.yml)이 Codex의 리뷰를 확인했으나 자동으로 해결할 수 없어 사람 확인이 필요한 상태로 등록되었습니다.\n\n**사람 확인이 필요한 이유**\n%s\n\n**원인 / Codex 지적 내용**\n%s\n\n%s\n\n**실제 수정 내용**\n미해결 — 사람 확인 대기 중\n\n**검증**\n이슈 발견 시점이라 아직 해당 없음\n\n---\n이 이슈는 나중에 사람이 해결 후 close할 때, 아래 템플릿에 맞춰 위 두 섹션을 채워주세요:\n\n**실제 수정 내용**\n(무엇을, 어떻게 고쳤는지 - 수정 후 코드 스니펫 포함)\n\n수정 커밋: `<커밋 해시>`\n반영된 PR: <PR 링크>\n\n**검증**\n(bash -n / npm run build / 재현 테스트 등 어떻게 검증했는지와 결과)' \
+                "$MARKER" "$PR_NUMBER" "$REASON_TEXT" "$REVIEW_CONTENT" "$CAUSE_EXPLANATION")
+              SHOULD_CLOSE="false"
+            fi
 
             ISSUE_URL=$(gh issue create --repo yoobilee/worky \
               --title "$PR_TITLE" \
@@ -544,6 +619,17 @@ jobs:
             ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
             echo "GitHub Issue 생성됨: $ISSUE_URL"
             echo "issue_created=true" >> "$GITHUB_OUTPUT"
+
+            if [ "$SHOULD_CLOSE" = "true" ]; then
+              if gh issue close "$ISSUE_NUMBER" --repo yoobilee/worky; then
+                echo "issue_closed=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "::warning::이슈 자동 close 실패 (이슈는 이미 생성됨: $ISSUE_URL)"
+                echo "issue_closed=false" >> "$GITHUB_OUTPUT"
+              fi
+            else
+              echo "issue_closed=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
           echo "issue_url=$ISSUE_URL" >> "$GITHUB_OUTPUT"
@@ -557,8 +643,11 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
           ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
+          CAUSE_EXPLANATION: ${{ steps.verify.outputs.cause_explanation }}
+          FIX_EXPLANATION: ${{ steps.verify.outputs.fix_explanation }}
           GH_ISSUE_NUMBER: ${{ steps.github_issue.outputs.issue_number }}
           GH_ISSUE_URL: ${{ steps.github_issue.outputs.issue_url }}
+          GH_ISSUE_CLOSED: ${{ steps.github_issue.outputs.issue_closed }}
         run: |
           # Worky 자체 이슈 - 소유자 계정 고정
           USER_ID="5a2804b4-4ecb-435c-b039-0cbc6e57837c"
@@ -590,13 +679,34 @@ jobs:
             exit 0
           fi
 
+          # GitHub Issue 본문과 내용을 맞추기 위해(이슈 정리 페이지 등에서
+          # 나중에 이 레코드만 봐도 맥락을 알 수 있도록) 짧은 요약 대신
+          # 원인/수정 내용까지 포함한 설명을 저장한다. FIX_EXPLANATION은
+          # 자동 수정이 검증까지 완료된 경우에만 채워지므로(steps.verify에서
+          # 이미 fail-closed 처리됨), 비어있으면 아직 미해결 상태라는
+          # 표시를 그대로 남긴다.
+          DESCRIPTION_TEXT=$(printf '%s\n\n[원인]\n%s\n\n[수정 내용]\n%s' \
+            "$ISSUE_SUMMARY" "$CAUSE_EXPLANATION" "${FIX_EXPLANATION:-미해결 - 사람 확인 대기 중}")
+
+          # 자동 수정 후 즉시 close된 경우(GH_ISSUE_CLOSED=true)까지 status를
+          # "open"으로 고정하면 GitHub과 Supabase 상태가 어긋나므로 맞춰준다.
+          # 이후 사람이 GitHub에서 수동으로 close/reopen하면
+          # /api/webhooks/github, /api/issues/sync가 이 status를 계속
+          # 동기화한다.
+          if [ "$GH_ISSUE_CLOSED" = "true" ]; then
+            STATUS_VALUE="closed"
+          else
+            STATUS_VALUE="open"
+          fi
+
           PAYLOAD=$(jq -n \
             --arg user_id "$USER_ID" \
             --arg title "$PR_TITLE" \
-            --arg description "$ISSUE_SUMMARY" \
+            --arg description "$DESCRIPTION_TEXT" \
             --arg repo "yoobilee/worky" \
             --argjson github_issue_number "$GH_ISSUE_NUMBER" \
             --arg github_issue_url "$GH_ISSUE_URL" \
+            --arg status "$STATUS_VALUE" \
             '{
               user_id: $user_id,
               source: "auto-pipeline",
@@ -605,7 +715,7 @@ jobs:
               repo: $repo,
               github_issue_number: $github_issue_number,
               github_issue_url: (if $github_issue_url == "" then null else $github_issue_url end),
-              status: "open"
+              status: $status
             }')
 
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${SUPABASE_URL}/rest/v1/issues" \
@@ -635,12 +745,19 @@ jobs:
           SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
           ISSUE_URL: ${{ steps.github_issue.outputs.issue_url }}
           ISSUE_NUMBER: ${{ steps.github_issue.outputs.issue_number }}
+          ISSUE_CLOSED: ${{ steps.github_issue.outputs.issue_closed }}
           SUMMARY: ${{ steps.verify.outputs.issue_summary }}
         run: |
+          if [ "$ISSUE_CLOSED" = "true" ]; then
+            STATUS_LABEL="등록됨 (자동 수정 완료 - 즉시 close)"
+          else
+            STATUS_LABEL="등록됨 (사람 확인 필요)"
+          fi
           jq -n --arg issue_url "$ISSUE_URL" \
                 --arg issue_number "$ISSUE_NUMBER" \
+                --arg status_label "$STATUS_LABEL" \
                 --arg summary "$SUMMARY" \
-            '{text: ("🐞 <" + $issue_url + "|GitHub Issue #" + $issue_number + "> 등록됨\n\n" + $summary)}' | \
+            '{text: ("🐞 <" + $issue_url + "|GitHub Issue #" + $issue_number + "> " + $status_label + "\n\n" + $summary)}' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
 
       - name: 특이사항 알림 (사람 판단 필요한 경우)
