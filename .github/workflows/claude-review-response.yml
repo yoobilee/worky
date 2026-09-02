@@ -577,7 +577,22 @@ jobs:
           # 가리키는 값(리뷰 id 또는 코멘트 id)으로 이미 통일해뒀다.
           MARKER="<!-- worky-auto-issue:pr-${PR_NUMBER}-review-${REVIEW_ID} -->"
 
-          EXISTING=$(gh issue list --repo yoobilee/worky --search "$MARKER in:body" --state all --json number,url,closed --jq '.[0]')
+          # 같은 Codex 리뷰 1건이 pull_request_review와
+          # pull_request_review_comment 두 이벤트로 각각 별도 워크플로우
+          # 실행을 거의 동시에 트리거하는 경우가 실측으로 반복 확인됐다
+          # (Issue #63/#64, #65/#66 - 매번 마커는 동일한데 이슈가 중복
+          # 생성됨). 원래 --search "$MARKER in:body"는 GitHub Search API를
+          # 쓰는데, 이 인덱스는 eventually-consistent라 방금 생성된
+          # 이슈가 곧바로 검색 결과에 안 잡힐 수 있어 두 실행이 서로의
+          # 이슈를 못 보고 각자 생성해버렸다. --search를 쓰지 않는 일반
+          # 이슈 목록 조회(REST list, 검색 인덱스를 거치지 않고 기본
+          # 데이터 저장소를 직접 읽음)는 즉시 일관성이 있으므로, 여기서는
+          # 최근 이슈들을 가져와 마커를 로컬(jq)에서 찾는 방식으로
+          # 바꿔 이 레이스를 근본적으로 줄인다. limit은 이 저장소의
+          # 자동 등록 이슈 발생 속도를 감안해 여유 있게 잡았다 - 늘어나면
+          # 값을 올려야 할 수 있다.
+          ALL_ISSUES_JSON=$(gh issue list --repo yoobilee/worky --state all --json number,url,closed,body --limit 200)
+          EXISTING=$(echo "$ALL_ISSUES_JSON" | jq --arg marker "$MARKER" '[.[] | select((.body // "") | contains($marker))] | .[0]')
 
           if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
             ISSUE_NUMBER=$(echo "$EXISTING" | jq -r '.number')
@@ -746,18 +761,37 @@ jobs:
           echo "Supabase issues 테이블 기록 완료"
 
       - name: 이슈 채널 알림 (결함 있었던 경우)
-        # issue_created=='true'(새로 만든 경우)일 때만 알림을 보낸다.
-        # 같은 리뷰에 딸린 pull_request_review/pull_request_review_comment가
-        # 여러 건 각각 트리거돼 기존 이슈를 재사용(issue_created=false)하는
-        # 경우까지 매번 "등록됨" 알림을 다시 보내면 중복 알림이 된다.
-        if: always() && steps.github_issue.outcome == 'success' && steps.github_issue.outputs.issue_url != '' && steps.github_issue.outputs.issue_created == 'true'
+        # 예전에는 issue_created=='true'(이번 실행에서 새로 만든 경우)에만
+        # 알림을 보내 재사용 시 중복 알림을 막았는데, 이 방식은 "이슈 생성
+        # 성공"과 "알림 전송 성공"을 하나의 플래그로 뭉뚱그려 Slack 전송이
+        # 실패하면(일시적 장애 등) 잡이 실패로 끝나고, 재실행 시 마커로
+        # 기존 이슈를 재사용(issue_created=false)하게 되면서 알림이 영구히
+        # 스킵되는 문제가 있었다(Codex 지적, Issue #65). 아래에서
+        # review_marker_id 기준 라벨로 "알림 전송 성공" 자체를 별도 추적해
+        # (review-timeout-watchdog.yml, "특이사항 알림" 스텝과 동일 패턴:
+        # Slack 전송이 성공한 뒤에만 라벨을 붙임) 이 스텝의 재시도 여부를
+        # 그 라벨로만 판단하도록 분리했다. issue_created/issue_closed
+        # 출력이나 Supabase 기록·특이사항 알림·자동 merge 등 다른 스텝의
+        # 판단 기준은 전혀 건드리지 않는다.
+        if: always() && steps.github_issue.outcome == 'success' && steps.github_issue.outputs.issue_url != ''
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          REVIEW_MARKER_ID: ${{ steps.pr.outputs.review_marker_id }}
           SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
           ISSUE_URL: ${{ steps.github_issue.outputs.issue_url }}
           ISSUE_NUMBER: ${{ steps.github_issue.outputs.issue_number }}
           ISSUE_CLOSED: ${{ steps.github_issue.outputs.issue_closed }}
           SUMMARY: ${{ steps.verify.outputs.issue_summary }}
         run: |
+          NOTIFY_LABEL="issue-notified:${REVIEW_MARKER_ID:-unknown}"
+          EXISTING_LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+          if echo "$EXISTING_LABELS" | grep -qxF "$NOTIFY_LABEL"; then
+            echo "이미 이 리뷰/코멘트(${REVIEW_MARKER_ID:-unknown})에 대해 이슈 등록 알림을 성공적으로 보냈음 - 중복 알림 스킵"
+            exit 0
+          fi
+
           if [ "$ISSUE_CLOSED" = "true" ]; then
             STATUS_LABEL="등록됨 (자동 수정 완료 - 즉시 close)"
           else
@@ -769,6 +803,13 @@ jobs:
                 --arg summary "$SUMMARY" \
             '{text: ("🐞 <" + $issue_url + "|GitHub Issue #" + $issue_number + "> " + $status_label + "\n\n" + $summary)}' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
+
+          # bash -e 기본 동작상 위 curl -sf가 실패하면 여기 도달하지 못하고
+          # 스텝이 즉시 실패 종료된다 - 라벨은 Slack 전송이 실제로 성공한
+          # 뒤에만 붙어야 다음 재시도에서 정확히 "아직 알림 못 보냄"으로
+          # 판단할 수 있다.
+          gh label create "$NOTIFY_LABEL" --repo "$REPO" --color "2EB67D" --force >/dev/null 2>&1 || true
+          gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$NOTIFY_LABEL" || true
 
       - name: 특이사항 알림 (사람 판단 필요한 경우)
         # steps.verify는 is_trusted_bot=='false'일 때 통째로 스킵되어
