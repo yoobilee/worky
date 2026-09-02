@@ -145,11 +145,27 @@ function findCodeRanges(text: string): Array<[number, number]> {
 // 동일하게 적용됨), 이 함수가 지키려는 것(코드 블록 "안의 텍스트 내용"이
 // 뒤바뀌지 않는 것)과는 별개 - 실제로 원본 코드 텍스트 자체는 그대로
 // 보존된다.
+//
+// 코드 범위와의 겹침은 "점(point) 포함"이 아니라 "구간 겹침(overlap)"으로
+// 판정한다. 리스트 항목 안에 들여쓰기 코드 블록이 중첩된 경우(예:
+// "- item\n\n      • literal"), remark가 계산하는 code 노드의 시작
+// offset이 물리적 줄 시작이 아니라 "리스트 자체의 들여쓰기만 제외한"
+// 위치를 가리켜 정규식 매치의 줄-시작 offset보다 뒤에 오는 경우가 있다
+// (Codex 지적, Issue #71 - 실측: "      • literal"에서 code 노드
+// start.offset=10인데 매치 시작 offset은 8이라 point 비교(offset >= start)가
+// 거짓이 되어 코드 "밖"으로 오판됨). 매치가 차지하는 구간
+// [matchStart, matchEnd)와 코드 구간 [start, end)이 조금이라도 겹치면
+// 코드로 취급하도록 바꾸면, 컨테이너(리스트 등)에 따라 remark가 code
+// 노드의 시작 offset을 정확히 어디로 잡는지와 무관하게 항상 안전하다 -
+// 정규식이 매치한 줄 전체가 어차피 코드 블록의 물리적 범위 안에 있으므로
+// 두 구간은 반드시 겹친다.
 function normalizeBulletMarkers(text: string): string {
   const codeRanges = findCodeRanges(text);
   return text.replace(/^([ \t]*)[•‣▪] /gm, (match, indent: string, offset: number) => {
-    const insideCode = codeRanges.some(([start, end]) => offset >= start && offset < end);
-    return insideCode ? match : `${indent}- `;
+    const matchStart = offset;
+    const matchEnd = offset + match.length;
+    const overlapsCode = codeRanges.some(([start, end]) => matchStart < end && matchEnd > start);
+    return overlapsCode ? match : `${indent}- `;
   });
 }
 
