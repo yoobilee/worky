@@ -2,8 +2,21 @@ name: Claude Review Response
 on:
   pull_request_review:
     types: [submitted]
+  pull_request_review_comment:
+    types: [created]
   issue_comment:
     types: [created, edited]
+
+# pull_request_review_comment(인라인 코드 리뷰 코멘트)를 추가한 이유: Codex의
+# 실제 P1/P2 지적사항은 거의 항상 파일/라인에 달리는 "인라인" 코멘트로
+# 오는데, 이 이벤트는 pull_request_review(리뷰 제출 자체)와 완전히 별개의
+# 웹훅 이벤트다. 게다가 pull_request_review의 review.body에는 인라인
+# 코멘트 내용이 전혀 포함되지 않고 "Codex Review / Reviewed commit" 같은
+# 껍데기 안내문만 있어, 지금까지 이 파이프라인이 Codex의 실제 지적사항을
+# 한 번도 제대로 못 읽고 있었다(실측 확인됨). 아래 "PR 정보 조회" 스텝에서
+# pull_request_review 트리거 시 딸린 인라인 코멘트를 별도로 조회해 합치고,
+# pull_request_review_comment가 단독으로(리뷰 제출 없이) 올 때는 그 코멘트
+# 하나만으로도 판단하도록 한다.
 
 # 신뢰하는 리뷰 봇의 GitHub 로그인(actor).
 # TODO(확인 필요): chatgpt-codex-connector[bot]은 GitHub App bot login 네이밍
@@ -31,6 +44,10 @@ jobs:
        endsWith(github.event.review.user.login, '[bot]') &&
        github.event.pull_request.head.repo.full_name != '' &&
        github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) ||
+      (github.event_name == 'pull_request_review_comment' &&
+       endsWith(github.event.comment.user.login, '[bot]') &&
+       github.event.pull_request.head.repo.full_name != '' &&
+       github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) ||
       (github.event_name == 'issue_comment' &&
        endsWith(github.event.comment.user.login, '[bot]') &&
        github.event.issue.pull_request)
@@ -38,6 +55,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
       id-token: write
     steps:
       - name: PR 정보 조회
@@ -54,11 +72,21 @@ jobs:
           PR_BASE_REPO_REVIEW: ${{ github.event.pull_request.base.repo.full_name }}
           PR_REVIEW_BODY: ${{ github.event.review.body }}
           PR_REVIEW_ACTOR: ${{ github.event.review.user.login }}
+          PR_REVIEW_ID: ${{ github.event.review.id }}
+          # 아래 COMMENT_* 4개는 issue_comment(일반 코멘트)와
+          # pull_request_review_comment(인라인 코멘트) 두 이벤트 모두
+          # 동일하게 github.event.comment.*에서 오므로 하나로 공유해서 쓴다.
+          # RC_REVIEW_ID/COMMENT_PATH/COMMENT_LINE은 인라인 코멘트에만
+          # 있는 필드라 issue_comment에서는 항상 빈 값이 된다.
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_ACTOR: ${{ github.event.comment.user.login }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          RC_REVIEW_ID: ${{ github.event.comment.pull_request_review_id }}
+          RC_COMMENT_PATH: ${{ github.event.comment.path }}
+          RC_COMMENT_LINE: ${{ github.event.comment.line }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_COMMENT_BODY: ${{ github.event.comment.body }}
-          ISSUE_COMMENT_ACTOR: ${{ github.event.comment.user.login }}
         run: |
           if [ "$EVENT_NAME" = "pull_request_review" ]; then
             NUMBER="$PR_NUMBER_REVIEW"
@@ -67,8 +95,27 @@ jobs:
             TITLE="$PR_TITLE_REVIEW"
             BODY="$PR_REVIEW_BODY"
             ACTOR="$PR_REVIEW_ACTOR"
+            MARKER_ID="$PR_REVIEW_ID"
             # fail-closed: 두 값이 모두 비어있어 우연히 같아지는 경우까지
             # "포크 아님"으로 통과시키지 않도록 head 값의 비어있음 여부도 확인
+            if [ -n "$PR_HEAD_REPO_REVIEW" ] && [ "$PR_HEAD_REPO_REVIEW" = "$PR_BASE_REPO_REVIEW" ]; then
+              IS_FORK="false"
+            else
+              IS_FORK="true"
+            fi
+          elif [ "$EVENT_NAME" = "pull_request_review_comment" ]; then
+            NUMBER="$PR_NUMBER_REVIEW"
+            REF="$PR_REF_REVIEW"
+            URL="$PR_URL_REVIEW"
+            TITLE="$PR_TITLE_REVIEW"
+            BODY="$COMMENT_BODY"
+            ACTOR="$COMMENT_ACTOR"
+            # 인라인 코멘트는 항상 어떤 리뷰(pending 리뷰 포함)에 속해있어
+            # pull_request_review_id가 채워져 있다 - 같은 리뷰에 딸린 다른
+            # 인라인 코멘트/리뷰 제출 이벤트와 마커를 공유해 중복 등록·중복
+            # 알림을 막는다 (아래 5번, "GitHub Issue 자동 등록"/"특이사항
+            # 알림" 참고)
+            MARKER_ID="$RC_REVIEW_ID"
             if [ -n "$PR_HEAD_REPO_REVIEW" ] && [ "$PR_HEAD_REPO_REVIEW" = "$PR_BASE_REPO_REVIEW" ]; then
               IS_FORK="false"
             else
@@ -79,8 +126,9 @@ jobs:
             REF=$(gh pr view "$NUMBER" --repo "$REPO" --json headRefName -q .headRefName)
             URL="$ISSUE_URL"
             TITLE="$ISSUE_TITLE"
-            BODY="$ISSUE_COMMENT_BODY"
-            ACTOR="$ISSUE_COMMENT_ACTOR"
+            BODY="$COMMENT_BODY"
+            ACTOR="$COMMENT_ACTOR"
+            MARKER_ID="$COMMENT_ID"
             IS_FORK=$(gh pr view "$NUMBER" --repo "$REPO" --json isCrossRepository -q .isCrossRepository)
           fi
 
@@ -116,6 +164,36 @@ jobs:
             *) IS_REVIEW_SKIPPED="false" ;;
           esac
 
+          # pull_request_review 이벤트의 review.body에는 인라인 코드 리뷰
+          # 코멘트 내용이 전혀 포함되지 않는다(Codex의 실제 P1/P2 지적사항은
+          # 거의 항상 인라인 코멘트로 옴 - 실측 확인됨). 이 리뷰(MARKER_ID)에
+          # 딸린 인라인 코멘트들을 별도로 조회해 프롬프트용 콘텐츠에 합친다.
+          # 이 리뷰가 신뢰 봇의 것이 아니거나(is_trusted_bot=false) 조회
+          # 자체가 실패해도 조용히 빈 값으로 두고 계속 진행한다 - 이 경우
+          # reviewContentRead는 프롬프트 지침에 따라 false로 판단되어
+          # fail-closed로 처리된다.
+          INLINE_COMMENTS=""
+          if [ "$EVENT_NAME" = "pull_request_review" ] && [ "$ACTOR" = "$REVIEW_BOT_LOGIN" ] && [ -n "$MARKER_ID" ]; then
+            ALL_COMMENTS_JSON=$(gh api "repos/$REPO/pulls/$NUMBER/comments" 2>/dev/null || echo "[]")
+            INLINE_COMMENTS=$(echo "$ALL_COMMENTS_JSON" | jq -r --arg review_id "$MARKER_ID" \
+              '[.[] | select((.pull_request_review_id // 0 | tostring) == $review_id)]
+               | map("- [" + .path + (if .line then (":" + (.line | tostring)) else "" end) + "]\n" + .body)
+               | join("\n\n")' 2>/dev/null || echo "")
+          fi
+
+          if [ "$EVENT_NAME" = "pull_request_review" ]; then
+            if [ -n "$INLINE_COMMENTS" ]; then
+              REVIEW_CONTENT=$(printf '[리뷰 요약]\n%s\n\n[인라인 코드 리뷰 코멘트 목록]\n%s' "$BODY" "$INLINE_COMMENTS")
+            else
+              REVIEW_CONTENT="$BODY"
+            fi
+          elif [ "$EVENT_NAME" = "pull_request_review_comment" ]; then
+            LINE_LABEL="${RC_COMMENT_LINE:-?}"
+            REVIEW_CONTENT=$(printf '[인라인 코드 리뷰 코멘트 - %s:%s]\n%s' "$RC_COMMENT_PATH" "$LINE_LABEL" "$BODY")
+          else
+            REVIEW_CONTENT="$BODY"
+          fi
+
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
@@ -124,6 +202,13 @@ jobs:
           echo "is_trusted_bot=$IS_TRUSTED_BOT" >> "$GITHUB_OUTPUT"
           echo "is_placeholder=$IS_PLACEHOLDER" >> "$GITHUB_OUTPUT"
           echo "is_review_skipped=$IS_REVIEW_SKIPPED" >> "$GITHUB_OUTPUT"
+          echo "review_marker_id=$MARKER_ID" >> "$GITHUB_OUTPUT"
+          delimiter_rc=$(openssl rand -hex 8)
+          {
+            echo "review_content_for_prompt<<$delimiter_rc"
+            echo "$REVIEW_CONTENT"
+            echo "$delimiter_rc"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         if: steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.pr.outputs.is_review_skipped == 'false'
@@ -170,11 +255,19 @@ jobs:
             --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue list:*),Bash(gh api:*)"
             --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"reviewContentRead":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","reviewContentRead","issueSummary","humanReviewReason"]}'
           prompt: |
-            이 PR에 리뷰 봇(Codex)이 남긴 리뷰를 확인해줘:
-            ${{ github.event_name == 'pull_request_review' && github.event.review.body || github.event.comment.body }}
+            이 PR에 리뷰 봇(Codex)이 남긴 리뷰/코멘트를 확인해줘:
+            ${{ steps.pr.outputs.review_content_for_prompt }}
+
+            (참고: 위 콘텐츠는 이벤트 종류에 따라 형태가 달라. "[리뷰 요약]"과
+            "[인라인 코드 리뷰 코멘트 목록]" 두 섹션이 같이 있으면 리뷰
+            제출(pull_request_review)에 딸린 실제 지적사항들이 이미 합쳐져
+            있는 것이니 그대로 판단하면 돼. "[인라인 코드 리뷰 코멘트 - 파일:라인]"
+            형태로 딱 하나만 있으면, 리뷰 제출 없이 인라인 코멘트 하나만
+            단독으로 추가된 경우니 그 코멘트 하나의 내용만으로 hasIssues를
+            판단해 - 굳이 다른 코멘트를 추가로 찾아볼 필요 없어.)
 
             (참고: pull_request_review 이벤트라면 리뷰 상태는
-            "${{ github.event.review.state }}"야 - 위 본문이 비어있거나
+            "${{ github.event.review.state }}"야 - 리뷰 요약이 비어있거나
             안내 문구만 있어도 이 상태값이 APPROVED/COMMENTED인지가 판단에
             도움이 될 수 있어.)
 
@@ -415,22 +508,18 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
-          EVENT_NAME: ${{ github.event_name }}
-          REVIEW_ID_REVIEW: ${{ github.event.review.id }}
-          REVIEW_ID_COMMENT: ${{ github.event.comment.id }}
+          REVIEW_ID: ${{ steps.pr.outputs.review_marker_id }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           PR_URL: ${{ steps.pr.outputs.url }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
           ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
         run: |
-          if [ "$EVENT_NAME" = "pull_request_review" ]; then
-            REVIEW_ID="$REVIEW_ID_REVIEW"
-          else
-            REVIEW_ID="$REVIEW_ID_COMMENT"
-          fi
-
-          # 같은 리뷰/코멘트에 대해 워크플로우가 재실행되어도 이슈가 중복
-          # 생성되지 않도록, 이슈 본문에 심어둔 마커로 기존 이슈를 먼저 찾는다
+          # 같은 리뷰/코멘트에 대해 워크플로우가 재실행되어도(또는 같은 리뷰
+          # 제출에 딸린 pull_request_review와 pull_request_review_comment
+          # 여러 건이 각각 별도 트리거되어도) 이슈가 중복 생성되지 않도록,
+          # 이슈 본문에 심어둔 마커로 기존 이슈를 먼저 찾는다. REVIEW_ID는
+          # "PR 정보 조회" 스텝에서 이벤트 타입과 무관하게 하나의 리뷰/코멘트를
+          # 가리키는 값(리뷰 id 또는 코멘트 id)으로 이미 통일해뒀다.
           MARKER="<!-- worky-auto-issue:pr-${PR_NUMBER}-review-${REVIEW_ID} -->"
 
           EXISTING=$(gh issue list --repo yoobilee/worky --search "$MARKER in:body" --state all --json number,url --jq '.[0]')
@@ -537,7 +626,11 @@ jobs:
           echo "Supabase issues 테이블 기록 완료"
 
       - name: 이슈 채널 알림 (결함 있었던 경우)
-        if: always() && steps.github_issue.outcome == 'success' && steps.github_issue.outputs.issue_url != ''
+        # issue_created=='true'(새로 만든 경우)일 때만 알림을 보낸다.
+        # 같은 리뷰에 딸린 pull_request_review/pull_request_review_comment가
+        # 여러 건 각각 트리거돼 기존 이슈를 재사용(issue_created=false)하는
+        # 경우까지 매번 "등록됨" 알림을 다시 보내면 중복 알림이 된다.
+        if: always() && steps.github_issue.outcome == 'success' && steps.github_issue.outputs.issue_url != '' && steps.github_issue.outputs.issue_created == 'true'
         env:
           SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
           ISSUE_URL: ${{ steps.github_issue.outputs.issue_url }}
@@ -557,13 +650,31 @@ jobs:
         # 코멘트(vercel[bot] 배포 알림 등)에 잘못 반응하지 않는다
         if: always() && steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.needs_human != 'false'
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
           SLACK_EXCEPTION_WEBHOOK_URL: ${{ secrets.SLACK_EXCEPTION_WEBHOOK_URL }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
           PR_URL: ${{ steps.pr.outputs.url }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
+          REVIEW_MARKER_ID: ${{ steps.pr.outputs.review_marker_id }}
           SUMMARY: ${{ steps.verify.outputs.human_review_reason }}
           CLAUDE_MD_ONLY: ${{ steps.verify.outputs.claude_md_only }}
           DIRTY_FILES: ${{ steps.verify.outputs.dirty_files }}
         run: |
+          # 같은 리뷰 제출에 pull_request_review와 pull_request_review_comment가
+          # (인라인 코멘트 개수만큼) 여러 건 각각 별도로 트리거될 수 있어,
+          # review_marker_id 기준으로 라벨을 남겨 같은 리뷰/코멘트에 대해
+          # 이미 알림을 보냈으면 다시 보내지 않는다 (review-timeout-watchdog.yml의
+          # SHA 라벨 방식과 동일한 패턴). 라벨 확인/부착이 실패해도(권한 등)
+          # 알림 자체는 fail-closed로 그대로 보낸다 - 중복 방지 실패가
+          # "알림을 아예 안 보냄"으로 이어지면 안 되기 때문이다.
+          NOTIFY_LABEL="needs-human:${REVIEW_MARKER_ID:-unknown}"
+          EXISTING_LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+          if echo "$EXISTING_LABELS" | grep -qxF "$NOTIFY_LABEL"; then
+            echo "이미 이 리뷰/코멘트(${REVIEW_MARKER_ID:-unknown})에 대해 특이사항 알림을 보냈음 - 중복 알림 스킵"
+            exit 0
+          fi
+
           # dirty 파일이 CLAUDE.md 하나뿐이면 claude-code-action의 보안
           # 되돌려쓰기로 인한 알려진 오탐일 가능성이 높다는 안내를 덧붙인다
           # (CLAUDE.md 참고). needs_human 판정 자체는 그대로 fail-closed로
@@ -580,6 +691,9 @@ jobs:
                 --arg summary "$MESSAGE_BODY" \
             '{text: ("⚠️ *확인 필요* <" + $url + "|" + $title + ">\n" + $summary)}' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_EXCEPTION_WEBHOOK_URL"
+
+          gh label create "$NOTIFY_LABEL" --repo "$REPO" --color "F9A825" --force >/dev/null 2>&1 || true
+          gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$NOTIFY_LABEL" || true
 
       - name: 자동 merge 요청 (사람 판단 불필요한 경우만)
         if: steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.needs_human == 'false'
