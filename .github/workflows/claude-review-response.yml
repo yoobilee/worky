@@ -830,19 +830,30 @@ jobs:
           fi
           echo "Supabase issues 테이블 기록 완료"
 
-      - name: 이슈 채널 알림 (결함 있었던 경우)
+      - name: 이슈 등록 알림 (결함 있었던 경우)
+        # [이슈 알림 재설계 - "등록 이벤트" 담당] 이슈가 새로 생성되거나
+        # (마커로) 재사용되는 시점에 현재 상태(사람 확인 필요 여부)와
+        # 함께 한 번 알린다. 이슈가 나중에 close되는 것은 이 스텝이 아니라
+        # 아래 "이슈 닫힘 알림" 스텝이 별도로(등록 시점의 상태 예측이
+        # 아니라 매 실행마다 실제 상태를 다시 조회해) 담당한다 - 두 스텝
+        # 모두 "지금 이 사실이 맞는가"만 보고 독립적으로 판단하므로, 등록
+        # 시점에 예측한 "미래 상태"가 이후 어떻게 틀어지든(재검증으로
+        # 뒤집히거나, 사람이 수동으로 닫거나) 서로의 판단에 영향을 주지
+        # 않는다(상세 배경은 아래 "이슈 닫힘 알림" 스텝 참고, Issue
+        # #67/#76/#77/#79).
+        #
         # 예전에는 issue_created=='true'(이번 실행에서 새로 만든 경우)에만
         # 알림을 보내 재사용 시 중복 알림을 막았는데, 이 방식은 "이슈 생성
         # 성공"과 "알림 전송 성공"을 하나의 플래그로 뭉뚱그려 Slack 전송이
         # 실패하면(일시적 장애 등) 잡이 실패로 끝나고, 재실행 시 마커로
         # 기존 이슈를 재사용(issue_created=false)하게 되면서 알림이 영구히
         # 스킵되는 문제가 있었다(Codex 지적, Issue #65). 아래에서
-        # review_marker_id 기준 라벨로 "알림 전송 성공" 자체를 별도 추적해
-        # (review-timeout-watchdog.yml, "특이사항 알림" 스텝과 동일 패턴:
-        # Slack 전송이 성공한 뒤에만 라벨을 붙임) 이 스텝의 재시도 여부를
-        # 그 라벨로만 판단하도록 분리했다. issue_created/issue_closed
-        # 출력이나 Supabase 기록·특이사항 알림·자동 merge 등 다른 스텝의
-        # 판단 기준은 전혀 건드리지 않는다.
+        # review_marker_id 기준 라벨(issue-notified:<id>)로 "알림 전송
+        # 성공" 자체를 별도 추적해(review-timeout-watchdog.yml, "특이사항
+        # 알림" 스텝과 동일 패턴: Slack 전송이 성공한 뒤에만 라벨을 붙임)
+        # 이 스텝의 재시도 여부를 그 라벨로만 판단하도록 분리했다.
+        # issue_created/issue_closed 출력이나 Supabase 기록·특이사항
+        # 알림·자동 merge 등 다른 스텝의 판단 기준은 전혀 건드리지 않는다.
         if: always() && steps.github_issue.outcome == 'success' && steps.github_issue.outputs.issue_url != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -881,82 +892,87 @@ jobs:
           gh label create "$NOTIFY_LABEL" --repo "$REPO" --color "2EB67D" --force >/dev/null 2>&1 || true
           gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$NOTIFY_LABEL" || true
 
-      - name: 이슈 정정 알림 (사람 확인 필요였다가 close된 경우)
-        # 처음에는 steps.github_issue.outputs.issue_closed_by_retry(이번
-        # 실행에서 열림->close로 "바뀌었는지"를 나타내는 1회성 플래그)로
-        # 판단했으나, 이 방식은 정정 Slack 전송 자체가 실패하면(curl -sf가
-        # bash -e로 스텝을 중단시켜 라벨을 못 붙임) 다음 재실행 시점엔
-        # 이슈가 이미 closed라 close 재시도 자체가 다시 일어나지 않아
-        # issue_closed_by_retry가 다시 true가 될 수 없고, 그 결과 정정
-        # 알림이 영구히 스킵되는 문제가 있었다(Codex 지적, Issue #77).
+      - name: 이슈 닫힘 알림
+        # [이슈 알림 재설계 - "닫힘 이벤트" 담당, 2026-09-02]
         #
-        # "이번 실행에서 바뀌었는가"가 아니라 "지금 이슈가 close 상태인데
-        # 정정 알림을 아직 못 보냈는가"를 매 실행마다 다시 판단하도록
-        # 바꿨다. steps.github_issue.outputs.issue_closed는 재사용/신규
-        # 생성 두 경로 모두에서 "이번 실행이 끝난 시점의 최종 상태"를
-        # 항상 다시 계산해 출력하므로(재사용 분기라도 EXISTING_CLOSED를
-        # 그대로 담음), 이 값을 그대로 재사용하면 별도 출력을 늘릴 필요가
-        # 없다.
+        # 오늘 하루 이 자리에 있던 "이슈 정정 알림" 스텝이 연쇄적으로
+        # 세 번 고쳐졌다:
+        #   - Issue #76: close 재시도(Issue #67)가 성공해도 기존
+        #     issue-notified 라벨 때문에 "이슈 채널 알림"이 스킵되어
+        #     정정 알림이 아예 안 감 -> 별도 정정 스텝 신설.
+        #   - Issue #77: 그 정정 스텝이 "이번 실행에서 상태가 방금
+        #     바뀌었는가"(issue_closed_by_retry, 1회성 플래그)로
+        #     판단해, 정정 Slack 전송 자체가 실패하면 다음 재실행에서는
+        #     이미 closed라 그 플래그가 다시 true가 될 수 없어 영구
+        #     스킵 -> "매 실행마다 현재 상태(issue_closed)를 다시
+        #     조회"하는 방식으로 전환.
+        #   - Issue #79: 그렇게 고친 뒤에도 "정정 알림"이라는 이름과
+        #     메시지("재검증에서 자동으로 해결됨")가 여전히 "왜/어떻게
+        #     닫혔는지"를 단정하고 있어서, 실제로는 사람이 수동으로
+        #     닫았는데 이 워크플로우가 재실행되면(needs_human이 여전히
+        #     true인 상태에서도 issue_closed=true는 유지됨) "자동으로
+        #     해결됐다"는 사실과 다른 메시지가 나갈 수 있는 문제가 남음.
         #
-        # 다만 issue_closed=='true'만으로는 "처음부터 사람 확인 없이 바로
-        # 자동 수정+close된 정상 케이스"까지 걸리므로(그건 애초에 "정정"할
-        # 대상이 아니다), 아래 스크립트에서 이 리뷰(review_marker_id)에
-        # "특이사항 알림"이 needs-human:<id> 라벨을 붙인 적이 있는지(=한때
-        # 사람 확인 필요로 안내됐던 적이 있는지)를 추가로 확인해 그 경우만
-        # 정정 알림을 보낸다.
+        # 세 문제 모두 근본적으로 "등록 시점에 미래 상태(자동 해결/사람
+        # 확인)를 예측하고, 나중에 상태가 바뀌면 그 예측을 정정한다"는
+        # 설계 자체에서 비롯됐다 - 예측과 정정이라는 두 단계가 서로
+        # 다른 실행(run)에 걸쳐 있다 보니 그 사이 무엇이 어떻게
+        # 바뀌었는지 계속 놓쳤다. 이 스텝은 그 설계를 버리고, 위
+        # "이슈 등록 알림"과 마찬가지로 "지금 이 사실이 맞는가"만 매
+        # 실행마다 새로 확인한다: steps.github_issue.outputs.issue_closed
+        # (재사용/신규 생성 두 경로 모두에서 이번 실행이 끝난 시점의
+        # 실제 GitHub 상태를 항상 다시 계산해 출력함)가 true이고, 아직
+        # 이 사실을 알리지 않았으면(issue-closed-notified:<id> 라벨
+        # 없음) 무조건 "✅ GitHub Issue #N 닫힘"만 알린다 - 누가/왜/
+        # 어떻게 닫았는지(자동 재검증, 사람의 수동 close, 이전 실행의
+        # close 재시도 등)는 전혀 따지지 않고 사실만 전달하므로, 원인을
+        # 잘못 단정해 틀린 메시지를 보낼 여지 자체가 없다(Issue #79의
+        # 근본 원인 제거). needs-human 라벨 유무로 "정정 대상인지"를
+        # 미리 가리는 조건도 없앴다 - 신규 생성 즉시 close된 경우도
+        # 똑같이 "닫힘" 알림을 받는 것이 오히려 일관적이다(등록
+        # 알림에서 이미 "사람 확인 필요"로 안내했었다면 이 닫힘 알림이
+        # 자연스럽게 "그 건이 이제 닫혔다"는 후속 소식이 되고, 처음부터
+        # 자동 close였어도 "등록됨(즉시 close)" 알림과 "닫힘" 알림이
+        # 거의 동시에 두 번 오는 것뿐이라 정보량이 줄지 않는다).
         #
-        # 중복 방지는 기존과 동일하게 review_marker_id 기준의 별도 라벨
-        # (issue-corrected:<id>)로 관리한다 - "이슈 채널 알림"의
-        # issue-notified:<id>, "특이사항 알림"의 needs-human:<id>와 목적이
-        # 다르므로(각각 "등록 알림 보냄", "확인 필요 알림 보냄", "정정
-        # 알림 보냄") 이름을 명확히 구분했다. 라벨은 Slack 전송이 실제로
-        # 성공한 뒤에만 부착한다(위 두 스텝과 동일한 "성공 확인 후 라벨"
-        # 패턴) - 이번 수정으로 이 라벨이 못 붙어도(Slack 전송 실패) 다음
-        # 재실행에서 issue_closed=='true'가 여전히 유지되는 한 계속
-        # 재시도된다.
+        # 중복 방지는 review_marker_id 기준의 새 라벨
+        # issue-closed-notified:<id>로 관리한다 - "이슈 등록 알림"의
+        # issue-notified:<id>(등록 알림 보냄), "특이사항 알림"의
+        # needs-human:<id>(확인 필요 알림 보냄)와 이름과 목적을 명확히
+        # 구분했다. 라벨은 Slack 전송이 실제로 성공한 뒤에만 부착하므로
+        # (다른 두 스텝과 동일한 "성공 확인 후 라벨" 패턴), 전송이
+        # 실패해도 다음 재실행에서 issue_closed=='true'가 여전히
+        # 유지되는 한(이슈가 다시 열리지 않는 한) 반드시 재시도된다.
         if: always() && steps.github_issue.outcome == 'success' && steps.github_issue.outputs.issue_closed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           REVIEW_MARKER_ID: ${{ steps.pr.outputs.review_marker_id }}
-          SLACK_EXCEPTION_WEBHOOK_URL: ${{ secrets.SLACK_EXCEPTION_WEBHOOK_URL }}
+          SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
           ISSUE_URL: ${{ steps.github_issue.outputs.issue_url }}
           ISSUE_NUMBER: ${{ steps.github_issue.outputs.issue_number }}
           ISSUE_TITLE: ${{ steps.pr.outputs.title }}
         run: |
-          NEEDS_HUMAN_LABEL="needs-human:${REVIEW_MARKER_ID:-unknown}"
-          CORRECT_LABEL="issue-corrected:${REVIEW_MARKER_ID:-unknown}"
+          CLOSED_LABEL="issue-closed-notified:${REVIEW_MARKER_ID:-unknown}"
           EXISTING_LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
-
-          # 한 번도 "사람 확인 필요"로 안내된 적 없는 이슈(처음부터 자동
-          # 수정+close된 정상 케이스)는 정정할 대상이 아니므로 스킵한다.
-          # 라벨 조회 자체가 실패해도(네트워크 오류 등) 안전하게 스킵 -
-          # needs-human 라벨은 한 번 붙으면 사라지지 않으므로, 실제로
-          # 대상이었다면 다음 재실행에서 조회가 성공하는 즉시 다시
-          # 판단된다.
-          if ! echo "$EXISTING_LABELS" | grep -qxF "$NEEDS_HUMAN_LABEL"; then
-            echo "이 리뷰/코멘트(${REVIEW_MARKER_ID:-unknown})는 사람 확인 필요로 안내된 적이 없음 - 정정 알림 대상 아님"
-            exit 0
-          fi
-
-          if echo "$EXISTING_LABELS" | grep -qxF "$CORRECT_LABEL"; then
-            echo "이미 이 리뷰/코멘트(${REVIEW_MARKER_ID:-unknown})에 대해 정정 알림을 성공적으로 보냈음 - 중복 알림 스킵"
+          if echo "$EXISTING_LABELS" | grep -qxF "$CLOSED_LABEL"; then
+            echo "이미 이 리뷰/코멘트(${REVIEW_MARKER_ID:-unknown})에 대해 닫힘 알림을 성공적으로 보냈음 - 중복 알림 스킵"
             exit 0
           fi
 
           jq -n --arg issue_url "$ISSUE_URL" \
                 --arg issue_number "$ISSUE_NUMBER" \
                 --arg issue_title "$ISSUE_TITLE" \
-            '{text: ("✅ *정정* <" + $issue_url + "|GitHub Issue #" + $issue_number + " - " + $issue_title + ">\n이전에 확인이 필요하다고 안내드렸던 건이 이후 재검증에서 자동으로 해결되어 이슈가 close되었습니다.")}' | \
-            curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_EXCEPTION_WEBHOOK_URL"
+            '{text: ("✅ <" + $issue_url + "|GitHub Issue #" + $issue_number + " - " + $issue_title + "> 닫힘")}' | \
+            curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
 
           # bash -e 기본 동작상 위 curl -sf가 실패하면 여기 도달하지 못하고
           # 스텝이 즉시 실패 종료된다 - 라벨은 Slack 전송이 실제로 성공한
-          # 뒤에만 붙어야 다음 재시도에서 정확히 "아직 정정 알림 못 보냄"으로
+          # 뒤에만 붙어야 다음 재실행에서 정확히 "아직 닫힘 알림 못 보냄"으로
           # 판단할 수 있다.
-          gh label create "$CORRECT_LABEL" --repo "$REPO" --color "2EB67D" --force >/dev/null 2>&1 || true
-          gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$CORRECT_LABEL" || true
+          gh label create "$CLOSED_LABEL" --repo "$REPO" --color "2EB67D" --force >/dev/null 2>&1 || true
+          gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$CLOSED_LABEL" || true
 
       - name: 특이사항 알림 (사람 판단 필요한 경우)
         # steps.verify는 is_trusted_bot=='false'일 때 통째로 스킵되어
