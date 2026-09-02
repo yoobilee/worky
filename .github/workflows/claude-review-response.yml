@@ -653,7 +653,33 @@ jobs:
             EXISTING_CLOSED=$(echo "$EXISTING" | jq -r '.closed')
             echo "이미 등록된 이슈를 재사용: $ISSUE_URL (closed=$EXISTING_CLOSED)"
             echo "issue_created=false" >> "$GITHUB_OUTPUT"
-            echo "issue_closed=$EXISTING_CLOSED" >> "$GITHUB_OUTPUT"
+
+            # 위 수정(Issue #63)은 "실제 상태를 정확히 보고"하는 것까지만
+            # 했을 뿐, 그 상태가 아직 "열림"인데 이번 실행의 재검증
+            # 결과(NEEDS_HUMAN)로는 이미 close됐어야 하는 경우 close를
+            # 다시 시도하지는 않았다. 시나리오: 이전 실행에서 자동 수정 후
+            # gh issue close가 일시적으로 실패(경고만 남기고 계속 진행,
+            # 아래 SHOULD_CLOSE 분기 참고) -> 같은 마커로 재실행되면 이
+            # 재사용 분기를 타는데, NEEDS_HUMAN=false(자동 수정 완료)여도
+            # close 재시도가 없어 이슈/Supabase 레코드가 계속 열려있고
+            # Slack에도 "사람 확인 필요"처럼 잘못 안내됐다(Codex 지적,
+            # Issue #67). "재사용된 이슈이지만 이번 실행 기준으로는 이미
+            # 닫혔어야 함"을 감지해 close를 재시도한다.
+            if [ "$EXISTING_CLOSED" = "false" ] && [ "$NEEDS_HUMAN" = "false" ]; then
+              if gh issue close "$ISSUE_NUMBER" --repo yoobilee/worky; then
+                echo "재사용된 이슈를 close 재시도로 닫음: $ISSUE_URL"
+                echo "issue_closed=true" >> "$GITHUB_OUTPUT"
+              else
+                # fail-safe: close 재시도가 또 실패해도 워크플로우 전체를
+                # 죽이지 않는다(continue-on-error도 이미 걸려있지만, 그와
+                # 별개로 이 스텝 자체가 여기서 exit하지 않도록). 다음
+                # 재실행에서 이 분기가 다시 시도된다.
+                echo "::warning::재사용된 이슈의 close 재시도 실패 (이슈는 계속 열려있음: $ISSUE_URL) - 다음 재실행에서 다시 시도됨"
+                echo "issue_closed=false" >> "$GITHUB_OUTPUT"
+              fi
+            else
+              echo "issue_closed=$EXISTING_CLOSED" >> "$GITHUB_OUTPUT"
+            fi
           else
             # needs_human=='false'(자동 수정 + "실제 git 상태 검증" 스텝의
             # 검증까지 통과)인 경우에만, 이 시점에 "실제 수정 내용"/"검증"
