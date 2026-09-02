@@ -577,14 +577,24 @@ jobs:
           # 가리키는 값(리뷰 id 또는 코멘트 id)으로 이미 통일해뒀다.
           MARKER="<!-- worky-auto-issue:pr-${PR_NUMBER}-review-${REVIEW_ID} -->"
 
-          EXISTING=$(gh issue list --repo yoobilee/worky --search "$MARKER in:body" --state all --json number,url --jq '.[0]')
+          EXISTING=$(gh issue list --repo yoobilee/worky --search "$MARKER in:body" --state all --json number,url,closed --jq '.[0]')
 
           if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
             ISSUE_NUMBER=$(echo "$EXISTING" | jq -r '.number')
             ISSUE_URL=$(echo "$EXISTING" | jq -r '.url')
-            echo "이미 등록된 이슈를 재사용: $ISSUE_URL"
+            # 이슈를 새로 만들지 않고 재사용하는 경로이므로, close 여부를
+            # false로 하드코딩하지 않고 실제 GitHub 이슈 상태를 그대로
+            # 반영한다 - 이전 실행이 이슈를 생성하고 close까지 마쳤는데
+            # 후속 Supabase 기록 스텝만 실패해 워크플로우가 재실행되는
+            # 경우, 재사용 분기를 타면서 이미 closed인 이슈를 false로
+            # 잘못 보고하면 아래 Supabase 기록 스텝(steps.github_issue.
+            # outputs.issue_closed를 쓰는 GH_ISSUE_CLOSED)에 그대로
+            # 전달되어 실제로는 closed인데 status:open으로 잘못 기록되는
+            # 문제가 있었다 (Issue #63 - Codex P2 지적).
+            EXISTING_CLOSED=$(echo "$EXISTING" | jq -r '.closed')
+            echo "이미 등록된 이슈를 재사용: $ISSUE_URL (closed=$EXISTING_CLOSED)"
             echo "issue_created=false" >> "$GITHUB_OUTPUT"
-            echo "issue_closed=false" >> "$GITHUB_OUTPUT"
+            echo "issue_closed=$EXISTING_CLOSED" >> "$GITHUB_OUTPUT"
           else
             # needs_human=='false'(자동 수정 + "실제 git 상태 검증" 스텝의
             # 검증까지 통과)인 경우에만, 이 시점에 "실제 수정 내용"/"검증"
