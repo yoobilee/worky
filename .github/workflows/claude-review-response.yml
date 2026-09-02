@@ -293,7 +293,7 @@ jobs:
           claude_args: |
             --max-turns 35
             --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue list:*),Bash(gh api:*)"
-            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"reviewContentRead":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"},"causeExplanation":{"type":"string"},"fixExplanation":{"type":"string"}},"required":["hasIssues","fixed","needsHuman","reviewContentRead","issueSummary","humanReviewReason","causeExplanation","fixExplanation"]}'
+            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"reviewContentRead":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"},"causeExplanation":{"type":"string"},"fixExplanation":{"type":"string"},"hasHighSeverityIssue":{"type":"boolean"},"allSeverityKnown":{"type":"boolean"}},"required":["hasIssues","fixed","needsHuman","reviewContentRead","issueSummary","humanReviewReason","causeExplanation","fixExplanation","hasHighSeverityIssue","allSeverityKnown"]}'
           prompt: |
             이 PR에 리뷰 봇(Codex)이 남긴 리뷰/코멘트를 확인해줘:
             ${{ steps.pr.outputs.review_content_for_prompt }}
@@ -350,22 +350,57 @@ jobs:
                (승인/문제없음) 그대로 종료. 단 이 경로로 hasIssues:false,
                needsHuman:false를 낼 때는 reviewContentRead가 true인 경우에만
                해당돼 - 리뷰를 제대로 못 읽었으면 절대 이 경로를 쓰지 마.
-            4. 안전하고 확실하게 고칠 수 있는 문제(타입 에러, 명백한 버그,
-               스타일 문제 등)면 직접 코드를 수정하고 커밋해
-            5. 아래에 해당하면 절대 코드를 수정하지 말고 "사람 판단 필요"로만 분류:
+            4. 지적사항이 있다면(hasIssues:true) 심각도를 확인해. Codex 리뷰는
+               각 지적 제목 바로 앞에 심각도 배지를 markdown 이미지로 표시해 -
+               실측 패턴(예외 없이 일관됨): `![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)`,
+               `![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)`
+               처럼 "P" 다음 숫자가 심각도야(숫자가 작을수록 심각). **P0가 P1보다
+               더 심각한 등급으로 나타날 수도 있어**(실측 데이터는 없지만 배지
+               규칙상 당연히 존재 가능) - P0와 P1을 동일하게(둘 다 최고 심각도군)
+               취급해. 위 리뷰 콘텐츠에서 각 지적사항 앞의 이 패턴을 찾아서:
+               - 지적사항 중 단 하나라도 P0 또는 P1이면 hasHighSeverityIssue:true로
+                 표시해(P0/P1이 하나도 없으면 false). 이 경우 needsHuman도 반드시
+                 true로 함께 표시해 - P0/P1 지적은 안전하게 고칠 수 있어 보여도
+                 (fixed:true여도) 항상 사람 확인이 필요해.
+               - 모든 지적사항의 심각도를 이 패턴(또는 명확히 동등하다고 알아볼
+                 수 있는 표기)으로 확인할 수 있었으면 allSeverityKnown:true,
+                 배지가 아예 없거나 형식이 달라 심각도를 확신할 수 없는 지적이
+                 하나라도 있으면 allSeverityKnown:false로 표시해(애매하면 무조건
+                 false - reviewContentRead와 같은 이유의 안전장치용 필드라 확신이
+                 없으면 fail-closed). allSeverityKnown:false인 경우도 needsHuman을
+                 true로 표시해 - 심각도를 모르는 지적은 안전하게 자동 종료할 수
+                 없어.
+               - hasIssues:false면 hasHighSeverityIssue:false, allSeverityKnown:true로
+                 둬(판단할 지적사항 자체가 없으니).
+               - 이 심각도 조건은 아래 5번 조건(카테고리 기반 사람 판단 필요)과
+                 별개로 추가되는 것이지, 5번을 대체하지 않아 - 5번에 해당하는
+                 지적은 심각도(P0/P1이든 P2든)와 무관하게 항상 수정하지 말고 사람
+                 판단 필요로 분류해.
+               - 참고로 이 hasHighSeverityIssue/allSeverityKnown 판단은 워크플로우
+                 스크립트 쪽에서도 리뷰 원문을 직접 재확인해 독립적으로 대조해 -
+                 여기서 실제 P0/P1 배지가 있는데 false로 잘못 표시하면 그 불일치
+                 자체가 감지돼 어차피 사람 확인으로 넘어가니, 정확하게 판단하는
+                 게 재작업을 줄이는 길이야.
+            5. 안전하고 확실하게 고칠 수 있는 문제(타입 에러, 명백한 버그,
+               스타일 문제 등)면 직접 코드를 수정하고 커밋해. P0/P1로 판단한
+               지적이어도 안전하게 고칠 수 있다면 수정은 그대로 시도해(다만
+               위 4번대로 needsHuman은 true를 유지) - "P0/P1이라 손대지 않는다"가
+               아니라 "P0/P1이라 자동으로 종료 처리하지 않는다"는 뜻이야.
+            6. 아래에 해당하면 절대 코드를 수정하지 말고 "사람 판단 필요"로만 분류:
                - Supabase 마이그레이션 파일(supabase/migrations/) 관련 지적
                - 환경변수, API 키, 인증/보안 관련 지적
                - GitHub Actions 워크플로우 파일(.github/workflows/) 자체 관련 지적
                - 여러 가지 해석이 가능하거나 설계 판단이 필요한 지적
-            6. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
+            7. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
                완료해서 이 브랜치에 반영해. 커밋 메시지는 한국어로 변경 내용을 요약해.
-            7. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
+            8. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
                reviewContentRead, issueSummary, humanReviewReason,
-               causeExplanation, fixExplanation 8개 필드 모두 필수)를 정확히
-               지켜서 결과를 출력해. issueSummary에는 어떤 결함을 발견했고
-               고쳤는지 여부만 사실 위주로 작성하고, humanReviewReason에는
-               왜 사람이 직접 판단해야 하는지 이유를 작성해 (사람 판단이
-               필요 없으면 빈 문자열로 둬). causeExplanation에는 GitHub
+               causeExplanation, fixExplanation, hasHighSeverityIssue, allSeverityKnown
+               10개 필드 모두 필수)를 정확히 지켜서 결과를 출력해. issueSummary에는
+               어떤 결함을 발견했고 고쳤는지 여부만 사실 위주로 작성하고,
+               humanReviewReason에는 왜 사람이 직접 판단해야 하는지 이유를 작성해
+               (P0/P1 지적이라 사람 확인이 필요한 경우 그 사실도 명시해줘 - 사람
+               판단이 필요 없으면 빈 문자열로 둬). causeExplanation에는 GitHub
                Issue 등록에 쓸 것이므로, 문제가 된 코드 스니펫(마크다운 코드
                블록)과 함께 왜 문제인지 원인을 한국어로 설명해 작성해
                (hasIssues:false면 빈 문자열로 둬). fixExplanation에는
@@ -380,6 +415,7 @@ jobs:
         env:
           CLAUDE_OUTCOME: ${{ steps.claude.outcome }}
           STRUCTURED_OUTPUT: ${{ steps.claude.outputs.structured_output }}
+          REVIEW_CONTENT: ${{ steps.pr.outputs.review_content_for_prompt }}
         run: |
           # fail-closed 기본값: 아래 로직 도중 예기치 않게(jq 실패 등) 죽어도
           # trap이 이 안전한 값을 그대로 출력한다
@@ -420,15 +456,51 @@ jobs:
           }
           trap write_result EXIT
 
+          # Claude 에이전트가 보고한 hasHighSeverityIssue를 그대로 신뢰하지
+          # 않고, 리뷰 원문(REVIEW_CONTENT - 이 스텝에서도 이미 사용 가능)에
+          # 실제로 P0/P1 심각도 배지가 있는지 독립적으로 재확인한다(Codex
+          # 지적, Issue #86 1번 - Claude가 실제로는 P1인 지적을
+          # hasHighSeverityIssue:false로 잘못 보고하면 기존 가드를 그대로
+          # 통과해버리는 문제).
+          #
+          # 실측(PR #56/57/60/75/78/83의 실제 인라인 코멘트 14건, 100% 일관):
+          # 배지는 항상 `![P{N} Badge](https://img.shields.io/badge/P{N}-{색상}?style=flat)`
+          # 형태의 markdown 이미지로, 지적 제목 줄 맨 앞에 붙는다. 두 패턴을
+          # OR로 검사한다:
+          #   1) badge/P[01]-[A-Za-z]+  - 실측된 정확한 URL 구조(우선)
+          #   2) !\[P[01]\s*Badge\]     - 이미지 alt 텍스트("P1 Badge")만
+          #      보는 보조 패턴. URL의 색상/도메인이 달라져도(P0 배지의
+          #      정확한 색상은 실측 데이터가 없어 P1과 같은 규칙을
+          #      가정했을 뿐이라 어긋날 수 있음) 여전히 markdown 이미지
+          #      문법(`![...]`) 형태로는 남아있을 가능성이 높아 이중
+          #      안전망 역할을 한다.
+          # 처음에는 `\bP[01]\b`(배지 문맥과 무관하게 "P0"/"P1" 단어 자체를
+          # 아무 데서나 찾음)로 더 느슨하게 만들었는데, 이 경우 "이 버그가
+          # P1 지적을 가릴 수 있다" 같은 일반 서술 문장에도 매칭되어 P2뿐인
+          # 리뷰까지 불필요하게 사람 확인으로 넘어가는 과민 반응이 있었다
+          # (Codex 지적, Issue #87 2번). 두 패턴 모두 markdown 이미지
+          # 문법(`![P{N}...]`)에 앵커링해, 실제 배지 문맥에서만 반응하고
+          # 서술 텍스트의 "P1"이라는 단어 자체에는 반응하지 않도록 좁혔다 -
+          # 그래도 배지 URL 구조 하나에만 의존하지 않도록 alt 텍스트
+          # 패턴은 그대로 유지해 진짜 배지를 놓치는 반대 방향 실수를
+          # 피한다.
+          if printf '%s' "$REVIEW_CONTENT" | grep -qE 'badge/P[01]-[A-Za-z]+' || \
+             printf '%s' "$REVIEW_CONTENT" | grep -qE '!\[P[01]\s*Badge\]'; then
+            CONTENT_HAS_HIGH_SEVERITY=true
+          else
+            CONTENT_HAS_HIGH_SEVERITY=false
+          fi
+
           # fail-closed: Claude 에이전트 스텝이 성공하지 않았으면(실패, 취소 등)
           # structured_output 파싱을 시도하지 않고 바로 안전한 값으로 처리
           if [ "$CLAUDE_OUTCOME" != "success" ]; then
-            PARSED='{"hasIssues":false,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"Claude 에이전트 처리 자체가 실패함 - 자동 판단 불가, GitHub Issue는 생성하지 않고 사람 확인만 요청","causeExplanation":"","fixExplanation":""}'
-          # fail-closed: structured_output이 비어있거나 스키마(8개 필드 모두 정확한 타입,
-          # reviewContentRead/causeExplanation/fixExplanation 포함)를 만족하지 않으면
-          # needsHuman=true, hasIssues=true로 안전하게 처리
+            PARSED='{"hasIssues":false,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"Claude 에이전트 처리 자체가 실패함 - 자동 판단 불가, GitHub Issue는 생성하지 않고 사람 확인만 요청","causeExplanation":"","fixExplanation":"","hasHighSeverityIssue":true,"allSeverityKnown":false}'
+          # fail-closed: structured_output이 비어있거나 스키마(10개 필드 모두 정확한 타입,
+          # reviewContentRead/causeExplanation/fixExplanation/hasHighSeverityIssue/
+          # allSeverityKnown 포함)를 만족하지 않으면 needsHuman=true,
+          # hasIssues=true로 안전하게 처리
           elif [ -n "$STRUCTURED_OUTPUT" ] && echo "$STRUCTURED_OUTPUT" | jq -e \
-            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.reviewContentRead | type) == "boolean" and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string" and (.causeExplanation | type) == "string" and (.fixExplanation | type) == "string"' \
+            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.reviewContentRead | type) == "boolean" and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string" and (.causeExplanation | type) == "string" and (.fixExplanation | type) == "string" and (.hasHighSeverityIssue | type) == "boolean" and (.allSeverityKnown | type) == "boolean"' \
             > /dev/null 2>&1; then
             # fail-closed: 리뷰 봇의 코멘트/리뷰 내용을 Claude 에이전트가 실제로
             # 읽지 못했다면(gh CLI/네트워크 차단·실패 등) hasIssues가 무엇으로
@@ -439,6 +511,25 @@ jobs:
             if echo "$STRUCTURED_OUTPUT" | jq -e '.reviewContentRead == false' > /dev/null 2>&1; then
               PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
                 '.needsHuman = true | .hasIssues = false | .humanReviewReason = "리뷰 봇 응답을 읽지 못해 확인이 필요합니다(네트워크/권한 차단 등)"')
+            # fail-closed: 리뷰 원문을 직접 재확인한 결과(CONTENT_HAS_HIGH_SEVERITY)
+            # 실제 P0/P1 배지가 있는데, Claude는 hasHighSeverityIssue:false로
+            # 보고하면서 needsHuman:false(자동 종료 가능)까지 냈다면 무조건
+            # 사람 확인 필요로 재정의한다. 일부러 hasIssues 값과 무관하게 둔다 -
+            # Claude가 P0/P1 지적사항의 존재 자체를 놓치고 프롬프트가 권장하는
+            # "지적사항 없음" 튜플(hasIssues:false, hasHighSeverityIssue:false,
+            # allSeverityKnown:true, needsHuman:false)을 그대로 반환하면
+            # hasIssues==true를 전제로 하는 검사는 전부 우회되기 때문이다
+            # (Codex 지적, Issue #87 1번 - 직전 커밋의 이 불일치 검증 자체가
+            # hasIssues==true 조건 뒤에 갇혀 있어 이 경우를 놓쳤음). 이 경우
+            # hasIssues는 Claude가 보고한 값을 그대로 두고(잘못된 근거로 이슈
+            # 본문을 만들어내는 것보다, 사람이 PR을 직접 보고 판단하게 하는
+            # 쪽이 안전하다 - needsHuman=true만으로 자동 merge 차단과 특이사항
+            # Slack 알림은 이미 충분히 트리거된다) needsHuman만 강제한다.
+            elif echo "$STRUCTURED_OUTPUT" | jq -e --argjson contentHigh "$CONTENT_HAS_HIGH_SEVERITY" \
+              '.needsHuman == false and $contentHigh == true and .hasHighSeverityIssue == false' \
+              > /dev/null 2>&1; then
+              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
+                '.needsHuman = true | .humanReviewReason = "리뷰 원문에 P0/P1 심각도 표시가 있는 것으로 확인됐는데 Claude는 hasHighSeverityIssue:false로 판단해(hasIssues 값과 무관하게) 판단 오류 가능성이 있어 사람 확인이 필요합니다"')
             # fail-closed: 이슈가 있는데(hasIssues=true) 고치지도 않았고(fixed=false)
             # 사람 확인도 불필요(needsHuman=false)하다는 모순된 결과는 무효 처리.
             # hasIssues/fixed/issueSummary는 신뢰할 수 있으므로 그대로 보존하고
@@ -448,11 +539,25 @@ jobs:
               > /dev/null 2>&1; then
               PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
                 '.needsHuman = true | .humanReviewReason = "검증 실패: 이슈가 있는데 해결되지 않았음에도 사람 확인이 불필요하다고 판단됨 - 안전을 위해 확인 필요로 전환"')
+            # fail-closed: P0/P1(최고 심각도) 지적이 있거나(hasHighSeverityIssue)
+            # 심각도를 확신할 수 없는 지적이 하나라도 있으면(allSeverityKnown=false),
+            # Claude 자신이 needsHuman:false(자동 종료 가능)로 판단했더라도
+            # 무조건 사람 확인 필요로 재정의한다. 리뷰 원문과의 불일치 검증은
+            # 위에서 hasIssues 값과 무관하게 이미 먼저 처리됐으므로(바로 위
+            # 분기), 여기서는 Claude 자신의 보고가 스스로 일관되게 "심각하다/
+            # 모르겠다"고 말한 경우만 다룬다. 이 조건은 기존 조건들을 전혀
+            # 대체하지 않고 그 위에 OR로 추가되는 것이라, 이미 안전한 경로가
+            # 넓어지는 일은 없고 좁아지기만 한다.
+            elif echo "$STRUCTURED_OUTPUT" | jq -e \
+              '.hasIssues == true and .needsHuman == false and (.hasHighSeverityIssue == true or .allSeverityKnown == false)' \
+              > /dev/null 2>&1; then
+              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
+                '.needsHuman = true | .humanReviewReason = (if .hasHighSeverityIssue then "P0/P1(최고 심각도) 지적이 포함되어 있어 자동 종료 대상에서 제외하고 항상 사람 확인이 필요합니다" else "지적사항의 심각도(P0/P1/P2 등)를 명확히 판별할 수 없어 안전을 위해 사람 확인이 필요합니다" end)')
             else
               PARSED="$STRUCTURED_OUTPUT"
             fi
           else
-            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"자동 판단 실패, 확인 필요","causeExplanation":"","fixExplanation":""}'
+            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"자동 판단 실패, 확인 필요","causeExplanation":"","fixExplanation":"","hasHighSeverityIssue":true,"allSeverityKnown":false}'
           fi
 
           # jq 실패가 조용히 묻히지 않도록 각각 독립된 대입문으로 계산한다 -
