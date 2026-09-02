@@ -14,9 +14,13 @@ on:
 # 코멘트 내용이 전혀 포함되지 않고 "Codex Review / Reviewed commit" 같은
 # 껍데기 안내문만 있어, 지금까지 이 파이프라인이 Codex의 실제 지적사항을
 # 한 번도 제대로 못 읽고 있었다(실측 확인됨). 아래 "PR 정보 조회" 스텝에서
-# pull_request_review 트리거 시 딸린 인라인 코멘트를 별도로 조회해 합치고,
-# pull_request_review_comment가 단독으로(리뷰 제출 없이) 올 때는 그 코멘트
-# 하나만으로도 판단하도록 한다.
+# 이벤트 종류와 무관하게 항상 그 리뷰(MARKER_ID)에 딸린 인라인 코멘트
+# 전체를 조회해 합친다 - pull_request_review와 pull_request_review_comment
+# (인라인 코멘트 개수만큼) 여러 건이 같은 리뷰 제출에서 거의 동시에
+# 트리거되는데, 어느 쪽이 먼저 "GitHub Issue 자동 등록"에 도달해 마커를
+# 선점하든 항상 완전한 집계 내용을 다시 조회하므로 부분 정보로 이슈가
+# 고정되는 race condition이 없다(Codex 지적, Issue #61 - 상세 이유는
+# 아래 "PR 정보 조회" 스텝의 INLINE_COMMENTS 조회 부분 주석 참고).
 
 # 신뢰하는 리뷰 봇의 GitHub 로그인(actor).
 # TODO(확인 필요): chatgpt-codex-connector[bot]은 GitHub App bot login 네이밍
@@ -168,13 +172,39 @@ jobs:
           # 코멘트 내용이 전혀 포함되지 않는다(Codex의 실제 P1/P2 지적사항은
           # 거의 항상 인라인 코멘트로 옴 - 실측 확인됨). 이 리뷰(MARKER_ID)에
           # 딸린 인라인 코멘트들을 별도로 조회해 프롬프트용 콘텐츠에 합친다.
+          #
+          # pull_request_review_comment 이벤트에서도 (자신이 들고 온 코멘트
+          # 하나만 쓰지 않고) 동일하게 이 조회를 수행한다 - 그렇지 않으면
+          # race condition이 있었다: 같은 리뷰 제출 1건이 pull_request_review
+          # 1건 + 인라인 코멘트 개수만큼의 pull_request_review_comment로
+          # 나뉘어 거의 동시에 트리거되는데, 만약 단일 코멘트 이벤트가 먼저
+          # "GitHub Issue 자동 등록"에 도달해 그 코멘트 하나만으로 이슈를
+          # 먼저 만들어버리면, 뒤이어 도착하는(전체 코멘트를 집계해서 보는)
+          # pull_request_review 실행은 마커가 이미 선점된 것을 보고 그
+          # 불완전한 이슈를 그대로 재사용만 할 뿐 나머지 지적사항을 채워
+          # 넣지 않아, 같은 리뷰의 다른 지적사항들이 영영 기록되지 않는
+          # 문제가 있었다(Codex 지적, Issue #61 1번). 리뷰 제출 시 딸린
+          # 인라인 코멘트들은 리뷰와 원자적으로 함께 생성되므로, 어느
+          # 이벤트가 먼저 오든 이 시점에 API를 조회하면 이미 그 리뷰의
+          # 전체 코멘트를 볼 수 있다 - "먼저 도착한 이벤트가 부분 정보로
+          # 마커를 선점"하는 문제를, 대기/병합 로직 없이 "이벤트 종류와
+          # 무관하게 항상 완전한 집계 내용을 다시 조회"하는 방식으로
+          # 근본 해결한다.
+          #
           # 이 리뷰가 신뢰 봇의 것이 아니거나(is_trusted_bot=false) 조회
           # 자체가 실패해도 조용히 빈 값으로 두고 계속 진행한다 - 이 경우
           # reviewContentRead는 프롬프트 지침에 따라 false로 판단되어
           # fail-closed로 처리된다.
+          #
+          # --paginate: 페이지네이션 없이는 코멘트 이력이 많은 PR에서
+          # REST API 첫 페이지(기본 30개)를 넘는 코멘트가 응답에서 누락돼
+          # 이 리뷰(MARKER_ID)에 딸린 코멘트가 필터링 결과에서 비게 될 수
+          # 있었다(Codex 지적, Issue #61 2번). gh api --paginate는 모든
+          # 페이지를 이어붙인 전체 배열을 반환한다.
           INLINE_COMMENTS=""
-          if [ "$EVENT_NAME" = "pull_request_review" ] && [ "$ACTOR" = "$REVIEW_BOT_LOGIN" ] && [ -n "$MARKER_ID" ]; then
-            ALL_COMMENTS_JSON=$(gh api "repos/$REPO/pulls/$NUMBER/comments" 2>/dev/null || echo "[]")
+          if { [ "$EVENT_NAME" = "pull_request_review" ] || [ "$EVENT_NAME" = "pull_request_review_comment" ]; } \
+             && [ "$ACTOR" = "$REVIEW_BOT_LOGIN" ] && [ -n "$MARKER_ID" ]; then
+            ALL_COMMENTS_JSON=$(gh api --paginate "repos/$REPO/pulls/$NUMBER/comments" 2>/dev/null || echo "[]")
             INLINE_COMMENTS=$(echo "$ALL_COMMENTS_JSON" | jq -r --arg review_id "$MARKER_ID" \
               '[.[] | select((.pull_request_review_id // 0 | tostring) == $review_id)]
                | map("- [" + .path + (if .line then (":" + (.line | tostring)) else "" end) + "]\n" + .body)
@@ -188,8 +218,18 @@ jobs:
               REVIEW_CONTENT="$BODY"
             fi
           elif [ "$EVENT_NAME" = "pull_request_review_comment" ]; then
-            LINE_LABEL="${RC_COMMENT_LINE:-?}"
-            REVIEW_CONTENT=$(printf '[인라인 코드 리뷰 코멘트 - %s:%s]\n%s' "$RC_COMMENT_PATH" "$LINE_LABEL" "$BODY")
+            if [ -n "$INLINE_COMMENTS" ]; then
+              # 이 코멘트 하나만이 아니라, 같은 리뷰(MARKER_ID)에 딸린
+              # 인라인 코멘트 전체를 집계한 결과 - pull_request_review가
+              # 먼저 도착했든 나중에 도착했든 항상 동일한 완전한 내용으로
+              # 수렴한다.
+              REVIEW_CONTENT=$(printf '[인라인 코드 리뷰 코멘트 목록 - 이 코멘트가 속한 리뷰 전체]\n%s' "$INLINE_COMMENTS")
+            else
+              # 집계 조회가 실패했거나 결과가 비었을 때의 폴백 - 최소한 이
+              # 이벤트가 들고 온 코멘트 하나는 놓치지 않는다.
+              LINE_LABEL="${RC_COMMENT_LINE:-?}"
+              REVIEW_CONTENT=$(printf '[인라인 코드 리뷰 코멘트 - %s:%s]\n%s' "$RC_COMMENT_PATH" "$LINE_LABEL" "$BODY")
+            fi
           else
             REVIEW_CONTENT="$BODY"
           fi
@@ -261,10 +301,14 @@ jobs:
             (참고: 위 콘텐츠는 이벤트 종류에 따라 형태가 달라. "[리뷰 요약]"과
             "[인라인 코드 리뷰 코멘트 목록]" 두 섹션이 같이 있으면 리뷰
             제출(pull_request_review)에 딸린 실제 지적사항들이 이미 합쳐져
-            있는 것이니 그대로 판단하면 돼. "[인라인 코드 리뷰 코멘트 - 파일:라인]"
-            형태로 딱 하나만 있으면, 리뷰 제출 없이 인라인 코멘트 하나만
-            단독으로 추가된 경우니 그 코멘트 하나의 내용만으로 hasIssues를
-            판단해 - 굳이 다른 코멘트를 추가로 찾아볼 필요 없어.)
+            있는 것이니 그대로 판단하면 돼. "[인라인 코드 리뷰 코멘트 목록 -
+            이 코멘트가 속한 리뷰 전체]" 형태면 인라인 코멘트(pull_request_
+            review_comment) 단독 트리거지만 같은 리뷰에 딸린 코멘트 전체를
+            이미 집계해서 보여주는 것이니 마찬가지로 그대로 판단하면 돼.
+            "[인라인 코드 리뷰 코멘트 - 파일:라인]" 형태로 코멘트 딱 하나만
+            있으면, 집계 조회 자체가 실패한 예외적인 경우라 이 코멘트
+            하나의 내용만으로 판단해 - 어느 형태든 굳이 다른 코멘트를
+            추가로 찾아볼 필요 없어.)
 
             (참고: pull_request_review 이벤트라면 리뷰 상태는
             "${{ github.event.review.state }}"야 - 리뷰 요약이 비어있거나
