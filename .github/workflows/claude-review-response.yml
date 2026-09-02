@@ -1014,10 +1014,29 @@ jobs:
         if: steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.needs_human == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           PR_TITLE: ${{ steps.pr.outputs.title }}
           ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
         run: |
+          # squash merge는 --body-file로 넘긴 텍스트가 실제 squash 커밋
+          # 메시지가 되고, GitHub의 "Closes #N" 등 자동 close 키워드는 그
+          # 최종 커밋 메시지를 기준으로 판정한다(원래 PR 본문이 아님).
+          # 기존에는 이 커밋 메시지를 "## 검증 결과/## 처리 방식" 자체
+          # 템플릿으로만 완전히 새로 만들어, PR 본문에 있던 "Closes #71"
+          # 같은 키워드가 실제 커밋에는 전혀 반영되지 않아 merge 후에도
+          # 이슈가 자동으로 안 닫히는 문제가 있었다(PR #80/Issue #71에서
+          # 실측 확인). PR 원본 본문에서 GitHub이 인식하는 close 키워드
+          # (close/closes/closed, fix/fixes/fixed, resolve/resolves/
+          # resolved + #숫자, 대소문자 무관)를 추출해 새 커밋 메시지
+          # 끝에 그대로 붙여서 이 문제를 고친다. 기존 검증 결과/처리
+          # 방식 요약 템플릿은 그대로 유지.
+          PR_BODY=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json body -q .body 2>/dev/null || echo "")
+          # PR 본문 조회 자체가 실패해도(네트워크 오류 등) 키워드를 못
+          # 찾은 것으로 처리하고 fail-safe하게 merge는 계속 진행한다 -
+          # 이 부가 기능 하나 때문에 자동 merge 전체를 막을 필요는 없다.
+          CLOSING_KEYWORDS=$(printf '%s' "$PR_BODY" | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+' | sort -u || true)
+
           # heredoc/이스케이프 없이 파일로 넘겨 특수문자·줄바꿈 이슈를 피한다
           BODY_TEXT="${ISSUE_SUMMARY:-특이사항 없음}"
           {
@@ -1027,5 +1046,9 @@ jobs:
             echo
             echo "## 처리 방식"
             echo "Codex 자동 리뷰 + Claude Code 에이전트 자동 검증"
+            if [ -n "$CLOSING_KEYWORDS" ]; then
+              echo
+              echo "$CLOSING_KEYWORDS"
+            fi
           } > /tmp/merge_body.md
           gh pr merge --auto --squash --subject "$PR_TITLE" --body-file /tmp/merge_body.md "$PR_NUMBER"
