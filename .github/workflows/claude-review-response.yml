@@ -1172,4 +1172,4 @@ jobs:
               echo "$CLOSING_KEYWORDS"
             fi
           } > /tmp/merge_body.md
-          gh pr merge --auto --squash --subject "$PR_TITLE" --body-file /tmp/merge_body.md "$PR_NUMBER"
+          gh pr merge --auto --squash --delete-branch --subject "$PR_TITLE" --body-file /tmp/merge_body.md "$PR_NUMBER"
