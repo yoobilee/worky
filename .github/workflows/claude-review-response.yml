@@ -174,25 +174,33 @@ jobs:
           # 재발 방지 - 아래 "실제 git 상태 검증" 스텝에서 review_verdict가
           # needs_human으로 강제 처리됨)
           #
-          # 이 패턴은 pull_request_review 이벤트의 review.body(리뷰 봇이
-          # 리뷰 자체에 대해 남기는 메타 안내문)에서만 적용한다.
-          # pull_request_review_comment 이벤트에서는 BODY가 인라인 코드
-          # 리뷰 코멘트 하나의 본문인데, 이건 리뷰 대상 "코드"에 대한 실제
-          # 지적 내용이라 "rate limit" 같은 단어가 우연히 등장할 수 있다
-          # (실측: PR #107에서 Codex가 "이 테스트가 /api/groq를 호출해
-          # rate limiting을 유발할 수 있다"고 지적한 정상 P2 코멘트가 이
-          # 패턴에 오탐되어 실제로 정상 수행된 리뷰가 "리뷰 미실행"으로
-          # 잘못 분류됨 - Issue #109). 애초에 인라인 코멘트가 존재한다는
-          # 사실 자체가 이미 리뷰가 정상 수행됐다는 증거이므로, 이 이벤트
-          # 종류에서는 스킵 판정 로직 자체를 건너뛰고 항상 false로 둔다.
-          if [ "$EVENT_NAME" = "pull_request_review" ]; then
+          # pull_request_review_comment 이벤트에서만 이 판정을 건너뛰고
+          # 항상 false로 둔다 - 이 이벤트의 BODY는 인라인 코드 리뷰 코멘트
+          # 하나의 본문인데, 이건 리뷰 대상 "코드"에 대한 실제 지적 내용이라
+          # "rate limit" 같은 단어가 우연히 등장할 수 있다(실측: PR #107에서
+          # Codex가 "이 테스트가 /api/groq를 호출해 rate limiting을 유발할
+          # 수 있다"고 지적한 정상 P2 코멘트가 이 패턴에 오탐되어 실제로
+          # 정상 수행된 리뷰가 "리뷰 미실행"으로 잘못 분류됨 - Issue #109).
+          # 애초에 인라인 코멘트가 존재한다는 사실 자체가 이미 리뷰가 정상
+          # 수행됐다는 증거이므로 이 이벤트 종류만 예외로 화이트리스트한다.
+          #
+          # 그 외 모든 이벤트(pull_request_review의 리뷰 요약 본문,
+          # issue_comment로 신뢰 봇이 남기는 코멘트 포함)에는 기존 패턴
+          # 매칭을 그대로 적용한다 - else를 안전한 기본값(false)으로 두면
+          # issue_comment 경로로 들어오는 신뢰 봇의 스킵/레이트리밋 안내를
+          # 놓치게 되어 CodeRabbit의 스킵 안내를 "지적사항 없음"으로 오인해
+          # PR #49가 검증 없이 자동 merge된 사고와 동일한 경로가 재발할 수
+          # 있다(Issue #111) - fail-closed 원칙상 화이트리스트해야 할
+          # 이벤트(pull_request_review_comment) 하나만 명시적으로 빼고,
+          # 나머지는 전부 기본 패턴 매칭 경로를 타야 한다.
+          if [ "$EVENT_NAME" = "pull_request_review_comment" ]; then
+            IS_REVIEW_SKIPPED="false"
+          else
             BODY_LOWER=$(printf '%s' "$BODY" | tr '[:upper:]' '[:lower:]')
             case "$BODY_LOWER" in
               *"does not receive"*|*"skip review"*|*"skipped"*|*"rate limit"*|*"rate-limited"*) IS_REVIEW_SKIPPED="true" ;;
               *) IS_REVIEW_SKIPPED="false" ;;
             esac
-          else
-            IS_REVIEW_SKIPPED="false"
           fi
 
           # pull_request_review 이벤트의 review.body에는 인라인 코드 리뷰
