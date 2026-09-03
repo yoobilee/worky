@@ -12,7 +12,7 @@ name: Trivial Change Auto-Merge
 # (라벨을 붙이는 행위)으로 바꿨다 - 자동 분류기의 오판 위험이 아니라 사람의
 # 명시적 판단에 기대는 것이라 위험의 성격이 다르다.
 #
-# 안전장치 (아래 4가지를 모두 만족해야만 스킵 - 하나라도 걸리면 스킵하지
+# 안전장치 (아래 5가지를 모두 만족해야만 스킵 - 하나라도 걸리면 스킵하지
 # 않고 기존 claude-review-response.yml의 Codex 리뷰 처리 대상으로 그대로
 # 남는다. 이 워크플로우는 그 흐름을 막지 않는다):
 #   1. trivial-change 라벨이 실제로 붙어있어야 함
@@ -20,13 +20,23 @@ name: Trivial Change Auto-Merge
 #      추가 자체에는 GitHub 네이티브 세분화 권한이 없어(트리아지 권한만
 #      있으면 누구나 라벨을 붙일 수 있음), 이슈 이벤트 히스토리에서 이
 #      라벨을 가장 최근에 붙인 행위자(actor)를 직접 조회해 검증한다.
-#   3. fork PR이 아니어야 함(head/base 저장소 동일)
-#   4. .github/workflows/ 아래 파일이 PR의 변경 파일 목록에 없어야 함 -
+#   3. 그 라벨링이 PR의 마지막 커밋 이후(또는 동시)에 이뤄졌어야 함 - owner가
+#      경미한 버전에 라벨을 붙인 뒤 실질적인 새 커밋이 push되면 라벨은 그대로
+#      남아있으므로, "라벨이 붙어있다"만으로는 부족하고 "지금 코드를 보고
+#      붙인 라벨인지"를 매번 다시 확인한다(Issue #91 1번).
+#   4. fork PR이 아니어야 함(head/base 저장소 동일)
+#   5. .github/workflows/ 아래 파일이 PR의 변경 파일 목록에 없어야 함 -
 #      이 규칙은 다른 모든 조건(라벨/행위자/fork 여부)과 무관하게 항상
 #      최우선 적용된다 - 프로젝트 규칙상 워크플로우 파일 관련 변경은
 #      심각도나 라벨과 무관하게 항상 사람 검증(Codex 리뷰)을 거쳐야 한다.
 # 위 조회 중 하나라도 실패하면(네트워크 오류 등) fail-closed로 "스킵하지
 # 않음"으로 처리한다 - 확신이 없으면 항상 안전한 기존 경로로 보낸다.
+#
+# 조건이 깨지면 이 워크플로우가 직접 예약한 auto-merge만 해제한다(별도
+# trivial-automerge-armed 라벨로 "우리가 예약했는지"를 자체 추적) -
+# claude-review-response.yml이 별도로 걸어둔 auto-merge 예약까지 부수효과로
+# 취소하면, 그 예약을 다시 걸 트리거가 없어 PR이 영구히 merge되지 않는 상태로
+# 남을 수 있었다(Issue #91 2번).
 on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
@@ -59,19 +69,55 @@ jobs:
             HAS_LABEL="true"
           fi
 
-          # 2) 그 라벨을 가장 최근에 붙인 사람이 저장소 소유자(yoobilee)인지.
-          # 이슈/PR 이벤트 히스토리에서 event=="labeled" && label.name==
-          # "trivial-change"인 항목 중 가장 최근 것의 actor를 확인한다.
+          # 2) 그 라벨을 가장 최근에 붙인 사람이 저장소 소유자(yoobilee)인지,
+          # 그리고 그 라벨링이 현재 head 커밋 이후에 이뤄진 것인지(=owner가
+          # 지금 코드를 보고 승인한 게 맞는지)를 함께 확인한다. 이슈/PR
+          # 이벤트 히스토리에서 event=="labeled" && label.name==
+          # "trivial-change"인 항목 중 가장 최근 것의 actor와 시각을 본다.
           # (라벨이 제거됐다가 다른 사람이 다시 붙인 경우, 그 "다시 붙인"
           # 행위만 의미가 있으므로 가장 최근 것만 본다.)
+          #
+          # gh api --paginate는 페이지마다 별도의 JSON 배열을 출력하므로
+          # (하나로 합쳐진 배열이 아님), jq -s(slurp)로 모든 페이지를 먼저
+          # 하나의 배열들의 배열로 모은 뒤 add로 평탄화해야 전체 이력을
+          # 대상으로 정확히 "가장 최근"을 판정할 수 있다(Codex 지적,
+          # Issue #91 3번 - 슬러프하지 않으면 페이지마다 결과가 따로
+          # 나와 여러 줄짜리 값이 되어 비교가 항상 실패했었음).
           LABEL_EVENTS_JSON=$(gh api "repos/$REPO/issues/$PR_NUMBER/events" --paginate 2>/dev/null || echo "")
           LABELED_BY_OWNER="false"
+          LAST_LABEL_AT=""
           if [ -n "$LABEL_EVENTS_JSON" ]; then
-            LAST_LABELER=$(echo "$LABEL_EVENTS_JSON" | jq -r \
-              '[.[] | select(.event == "labeled" and .label.name == "trivial-change")] | last | .actor.login // ""' \
+            LAST_LABEL_EVENT=$(echo "$LABEL_EVENTS_JSON" | jq -rs \
+              'add
+               | [.[] | select(.event == "labeled" and .label.name == "trivial-change")]
+               | last
+               | if . == null then "" else ((.actor.login // "") + "\t" + (.created_at // "")) end' \
               2>/dev/null || echo "")
+            LAST_LABELER="${LAST_LABEL_EVENT%%$'\t'*}"
+            LAST_LABEL_AT="${LAST_LABEL_EVENT#*$'\t'}"
             if [ "$LAST_LABELER" = "yoobilee" ]; then
               LABELED_BY_OWNER="true"
+            fi
+          fi
+
+          # 라벨링이 owner에 의한 것이 확인됐어도, 그 이후 새 커밋이
+          # push됐다면(=owner가 실제로는 못 본 코드) 그 승인은 더 이상
+          # 유효하지 않다. PR의 마지막 커밋 시각과 라벨링 시각을 비교해,
+          # 라벨링이 마지막 커밋보다 뒤(또는 같은 시각)일 때만 "신선한"
+          # 승인으로 인정한다(Codex 지적, Issue #91 1번 - owner가 경미한
+          # 버전에 라벨을 붙인 뒤 author가 실질적인 새 커밋을 push해도
+          # 라벨은 그대로 남아있어 그 새 코드까지 검증 없이 통과할 수
+          # 있었음). 조회 실패나 값 파싱 실패 등 조금이라도 확신이 안
+          # 서면 fail-closed로 "오래됨(stale)"으로 처리한다.
+          LABEL_STALE="true"
+          if [ "$LABELED_BY_OWNER" = "true" ] && [ -n "$LAST_LABEL_AT" ]; then
+            LAST_COMMIT_AT=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || echo "")
+            if [ -n "$LAST_COMMIT_AT" ]; then
+              LABEL_EPOCH=$(date -d "$LAST_LABEL_AT" +%s 2>/dev/null || echo "")
+              COMMIT_EPOCH=$(date -d "$LAST_COMMIT_AT" +%s 2>/dev/null || echo "")
+              if [ -n "$LABEL_EPOCH" ] && [ -n "$COMMIT_EPOCH" ] && [ "$LABEL_EPOCH" -ge "$COMMIT_EPOCH" ]; then
+                LABEL_STALE="false"
+              fi
             fi
           fi
 
@@ -94,13 +140,25 @@ jobs:
             fi
           fi
 
-          echo "판정: has_label=$HAS_LABEL labeled_by_owner=$LABELED_BY_OWNER is_fork=$IS_FORK touches_workflows=$TOUCHES_WORKFLOWS"
+          echo "판정: has_label=$HAS_LABEL labeled_by_owner=$LABELED_BY_OWNER label_stale=$LABEL_STALE is_fork=$IS_FORK touches_workflows=$TOUCHES_WORKFLOWS"
 
           SHOULD_SKIP="false"
           if [ "$HAS_LABEL" = "true" ] && [ "$LABELED_BY_OWNER" = "true" ] && \
+             [ "$LABEL_STALE" = "false" ] && \
              [ "$IS_FORK" = "false" ] && [ "$TOUCHES_WORKFLOWS" = "false" ]; then
             SHOULD_SKIP="true"
           fi
+
+          # 이 워크플로우가 실제로 auto-merge를 예약했는지 자체 라벨로
+          # 추적한다. gh pr merge --disable-auto는 PR 단위로 auto-merge를
+          # 끄는 명령이라, claude-review-response.yml이 Codex 처리 완료
+          # 후 이미 걸어둔 예약까지 구분 없이 취소해버릴 수 있었다(Codex
+          # 지적, Issue #91 2번 - 두 워크플로우 모두 GITHUB_TOKEN으로
+          # 동작해 "누가 예약했는지"를 GitHub API의 enabledBy로는 구분할
+          # 수 없어, 우리가 예약할 때 직접 라벨을 남겨 추적하는 방식을
+          # 택했다). 이 라벨이 없다면(=이 워크플로우가 예약한 적이 없다면)
+          # disable-auto 자체를 아예 호출하지 않는다.
+          ARMED_LABEL="trivial-automerge-armed"
 
           if [ "$SHOULD_SKIP" = "true" ]; then
             echo "trivial-change 조건 충족 - Codex 리뷰 대기 없이 빌드 검증만으로 자동 merge 예약"
@@ -109,8 +167,14 @@ jobs:
             # PR 본문에 "Closes #N"이 있으면 그대로 보존된다(자동 merge
             # 스텝이 자체 템플릿으로 커밋 메시지를 새로 만들어 close 키워드가
             # 유실됐던 문제 - PR #81 - 를 여기서는 애초에 만들지 않는 방식).
-            gh pr merge --auto --squash --repo "$REPO" "$PR_NUMBER" || \
-              echo "::warning::gh pr merge --auto 호출 실패 (이미 armed 상태이거나 일시적 오류일 수 있음, 다음 재실행에서 재시도됨)"
+            if gh pr merge --auto --squash --repo "$REPO" "$PR_NUMBER"; then
+              if ! echo "$CURRENT_LABELS" | grep -qxF "$ARMED_LABEL"; then
+                gh label create "$ARMED_LABEL" --repo "$REPO" --color "2EB67D" --force >/dev/null 2>&1 || true
+                gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$ARMED_LABEL" || true
+              fi
+            else
+              echo "::warning::gh pr merge --auto 호출 실패 (일시적 오류일 수 있음, 다음 재실행에서 재시도됨)"
+            fi
 
             NOTIFY_LABEL="trivial-skip-notified"
             if ! echo "$CURRENT_LABELS" | grep -qxF "$NOTIFY_LABEL"; then
@@ -124,6 +188,11 @@ jobs:
               fi
             fi
           else
-            echo "trivial-change 조건 미충족(또는 이전에 충족했다가 지금은 깨짐) - 자동 merge 예약을 해제하고 기존 Codex 리뷰 흐름을 따름"
-            gh pr merge --disable-auto --repo "$REPO" "$PR_NUMBER" 2>/dev/null || true
+            if echo "$CURRENT_LABELS" | grep -qxF "$ARMED_LABEL"; then
+              echo "trivial-change 조건이 깨짐(라벨 제거, 새 커밋으로 라벨 만료, 워크플로우 파일 추가 등) - 이 워크플로우가 예약했던 auto-merge만 해제"
+              gh pr merge --disable-auto --repo "$REPO" "$PR_NUMBER" 2>/dev/null || true
+              gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label "$ARMED_LABEL" 2>/dev/null || true
+            else
+              echo "trivial-change 조건 미충족이지만 이 워크플로우가 예약한 auto-merge가 없음 - 아무 것도 하지 않음(다른 워크플로우의 예약을 건드리지 않음)"
+            fi
           fi
