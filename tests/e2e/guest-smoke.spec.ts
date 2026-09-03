@@ -15,9 +15,11 @@ test("게스트가 대시보드에서 일정 관리 페이지로 이동할 수 �
   await page.getByRole("button", { name: "게스트로 체험하기" }).click();
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
 
+  // 게스트 계정의 language 설정이 en/ko 중 무엇으로 렌더링되든 안정적으로
+  // 동작하도록 하드코딩 텍스트 대신 href 기반 selector 사용
   await page
     .getByRole("navigation")
-    .getByRole("link", { name: "일정 관리" })
+    .locator('a[href="/calendar"]')
     .click();
-  await expect(page.getByRole("heading", { name: "일정 관리" })).toBeVisible();
+  await expect(page).toHaveURL(/\/calendar$/);
 });
