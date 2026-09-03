@@ -1,0 +1,129 @@
+name: Trivial Change Auto-Merge
+
+# `trivial-change` 라벨이 PR에 붙어있는 경우에 한해, Codex 리뷰
+# (claude-review-response.yml)를 기다리지 않고 빌드 검증(build-check.yml,
+# 브랜치 보호 규칙의 필수 상태 체크)만으로 자동 merge를 허용한다.
+#
+# 이전에 "diff를 자동 분석해 경미한 변경인지 휴리스틱으로 판단"하는 방식을
+# 검토했으나, 조건문/함수 시그니처/JSX 구조가 한 글자도 안 바뀌었는지를
+# 텍스트 기반 diff만으로 신뢰성 있게 보장할 방법이 없고(완전한 AST diff가
+# 필요), 오판 시 피해가 "리뷰 자체를 건너뛰고 merge"라는 돌이키기 어려운
+# 수준이라 폐기했다. 대신 "경미함"의 판단 주체를 자동화가 아니라 사람
+# (라벨을 붙이는 행위)으로 바꿨다 - 자동 분류기의 오판 위험이 아니라 사람의
+# 명시적 판단에 기대는 것이라 위험의 성격이 다르다.
+#
+# 안전장치 (아래 4가지를 모두 만족해야만 스킵 - 하나라도 걸리면 스킵하지
+# 않고 기존 claude-review-response.yml의 Codex 리뷰 처리 대상으로 그대로
+# 남는다. 이 워크플로우는 그 흐름을 막지 않는다):
+#   1. trivial-change 라벨이 실제로 붙어있어야 함
+#   2. 그 라벨을 붙인 사람이 저장소 소유자(yoobilee) 본인이어야 함 - 라벨
+#      추가 자체에는 GitHub 네이티브 세분화 권한이 없어(트리아지 권한만
+#      있으면 누구나 라벨을 붙일 수 있음), 이슈 이벤트 히스토리에서 이
+#      라벨을 가장 최근에 붙인 행위자(actor)를 직접 조회해 검증한다.
+#   3. fork PR이 아니어야 함(head/base 저장소 동일)
+#   4. .github/workflows/ 아래 파일이 PR의 변경 파일 목록에 없어야 함 -
+#      이 규칙은 다른 모든 조건(라벨/행위자/fork 여부)과 무관하게 항상
+#      최우선 적용된다 - 프로젝트 규칙상 워크플로우 파일 관련 변경은
+#      심각도나 라벨과 무관하게 항상 사람 검증(Codex 리뷰)을 거쳐야 한다.
+# 위 조회 중 하나라도 실패하면(네트워크 오류 등) fail-closed로 "스킵하지
+# 않음"으로 처리한다 - 확신이 없으면 항상 안전한 기존 경로로 보낸다.
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: trivial-change 스킵 조건 재평가
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.event.pull_request.base.repo.full_name }}
+        run: |
+          # 이 스텝 전체는 의도적으로 bash -e 없이(set -e 미사용) 동작한다 -
+          # 개별 gh/jq 조회가 실패해도 각 검증값을 그 즉시 "안전한 기본값"
+          # (라벨 없음/워크플로우 파일 있음/fork임 등, 전부 "스킵 안 함"
+          # 방향)으로 두고 계속 진행해, 마지막에 한 곳에서만 종합 판단한다.
+
+          # 1) trivial-change 라벨이 현재 붙어있는지
+          CURRENT_LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+          HAS_LABEL="false"
+          if echo "$CURRENT_LABELS" | grep -qxF "trivial-change"; then
+            HAS_LABEL="true"
+          fi
+
+          # 2) 그 라벨을 가장 최근에 붙인 사람이 저장소 소유자(yoobilee)인지.
+          # 이슈/PR 이벤트 히스토리에서 event=="labeled" && label.name==
+          # "trivial-change"인 항목 중 가장 최근 것의 actor를 확인한다.
+          # (라벨이 제거됐다가 다른 사람이 다시 붙인 경우, 그 "다시 붙인"
+          # 행위만 의미가 있으므로 가장 최근 것만 본다.)
+          LABEL_EVENTS_JSON=$(gh api "repos/$REPO/issues/$PR_NUMBER/events" --paginate 2>/dev/null || echo "")
+          LABELED_BY_OWNER="false"
+          if [ -n "$LABEL_EVENTS_JSON" ]; then
+            LAST_LABELER=$(echo "$LABEL_EVENTS_JSON" | jq -r \
+              '[.[] | select(.event == "labeled" and .label.name == "trivial-change")] | last | .actor.login // ""' \
+              2>/dev/null || echo "")
+            if [ "$LAST_LABELER" = "yoobilee" ]; then
+              LABELED_BY_OWNER="true"
+            fi
+          fi
+
+          # 3) fork PR 여부. head/base 저장소 중 하나라도 비어있으면(조회
+          # 실패 등) fail-closed로 fork로 간주한다.
+          IS_FORK="true"
+          if [ -n "$HEAD_REPO" ] && [ "$HEAD_REPO" = "$BASE_REPO" ]; then
+            IS_FORK="false"
+          fi
+
+          # 4) .github/workflows/ 아래 파일이 변경 목록에 있는지. 조회
+          # 자체가 실패하면 fail-closed로 "포함됨"으로 간주한다.
+          FILES_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json files 2>/dev/null || echo "")
+          TOUCHES_WORKFLOWS="true"
+          if [ -n "$FILES_JSON" ]; then
+            if echo "$FILES_JSON" | jq -e \
+              '([.files[].path] | any(startswith(".github/workflows/"))) | not' \
+              > /dev/null 2>&1; then
+              TOUCHES_WORKFLOWS="false"
+            fi
+          fi
+
+          echo "판정: has_label=$HAS_LABEL labeled_by_owner=$LABELED_BY_OWNER is_fork=$IS_FORK touches_workflows=$TOUCHES_WORKFLOWS"
+
+          SHOULD_SKIP="false"
+          if [ "$HAS_LABEL" = "true" ] && [ "$LABELED_BY_OWNER" = "true" ] && \
+             [ "$IS_FORK" = "false" ] && [ "$TOUCHES_WORKFLOWS" = "false" ]; then
+            SHOULD_SKIP="true"
+          fi
+
+          if [ "$SHOULD_SKIP" = "true" ]; then
+            echo "trivial-change 조건 충족 - Codex 리뷰 대기 없이 빌드 검증만으로 자동 merge 예약"
+            # --subject/--body를 일부러 지정하지 않는다 - gh pr merge --auto가
+            # 기본으로 쓰는 squash 커밋 메시지는 PR 본문을 그대로 가져오므로,
+            # PR 본문에 "Closes #N"이 있으면 그대로 보존된다(자동 merge
+            # 스텝이 자체 템플릿으로 커밋 메시지를 새로 만들어 close 키워드가
+            # 유실됐던 문제 - PR #81 - 를 여기서는 애초에 만들지 않는 방식).
+            gh pr merge --auto --squash --repo "$REPO" "$PR_NUMBER" || \
+              echo "::warning::gh pr merge --auto 호출 실패 (이미 armed 상태이거나 일시적 오류일 수 있음, 다음 재실행에서 재시도됨)"
+
+            NOTIFY_LABEL="trivial-skip-notified"
+            if ! echo "$CURRENT_LABELS" | grep -qxF "$NOTIFY_LABEL"; then
+              if gh pr comment "$PR_NUMBER" --repo "$REPO" \
+                --body "🟢 \`trivial-change\` 라벨로 Codex 리뷰를 건너뛰고 빌드 검증만으로 자동 merge가 예약되었습니다."; then
+                # bash -e를 안 쓰므로 curl/댓글 실패가 아래 라벨 부착으로
+                # 자동 이어지지 않는다 - 성공했을 때만 명시적으로 라벨을
+                # 붙여 다음 재실행에서 중복 코멘트를 방지한다.
+                gh label create "$NOTIFY_LABEL" --repo "$REPO" --color "2EB67D" --force >/dev/null 2>&1 || true
+                gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$NOTIFY_LABEL" || true
+              fi
+            fi
+          else
+            echo "trivial-change 조건 미충족(또는 이전에 충족했다가 지금은 깨짐) - 자동 merge 예약을 해제하고 기존 Codex 리뷰 흐름을 따름"
+            gh pr merge --disable-auto --repo "$REPO" "$PR_NUMBER" 2>/dev/null || true
+          fi
