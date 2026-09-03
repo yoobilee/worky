@@ -558,18 +558,27 @@ jobs:
                 '.review_verdict = "needs_human" | .humanReviewReason = "검증 실패: auto_close로 판단했으나 all_issues_addressed가 false로 모순됨 - 안전을 위해 확인 필요로 전환"')
             # 게이트 5: 리뷰 원문 재확인 결과(CONTENT_HAS_HIGH_SEVERITY) 실제
             # P0/P1 배지가 있거나, Claude 자신이 highest_severity를 P0/P1로
-            # 보고했다면 - 둘 중 하나만 참이어도 - auto_close를 무조건
-            # needs_human으로 재정의한다. review_verdict 자체가 3-state
-            # enum이 되면서 "hasIssues==true를 전제로만 검사"하던 기존 구조적
-            # 결함(Codex 지적, Issue #87 1번 / #88 1번 - hasIssues:false 등
-            # "지적사항 없음" 튜플로 이 검사 전체를 우회할 수 있었음)이
-            # 사라졌다 - review_verdict=="auto_close"라는 단일 조건만으로
-            # 원인과 무관하게 항상 이 게이트를 통과시킨다.
+            # 보고했거나, highest_severity 자체가 "unknown"이면 - 셋 중
+            # 하나만 참이어도 - auto_close를 무조건 needs_human으로
+            # 재정의한다. highest_severity=="unknown" 케이스는 프롬프트가
+            # 명시적으로 허용하는 "심각도를 확신할 수 없음" 표시인데도 이
+            # 게이트가 P0/P1만 검사하고 있어 auto_close+all_issues_addressed:
+            # true+highest_severity:"unknown" 조합이 아무 게이트에도
+            # 걸리지 않고 그대로 자동 종료될 수 있었다(Codex 지적, Issue
+            # #101 1번 - 구 allSeverityKnown:false의 fail-closed 취지가
+            # 새 스키마로 넘어오며 실제로는 반영되지 않았던 결함). "심각도를
+            # 모르면 안전 쪽"이라는 원래 설계 의도를 게이트 로직에 명시적으로
+            # 되살린다. review_verdict 자체가 3-state enum이 되면서
+            # "hasIssues==true를 전제로만 검사"하던 기존 구조적 결함(Codex
+            # 지적, Issue #87 1번 / #88 1번 - hasIssues:false 등 "지적사항
+            # 없음" 튜플로 이 검사 전체를 우회할 수 있었음)이 사라졌다 -
+            # review_verdict=="auto_close"라는 단일 조건만으로 원인과
+            # 무관하게 항상 이 게이트를 통과시킨다.
             elif echo "$STRUCTURED_OUTPUT" | jq -e --argjson contentHigh "$CONTENT_HAS_HIGH_SEVERITY" \
-              '.review_verdict == "auto_close" and ($contentHigh == true or .highest_severity == "P0" or .highest_severity == "P1")' \
+              '.review_verdict == "auto_close" and ($contentHigh == true or .highest_severity == "P0" or .highest_severity == "P1" or .highest_severity == "unknown")' \
               > /dev/null 2>&1; then
               PARSED=$(echo "$STRUCTURED_OUTPUT" | jq --argjson contentHigh "$CONTENT_HAS_HIGH_SEVERITY" \
-                '.review_verdict = "needs_human" | .humanReviewReason = (if $contentHigh and (.highest_severity != "P0" and .highest_severity != "P1") then "리뷰 원문에 P0/P1 심각도 표시가 있는 것으로 확인됐는데 Claude는 highest_severity를 그보다 낮게 보고해 판단 오류 가능성이 있어 사람 확인이 필요합니다" else "P0/P1(최고 심각도) 지적이 포함되어 있어 자동 종료 대상에서 제외하고 항상 사람 확인이 필요합니다" end)')
+                '.review_verdict = "needs_human" | .humanReviewReason = (if .highest_severity == "unknown" then "지적사항의 심각도를 명확히 판별할 수 없어(highest_severity:unknown) 안전을 위해 사람 확인이 필요합니다" elif $contentHigh and (.highest_severity != "P0" and .highest_severity != "P1") then "리뷰 원문에 P0/P1 심각도 표시가 있는 것으로 확인됐는데 Claude는 highest_severity를 그보다 낮게 보고해 판단 오류 가능성이 있어 사람 확인이 필요합니다" else "P0/P1(최고 심각도) 지적이 포함되어 있어 자동 종료 대상에서 제외하고 항상 사람 확인이 필요합니다" end)')
             else
               PARSED="$STRUCTURED_OUTPUT"
             fi
@@ -727,6 +736,37 @@ jobs:
             HUMAN_REVIEW_REASON="$PARSE_HUMAN_REVIEW_REASON"
             FIX_EXPLANATION=""
           fi
+
+          # 게이트 2 재확인(최종 diff 기준) - Issue #101 3번. "PR 정보 조회"
+          # 스텝의 TOUCHES_WORKFLOWS는 checkout/Claude 에이전트 실행보다
+          # 앞선 시점의 diff로 계산됐다. 에이전트는 리뷰 대응 중 커밋을
+          # push할 수 있으므로(원본 PR은 .github/workflows/를 안 건드렸어도
+          # 에이전트가 그 사이에 워크플로우 파일을 새로 고쳤다면), 그
+          # 최초 스냅샷만으로는 최종 diff의 워크플로우 변경을 놓칠 수
+          # 있다(Codex 지적). 여기서 최종(에이전트 push 이후) diff를 다시
+          # 조회해, review_verdict가 auto_close로 남아있는 경우에만 한 번
+          # 더 게이트 2를 적용한다 - 최초 diff는 이미 "결과 파싱 및 분기"
+          # 스텝에서 게이트 2로 반영됐으므로(그 결과가 여기 REVIEW_VERDICT에
+          # 이미 녹아있음), 최초/최종 diff 중 하나라도 걸리면 최종적으로
+          # auto_close가 될 수 없다. 조회 자체가 실패하면 fail-closed로
+          # true(워크플로우 파일을 건드린 것으로 간주)로 둔다.
+          if [ "$REVIEW_VERDICT" = "auto_close" ]; then
+            TOUCHES_WORKFLOWS_FINAL="true"
+            FILES_JSON_FINAL=$(gh pr view "$PR_NUMBER" --json files 2>/dev/null || echo "")
+            if [ -n "$FILES_JSON_FINAL" ]; then
+              if echo "$FILES_JSON_FINAL" | jq -e \
+                '([.files[].path] | any(startswith(".github/workflows/"))) | not' \
+                > /dev/null 2>&1; then
+                TOUCHES_WORKFLOWS_FINAL="false"
+              fi
+            fi
+            if [ "$TOUCHES_WORKFLOWS_FINAL" = "true" ]; then
+              REVIEW_VERDICT=needs_human
+              FIX_EXPLANATION=""
+              HUMAN_REVIEW_REASON="에이전트 실행 이후 최종 diff 기준으로 이 PR이 .github/workflows/ 아래 파일을 변경하고 있어 항상 사람 확인이 필요합니다(프로젝트 규칙, 게이트 2 재확인)"
+            fi
+          fi
+
           ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
           CAUSE_EXPLANATION="$PARSE_CAUSE_EXPLANATION"
 
@@ -735,12 +775,22 @@ jobs:
         # review_verdict가 review_incomplete가 아닌 모든 경우(auto_close/
         # needs_human)에 대해 트리거한다 - docs/issue-88-redesign.md 2.2절.
         # review_incomplete는 애초에 지적사항 유무 자체를 판단하지 못한
-        # 상태라 이슈를 만들 근거가 없다. 파싱 스텝(steps.parse)의 판정을
-        # 트리거 조건으로 쓰고, 실제 본문 완성 여부(완료 템플릿 vs 대기
-        # 템플릿)는 아래에서 검증 스텝(steps.verify)의 최종 review_verdict를
-        # 기준으로 판단한다 - 기존 has_issues(parse 기준)/needs_human(verify
-        # 기준) 분리 구조를 그대로 유지.
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outcome == 'success' && steps.parse.outputs.review_verdict != 'review_incomplete'
+        # 상태라 이슈를 만들 근거가 없다.
+        #
+        # 트리거를 steps.verify(항상 실행됨, IS_REVIEW_SKIPPED일 때도
+        # 실행되어 needs_human을 확정함)의 최종 review_verdict 기준으로
+        # 판단한다 - 원래는 steps.parse의 판정을 트리거로 쓰고 verify는
+        # 완성도 판단에만 썼는데, parse 스텝 자체가 is_review_skipped
+        # 경로에서는 아예 실행되지 않아(steps.parse.outcome이 success가
+        # 아님) 이 경우 verify가 needs_human을 명확히 냈는데도 이슈가
+        # 전혀 생성되지 않는 문제가 있었다(Codex 지적, Issue #101 2번).
+        # parse가 review_incomplete를 반환했는데 verify가 git 상태
+        # 불일치로 최종 needs_human으로 승격시키는 경우도 동일하게
+        # 누락됐었다. verify는 parse의 모든 경로(성공/스킵/실패)를 항상
+        # 최종 review_verdict로 수렴시키므로, 트리거와 완성도 판단 모두
+        # verify 하나로 통일해도 안전하다 - verify는 이슈를 "덜" 만드는
+        # 방향으로만 값을 바꾸지 않는다(needs_human 쪽으로만 강화됨).
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outcome == 'success' && steps.verify.outputs.review_verdict != 'review_incomplete'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -873,9 +923,11 @@ jobs:
           echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Supabase issues 테이블 기록
-        # GitHub Issue 자동 등록 스텝과 동일한 트리거 조건(review_verdict
-        # 기준)으로 통일 - docs/issue-88-redesign.md 2.2절.
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outcome == 'success' && steps.parse.outputs.review_verdict != 'review_incomplete'
+        # GitHub Issue 자동 등록 스텝과 동일한 트리거 조건(steps.verify의
+        # 최종 review_verdict 기준)으로 통일 - docs/issue-88-redesign.md
+        # 2.2절, Issue #101 2번(parse 기준이면 is_review_skipped 경로에서
+        # 누락됨).
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outcome == 'success' && steps.verify.outputs.review_verdict != 'review_incomplete'
         continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
