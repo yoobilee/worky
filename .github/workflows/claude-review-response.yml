@@ -160,8 +160,8 @@ jobs:
           # 사람 확인이 필요한 상태로 처리해야 한다. (CodeRabbit이 "이
           # 저장소는 star 10개 미만이라 리뷰를 안 한다"는 스킵 안내를
           # "지적사항 없음"으로 오인해 PR #49가 검증 없이 자동 merge된 사고의
-          # 재발 방지 - 아래 "실제 git 상태 검증" 스텝에서 needs_human=true로
-          # 강제 처리됨)
+          # 재발 방지 - 아래 "실제 git 상태 검증" 스텝에서 review_verdict가
+          # needs_human으로 강제 처리됨)
           BODY_LOWER=$(printf '%s' "$BODY" | tr '[:upper:]' '[:lower:]')
           case "$BODY_LOWER" in
             *"does not receive"*|*"skip review"*|*"skipped"*|*"rate limit"*|*"rate-limited"*) IS_REVIEW_SKIPPED="true" ;;
@@ -234,6 +234,26 @@ jobs:
             REVIEW_CONTENT="$BODY"
           fi
 
+          # 게이트 2(워크플로우 파일 변경 여부) - Issue #88 재설계,
+          # docs/issue-88-redesign.md 3장. 지금까지 ".github/workflows/
+          # 파일 관련 지적이면 사람 판단 필요"는 Claude 프롬프트 지시문에만
+          # 의존했고 스크립트 레벨 강제가 전혀 없었다(Claude가 이 규칙을
+          # 놓치면 그대로 auto_close될 수 있었음). PR이 실제로 변경한 파일
+          # 목록을 여기서 직접 조회해 독립적으로 강제한다 - Claude의 코드
+          # 수정/커밋 자체를 막지는 않고, 오직 "auto_close 허용 여부"만 이
+          # 값으로 최종 게이팅한다("결과 파싱 및 분기" 스텝에서 소비).
+          # 조회 자체가 실패하면(gh api 오류, 권한 문제 등) fail-closed
+          # 원칙에 따라 true(워크플로우 파일을 건드린 것으로 간주)로 둔다.
+          TOUCHES_WORKFLOWS="true"
+          FILES_JSON=$(gh pr view "$NUMBER" --repo "$REPO" --json files 2>/dev/null || echo "")
+          if [ -n "$FILES_JSON" ]; then
+            if echo "$FILES_JSON" | jq -e \
+              '([.files[].path] | any(startswith(".github/workflows/"))) | not' \
+              > /dev/null 2>&1; then
+              TOUCHES_WORKFLOWS="false"
+            fi
+          fi
+
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
@@ -242,6 +262,7 @@ jobs:
           echo "is_trusted_bot=$IS_TRUSTED_BOT" >> "$GITHUB_OUTPUT"
           echo "is_placeholder=$IS_PLACEHOLDER" >> "$GITHUB_OUTPUT"
           echo "is_review_skipped=$IS_REVIEW_SKIPPED" >> "$GITHUB_OUTPUT"
+          echo "touches_workflows=$TOUCHES_WORKFLOWS" >> "$GITHUB_OUTPUT"
           echo "review_marker_id=$MARKER_ID" >> "$GITHUB_OUTPUT"
           delimiter_rc=$(openssl rand -hex 8)
           {
@@ -293,7 +314,7 @@ jobs:
           claude_args: |
             --max-turns 35
             --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue list:*),Bash(gh api:*)"
-            --json-schema '{"type":"object","properties":{"hasIssues":{"type":"boolean"},"fixed":{"type":"boolean"},"needsHuman":{"type":"boolean"},"reviewContentRead":{"type":"boolean"},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"},"causeExplanation":{"type":"string"},"fixExplanation":{"type":"string"},"hasHighSeverityIssue":{"type":"boolean"},"allSeverityKnown":{"type":"boolean"}},"required":["hasIssues","fixed","needsHuman","reviewContentRead","issueSummary","humanReviewReason","causeExplanation","fixExplanation","hasHighSeverityIssue","allSeverityKnown"]}'
+            --json-schema '{"type":"object","properties":{"review_verdict":{"type":"string","enum":["auto_close","needs_human","review_incomplete"]},"all_issues_addressed":{"type":"boolean"},"highest_severity":{"type":"string","enum":["P0","P1","P2","P3","unknown","none"]},"issueSummary":{"type":"string"},"humanReviewReason":{"type":"string"},"causeExplanation":{"type":"string"},"fixExplanation":{"type":"string"}},"required":["review_verdict","all_issues_addressed","highest_severity","issueSummary","humanReviewReason","causeExplanation","fixExplanation"]}'
           prompt: |
             이 PR에 리뷰 봇(Codex)이 남긴 리뷰/코멘트를 확인해줘:
             ${{ steps.pr.outputs.review_content_for_prompt }}
@@ -325,110 +346,118 @@ jobs:
             게 나아. 같은 정보를 이미 조회했다면 다시 조회하지 말고 그
             결과를 재사용해.)
 
-            아래 원칙에 따라 처리해:
-            1. reviewContentRead 필드: 위 리뷰 본문(그리고 필요해서 gh CLI 등으로
+            아래 원칙에 따라 review_verdict(auto_close/needs_human/
+            review_incomplete 3-state), all_issues_addressed, highest_severity를
+            정해:
+            1. review_incomplete: 위 리뷰 본문(그리고 필요해서 gh CLI 등으로
                추가 조회를 시도했다면 그 결과까지 포함)을 실제로 확인해서 지적사항
-               여부를 판단할 근거가 충분하면 true로 표시해. 특히 본문이 비어있거나
+               여부를 판단할 근거가 충분하지 않으면 이 값. 특히 본문이 비어있거나
                "Reviewed commit: ..." 같은 안내 문구만 있고 실제 지적 내용이
-               안 보이면, 곧바로 false로 단정하지 말고 먼저 gh CLI(허용된
+               안 보이면, 곧바로 이 값으로 단정하지 말고 먼저 gh CLI(허용된
                조회 명령: gh pr view, gh pr diff, gh issue list, gh api)로
                이 PR의 실제 리뷰/인라인 코멘트나 리액션(👍 등)을 조회해서
                확인해봐 - Codex는 지적할 게 없으면 본문 없이 👍 리액션만
                남기는 경우가 있어. 그렇게 조회해서 "정말 지적사항이 없다"는
-               근거를 얻었으면 reviewContentRead:true로 표시해도 돼. gh CLI,
+               근거를 얻었으면 이 값 대신 아래 3번 경로를 써도 돼. gh CLI,
                네트워크 접근 등 도구 호출이 차단/실패해서 끝내 확인하지
-               못했다면 - 조금이라도 확신이 안 서면 - 반드시 false로 표시해.
-               이 필드는 "확인 불가"와 "확인했더니 문제없음이 확실한 경우"를
-               구분하는 안전장치이므로 애매하면 무조건 false야.
+               못했다면 - 조금이라도 확신이 안 서면 - 반드시 review_incomplete로
+               표시해. 이 값은 "확인 불가"와 "확인했더니 문제없음이 확실한
+               경우"를 구분하는 안전장치이므로 애매하면 무조건 이 값이야.
             2. 리뷰 내용이 "이 저장소는 리뷰를 실행하지 않았다/스킵했다/
                레이트리밋에 걸렸다" 같이 실제 코드를 검토하지 않았다는
                취지라면, 이를 절대 "문제없음"으로 해석하지 마. 이 경우
-               hasIssues는 false로 두되 needsHuman은 반드시 true로,
-               humanReviewReason에는 "리뷰가 실제로 수행되지 않음"이라는
-               취지를 명확히 적어.
+               review_verdict는 "needs_human"으로(review_incomplete가 아님 -
+               이 경우는 사람이 반드시 확인해야 하는 명확한 케이스라 GitHub
+               Issue도 등록되어야 함), humanReviewReason에는 "리뷰가 실제로
+               수행되지 않음"이라는 취지를 명확히 적어.
             3. 리뷰 봇이 실제로 코드를 검토했고 지적한 문제가 없으면
-               (승인/문제없음) 그대로 종료. 단 이 경로로 hasIssues:false,
-               needsHuman:false를 낼 때는 reviewContentRead가 true인 경우에만
-               해당돼 - 리뷰를 제대로 못 읽었으면 절대 이 경로를 쓰지 마.
-            4. 지적사항이 있다면(hasIssues:true) 심각도를 확인해. Codex 리뷰는
-               각 지적 제목 바로 앞에 심각도 배지를 markdown 이미지로 표시해 -
-               실측 패턴(예외 없이 일관됨): `![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)`,
+               (승인/문제없음), review_verdict:"auto_close",
+               all_issues_addressed:true(애초에 해결할 지적사항이 없었으므로),
+               highest_severity:"none"으로 표시해. 단 이 경로는 위 1번에서
+               실제로 확인 근거를 얻은 경우에만 써 - 리뷰를 제대로 못 읽었으면
+               절대 이 경로를 쓰지 마(그 경우는 1번의 review_incomplete).
+            4. 지적사항이 있었다면 심각도부터 확인해. Codex 리뷰는 각 지적 제목
+               바로 앞에 심각도 배지를 markdown 이미지로 표시해 - 실측 패턴
+               (예외 없이 일관됨): `![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)`,
                `![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)`
                처럼 "P" 다음 숫자가 심각도야(숫자가 작을수록 심각). **P0가 P1보다
                더 심각한 등급으로 나타날 수도 있어**(실측 데이터는 없지만 배지
-               규칙상 당연히 존재 가능) - P0와 P1을 동일하게(둘 다 최고 심각도군)
-               취급해. 위 리뷰 콘텐츠에서 각 지적사항 앞의 이 패턴을 찾아서:
-               - 지적사항 중 단 하나라도 P0 또는 P1이면 hasHighSeverityIssue:true로
-                 표시해(P0/P1이 하나도 없으면 false). 이 경우 needsHuman도 반드시
-                 true로 함께 표시해 - P0/P1 지적은 안전하게 고칠 수 있어 보여도
-                 (fixed:true여도) 항상 사람 확인이 필요해.
-               - 모든 지적사항의 심각도를 이 패턴(또는 명확히 동등하다고 알아볼
-                 수 있는 표기)으로 확인할 수 있었으면 allSeverityKnown:true,
-                 배지가 아예 없거나 형식이 달라 심각도를 확신할 수 없는 지적이
-                 하나라도 있으면 allSeverityKnown:false로 표시해(애매하면 무조건
-                 false - reviewContentRead와 같은 이유의 안전장치용 필드라 확신이
-                 없으면 fail-closed). allSeverityKnown:false인 경우도 needsHuman을
-                 true로 표시해 - 심각도를 모르는 지적은 안전하게 자동 종료할 수
-                 없어.
-               - hasIssues:false면 hasHighSeverityIssue:false, allSeverityKnown:true로
-                 둬(판단할 지적사항 자체가 없으니).
-               - 이 심각도 조건은 아래 5번 조건(카테고리 기반 사람 판단 필요)과
-                 별개로 추가되는 것이지, 5번을 대체하지 않아 - 5번에 해당하는
-                 지적은 심각도(P0/P1이든 P2든)와 무관하게 항상 수정하지 말고 사람
-                 판단 필요로 분류해.
-               - 참고로 이 hasHighSeverityIssue/allSeverityKnown 판단은 워크플로우
-                 스크립트 쪽에서도 리뷰 원문을 직접 재확인해 독립적으로 대조해 -
-                 여기서 실제 P0/P1 배지가 있는데 false로 잘못 표시하면 그 불일치
-                 자체가 감지돼 어차피 사람 확인으로 넘어가니, 정확하게 판단하는
-                 게 재작업을 줄이는 길이야.
+               규칙상 당연히 존재 가능). highest_severity에는 발견된 지적사항들
+               중 가장 심각한(숫자가 가장 작은) 등급을 P0/P1/P2/P3 중 하나로
+               표시하고, 그 등급을 이 패턴(또는 명확히 동등하다고 알아볼 수
+               있는 표기)으로 확신할 수 없으면 반드시 "unknown"으로 표시해
+               (애매하면 무조건 unknown - 안전장치용 필드라 확신이 없으면
+               fail-closed). 참고로 이 highest_severity 판단은 워크플로우
+               스크립트 쪽에서도 리뷰 원문을 직접 재확인해 독립적으로 대조해 -
+               여기서 실제 P0/P1 배지가 있는데 낮게 잘못 표시하면 그 불일치
+               자체가 감지돼 review_verdict가 auto_close였더라도 강제로
+               needs_human으로 전환되니, 정확하게 판단하는 게 재작업을 줄이는
+               길이야.
             5. 안전하고 확실하게 고칠 수 있는 문제(타입 에러, 명백한 버그,
-               스타일 문제 등)면 직접 코드를 수정하고 커밋해. P0/P1로 판단한
-               지적이어도 안전하게 고칠 수 있다면 수정은 그대로 시도해(다만
-               위 4번대로 needsHuman은 true를 유지) - "P0/P1이라 손대지 않는다"가
-               아니라 "P0/P1이라 자동으로 종료 처리하지 않는다"는 뜻이야.
-            6. 아래에 해당하면 절대 코드를 수정하지 말고 "사람 판단 필요"로만 분류:
+               스타일 문제 등)면 심각도와 무관하게 직접 코드를 수정하고
+               커밋해. "고칠 수 있는가"와 "review_verdict를 auto_close로
+               낼 수 있는가"는 별개의 판단이야 - 후자는 아래 6, 7번 조건에
+               별도로 달려 있어.
+            6. 아래에 해당하면 절대 코드를 수정하지 말고 review_verdict를
+               반드시 "needs_human"으로:
                - Supabase 마이그레이션 파일(supabase/migrations/) 관련 지적
                - 환경변수, API 키, 인증/보안 관련 지적
-               - GitHub Actions 워크플로우 파일(.github/workflows/) 자체 관련 지적
+               - GitHub Actions 워크플로우 파일(.github/workflows/) 자체
+                 관련 지적(이 PR이 워크플로우 파일을 건드리는지 여부는
+                 워크플로우 스크립트에서도 별도로 독립 검증해 - 여기서
+                 놓쳐도 최종적으로 auto_close 처리되지는 않아)
                - 여러 가지 해석이 가능하거나 설계 판단이 필요한 지적
-            7. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
+               - highest_severity가 P0 또는 P1인 지적(4번 참고 - 안전하게
+                 고칠 수 있어도 auto_close는 안 돼)
+            7. all_issues_addressed: 발견된 지적사항을 전부(하나도 빠짐없이)
+               안전하게 고쳐서 git commit/push까지 완료했으면 true, 하나라도
+               고치지 못했거나(6번 카테고리라 손대지 않은 경우 포함) 일부만
+               고쳤으면 false로 표시해. 지적사항 자체가 없었던 경우(3번 경로)는
+               true로 둬. review_verdict가 "auto_close"이려면
+               all_issues_addressed도 반드시 true여야 해(그렇지 않으면
+               워크플로우 스크립트에서 강제로 needs_human으로 전환돼).
+            8. 코드를 직접 수정한 경우, 반드시 git add, git commit, git push까지
                완료해서 이 브랜치에 반영해. 커밋 메시지는 한국어로 변경 내용을 요약해.
-            8. 마지막에 지정된 JSON 스키마(hasIssues, fixed, needsHuman,
-               reviewContentRead, issueSummary, humanReviewReason,
-               causeExplanation, fixExplanation, hasHighSeverityIssue, allSeverityKnown
-               10개 필드 모두 필수)를 정확히 지켜서 결과를 출력해. issueSummary에는
-               어떤 결함을 발견했고 고쳤는지 여부만 사실 위주로 작성하고,
-               humanReviewReason에는 왜 사람이 직접 판단해야 하는지 이유를 작성해
-               (P0/P1 지적이라 사람 확인이 필요한 경우 그 사실도 명시해줘 - 사람
-               판단이 필요 없으면 빈 문자열로 둬). causeExplanation에는 GitHub
-               Issue 등록에 쓸 것이므로, 문제가 된 코드 스니펫(마크다운 코드
-               블록)과 함께 왜 문제인지 원인을 한국어로 설명해 작성해
-               (hasIssues:false면 빈 문자열로 둬). fixExplanation에는
-               실제로 무엇을, 어떻게 고쳤는지 수정 후 코드 스니펫과 함께
-               한국어로 작성해 - 반드시 fixed:true일 때만 채우고,
-               fixed:false면 빈 문자열로 둬(고치지 않았는데 고친 것처럼
-               쓰면 안 됨).
+            9. 마지막에 지정된 JSON 스키마(review_verdict, all_issues_addressed,
+               highest_severity, issueSummary, humanReviewReason,
+               causeExplanation, fixExplanation 7개 필드 모두 필수)를 정확히
+               지켜서 결과를 출력해. issueSummary에는 어떤 결함을 발견했고
+               고쳤는지 여부만 사실 위주로 작성하고, humanReviewReason에는 왜
+               사람이 직접 판단해야 하는지 이유를 작성해(review_verdict가
+               needs_human 또는 review_incomplete인 이유를 명시 - P0/P1
+               지적이거나 6번 카테고리라 사람 확인이 필요한 경우 그 사실도
+               명시해줘 - review_verdict가 auto_close면 빈 문자열로 둬).
+               causeExplanation에는 GitHub Issue 등록에 쓸 것이므로, 문제가
+               된 코드 스니펫(마크다운 코드 블록)과 함께 왜 문제인지 원인을
+               한국어로 설명해 작성해(지적사항 자체가 없었으면 빈 문자열로
+               둬). fixExplanation에는 실제로 무엇을, 어떻게 고쳤는지 수정
+               후 코드 스니펫과 함께 한국어로 작성해 - 고친 내용이 있을
+               때만 채우고, 고치지 않았으면 빈 문자열로 둬(고치지 않았는데
+               고친 것처럼 쓰면 안 됨).
 
       - name: 결과 파싱 및 분기
         id: parse
+        # Issue #88 화이트리스트 게이트 재설계(docs/issue-88-redesign.md).
+        # 게이트 1(IS_REVIEW_SKIPPED)은 이 스텝의 if: 조건 자체로 강제된다 -
+        # true면 이 스텝은 아예 실행되지 않으므로, 스크립트 내부에서 따로
+        # 검사할 필요가 없다(가장 먼저, 가장 강하게 적용되는 게이트).
         if: always() && steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.pr.outputs.is_review_skipped == 'false'
         env:
           CLAUDE_OUTCOME: ${{ steps.claude.outcome }}
           STRUCTURED_OUTPUT: ${{ steps.claude.outputs.structured_output }}
           REVIEW_CONTENT: ${{ steps.pr.outputs.review_content_for_prompt }}
+          TOUCHES_WORKFLOWS: ${{ steps.pr.outputs.touches_workflows }}
         run: |
           # fail-closed 기본값: 아래 로직 도중 예기치 않게(jq 실패 등) 죽어도
           # trap이 이 안전한 값을 그대로 출력한다
-          NEEDS_HUMAN=true
-          HAS_ISSUES=true
+          REVIEW_VERDICT=needs_human
           ISSUE_SUMMARY=""
           HUMAN_REVIEW_REASON="파싱 스크립트가 완료되지 못함 - 확인 필요"
           CAUSE_EXPLANATION=""
           FIX_EXPLANATION=""
 
           write_result() {
-            echo "needs_human=$NEEDS_HUMAN" >> "$GITHUB_OUTPUT"
-            echo "has_issues=$HAS_ISSUES" >> "$GITHUB_OUTPUT"
+            echo "review_verdict=$REVIEW_VERDICT" >> "$GITHUB_OUTPUT"
             delimiter1=$(openssl rand -hex 8)
             {
               echo "issue_summary<<$delimiter1"
@@ -456,35 +485,34 @@ jobs:
           }
           trap write_result EXIT
 
-          # Claude 에이전트가 보고한 hasHighSeverityIssue를 그대로 신뢰하지
+          # Claude 에이전트가 보고한 highest_severity를 그대로 신뢰하지
           # 않고, 리뷰 원문(REVIEW_CONTENT - 이 스텝에서도 이미 사용 가능)에
           # 실제로 P0/P1 심각도 배지가 있는지 독립적으로 재확인한다(Codex
-          # 지적, Issue #86 1번 - Claude가 실제로는 P1인 지적을
-          # hasHighSeverityIssue:false로 잘못 보고하면 기존 가드를 그대로
-          # 통과해버리는 문제).
+          # 지적, Issue #86 1번 - Claude가 실제로는 P1인 지적을 더 낮게
+          # 잘못 보고하면 기존 가드를 그대로 통과해버리는 문제).
           #
           # 실측(PR #56/57/60/75/78/83의 실제 인라인 코멘트 14건, 100% 일관):
           # 배지는 항상 `![P{N} Badge](https://img.shields.io/badge/P{N}-{색상}?style=flat)`
           # 형태의 markdown 이미지로, 지적 제목 줄 맨 앞에 붙는다. 두 패턴을
           # OR로 검사한다:
-          #   1) badge/P[01]-[A-Za-z]+  - 실측된 정확한 URL 구조(우선)
+          #   1) !\[[^]]*\]\([^)]*badge/P[01]-[A-Za-z]+[^)]*\) - 배지 URL
+          #      구조(badge/P[01]-색상)가 markdown 이미지 문법(`![alt](url)`)의
+          #      괄호 안에 실제로 들어있을 때만 매칭한다. 이전 버전은 이
+          #      URL 프래그먼트를 `![...]` 문맥에 앵커링하지 않고 리뷰
+          #      본문 어디에서든 찾았는데, 리뷰가 배지 자체가 아니라 배지
+          #      URL을 인용/설명하는 일반 문장("...badge/P1-orange 같은
+          #      URL을 쓰는데...")에도 오탐하는 문제가 있었다(Codex 지적,
+          #      Issue #88 2번). 이제는 같은 `![...](...)"` 구조 안에
+          #      alt-텍스트와 URL이 함께 있어야만 매칭되어 순수 텍스트
+          #      인용은 걸러진다.
           #   2) !\[P[01]\s*Badge\]     - 이미지 alt 텍스트("P1 Badge")만
-          #      보는 보조 패턴. URL의 색상/도메인이 달라져도(P0 배지의
-          #      정확한 색상은 실측 데이터가 없어 P1과 같은 규칙을
-          #      가정했을 뿐이라 어긋날 수 있음) 여전히 markdown 이미지
-          #      문법(`![...]`) 형태로는 남아있을 가능성이 높아 이중
-          #      안전망 역할을 한다.
-          # 처음에는 `\bP[01]\b`(배지 문맥과 무관하게 "P0"/"P1" 단어 자체를
-          # 아무 데서나 찾음)로 더 느슨하게 만들었는데, 이 경우 "이 버그가
-          # P1 지적을 가릴 수 있다" 같은 일반 서술 문장에도 매칭되어 P2뿐인
-          # 리뷰까지 불필요하게 사람 확인으로 넘어가는 과민 반응이 있었다
-          # (Codex 지적, Issue #87 2번). 두 패턴 모두 markdown 이미지
-          # 문법(`![P{N}...]`)에 앵커링해, 실제 배지 문맥에서만 반응하고
-          # 서술 텍스트의 "P1"이라는 단어 자체에는 반응하지 않도록 좁혔다 -
-          # 그래도 배지 URL 구조 하나에만 의존하지 않도록 alt 텍스트
-          # 패턴은 그대로 유지해 진짜 배지를 놓치는 반대 방향 실수를
-          # 피한다.
-          if printf '%s' "$REVIEW_CONTENT" | grep -qE 'badge/P[01]-[A-Za-z]+' || \
+          #      보는 보조 패턴(원래부터 `![...]` 문법에 앵커링되어 있어
+          #      #88 2번 대상이 아니었음). URL의 색상/도메인이 달라져도
+          #      (P0 배지의 정확한 색상은 실측 데이터가 없어 P1과 같은
+          #      규칙을 가정했을 뿐이라 어긋날 수 있음) 여전히 markdown
+          #      이미지 문법 형태로는 남아있을 가능성이 높아 이중 안전망
+          #      역할을 한다.
+          if printf '%s' "$REVIEW_CONTENT" | grep -qE '!\[[^]]*\]\([^)]*badge/P[01]-[A-Za-z]+[^)]*\)' || \
              printf '%s' "$REVIEW_CONTENT" | grep -qE '!\[P[01]\s*Badge\]'; then
             CONTENT_HAS_HIGH_SEVERITY=true
           else
@@ -492,79 +520,67 @@ jobs:
           fi
 
           # fail-closed: Claude 에이전트 스텝이 성공하지 않았으면(실패, 취소 등)
-          # structured_output 파싱을 시도하지 않고 바로 안전한 값으로 처리
+          # structured_output 파싱을 시도하지 않고 바로 안전한 값으로 처리.
+          # review_incomplete는 GitHub Issue를 생성하지 않으므로(아래 다운스트림
+          # 스텝들의 review_verdict != 'review_incomplete' 조건 참고), 실행
+          # 자체가 실패한 경우까지 이슈로 남기지 않는다 - 기존 hasIssues:false
+          # 폴백과 동일한 동작.
           if [ "$CLAUDE_OUTCOME" != "success" ]; then
-            PARSED='{"hasIssues":false,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"Claude 에이전트 처리 자체가 실패함 - 자동 판단 불가, GitHub Issue는 생성하지 않고 사람 확인만 요청","causeExplanation":"","fixExplanation":"","hasHighSeverityIssue":true,"allSeverityKnown":false}'
-          # fail-closed: structured_output이 비어있거나 스키마(10개 필드 모두 정확한 타입,
-          # reviewContentRead/causeExplanation/fixExplanation/hasHighSeverityIssue/
-          # allSeverityKnown 포함)를 만족하지 않으면 needsHuman=true,
-          # hasIssues=true로 안전하게 처리
+            PARSED='{"review_verdict":"review_incomplete","all_issues_addressed":false,"highest_severity":"unknown","issueSummary":"","humanReviewReason":"Claude 에이전트 처리 자체가 실패함 - 자동 판단 불가, GitHub Issue는 생성하지 않고 사람 확인만 요청","causeExplanation":"","fixExplanation":""}'
+          # fail-closed: structured_output이 비어있거나 스키마(7개 필드 모두
+          # 정확한 타입 + review_verdict/highest_severity enum 값)를
+          # 만족하지 않으면 needs_human으로 안전하게 처리(이 경로는 GitHub
+          # Issue를 생성함 - Claude가 실행은 됐는데 출력이 망가진 것 자체가
+          # 알림 대상이라는 기존 동작 유지).
           elif [ -n "$STRUCTURED_OUTPUT" ] && echo "$STRUCTURED_OUTPUT" | jq -e \
-            '(.hasIssues | type) == "boolean" and (.fixed | type) == "boolean" and (.needsHuman | type) == "boolean" and (.reviewContentRead | type) == "boolean" and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string" and (.causeExplanation | type) == "string" and (.fixExplanation | type) == "string" and (.hasHighSeverityIssue | type) == "boolean" and (.allSeverityKnown | type) == "boolean"' \
+            '(.review_verdict | type) == "string" and (.review_verdict == "auto_close" or .review_verdict == "needs_human" or .review_verdict == "review_incomplete") and (.all_issues_addressed | type) == "boolean" and (.highest_severity | type) == "string" and (.highest_severity == "P0" or .highest_severity == "P1" or .highest_severity == "P2" or .highest_severity == "P3" or .highest_severity == "unknown" or .highest_severity == "none") and (.issueSummary | type) == "string" and (.humanReviewReason | type) == "string" and (.causeExplanation | type) == "string" and (.fixExplanation | type) == "string"' \
             > /dev/null 2>&1; then
-            # fail-closed: 리뷰 봇의 코멘트/리뷰 내용을 Claude 에이전트가 실제로
-            # 읽지 못했다면(gh CLI/네트워크 차단·실패 등) hasIssues가 무엇으로
-            # 나왔든 무조건 사람 확인 필요로 강제 전환한다. reviewContentRead는
-            # "확인 불가"와 "확인했더니 문제없음이 확실한 경우"를 구분하기 위한
-            # 필드로, 이 분기는 "확인이 됐다고 확신할 수 없는 모든 경우"를 안전한
-            # 쪽으로 보낸다 - hasIssues 판단 자체를 신뢰하지 않는다.
-            if echo "$STRUCTURED_OUTPUT" | jq -e '.reviewContentRead == false' > /dev/null 2>&1; then
+            # review_incomplete는 이미 가장 안전한(이슈 미생성) 상태이므로
+            # 아래 게이트들로 더 낮출 필요가 없다 - 그대로 통과.
+            if echo "$STRUCTURED_OUTPUT" | jq -e '.review_verdict == "review_incomplete"' > /dev/null 2>&1; then
+              PARSED="$STRUCTURED_OUTPUT"
+            # 게이트 2(touches_workflows) - "PR 정보 조회" 스텝에서 이미
+            # 독립적으로 계산한 값을 그대로 신뢰한다. 프롬프트 지시문(6번)에
+            # 이미 같은 규칙이 있지만, Claude가 이를 놓치고 auto_close를
+            # 내더라도 여기서 스크립트 레벨로 다시 강제한다.
+            elif echo "$STRUCTURED_OUTPUT" | jq -e --argjson tw "$TOUCHES_WORKFLOWS" \
+              '.review_verdict == "auto_close" and $tw == true' \
+              > /dev/null 2>&1; then
               PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
-                '.needsHuman = true | .hasIssues = false | .humanReviewReason = "리뷰 봇 응답을 읽지 못해 확인이 필요합니다(네트워크/권한 차단 등)"')
-            # fail-closed: 리뷰 원문을 직접 재확인한 결과(CONTENT_HAS_HIGH_SEVERITY)
-            # 실제 P0/P1 배지가 있는데, Claude는 hasHighSeverityIssue:false로
-            # 보고하면서 needsHuman:false(자동 종료 가능)까지 냈다면 무조건
-            # 사람 확인 필요로 재정의한다. 일부러 hasIssues 값과 무관하게 둔다 -
-            # Claude가 P0/P1 지적사항의 존재 자체를 놓치고 프롬프트가 권장하는
-            # "지적사항 없음" 튜플(hasIssues:false, hasHighSeverityIssue:false,
-            # allSeverityKnown:true, needsHuman:false)을 그대로 반환하면
-            # hasIssues==true를 전제로 하는 검사는 전부 우회되기 때문이다
-            # (Codex 지적, Issue #87 1번 - 직전 커밋의 이 불일치 검증 자체가
-            # hasIssues==true 조건 뒤에 갇혀 있어 이 경우를 놓쳤음). 이 경우
-            # hasIssues는 Claude가 보고한 값을 그대로 두고(잘못된 근거로 이슈
-            # 본문을 만들어내는 것보다, 사람이 PR을 직접 보고 판단하게 하는
-            # 쪽이 안전하다 - needsHuman=true만으로 자동 merge 차단과 특이사항
-            # Slack 알림은 이미 충분히 트리거된다) needsHuman만 강제한다.
+                '.review_verdict = "needs_human" | .humanReviewReason = "이 PR이 .github/workflows/ 아래 파일을 변경하고 있어 심각도/카테고리와 무관하게 항상 사람 확인이 필요합니다(프로젝트 규칙)"')
+            # 모순 감지: auto_close인데 all_issues_addressed가 false -
+            # "지적사항을 다 못 고쳤는데 자동 종료 가능"은 정의상 성립할 수
+            # 없는 조합이므로 무효 처리.
+            elif echo "$STRUCTURED_OUTPUT" | jq -e \
+              '.review_verdict == "auto_close" and .all_issues_addressed == false' \
+              > /dev/null 2>&1; then
+              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
+                '.review_verdict = "needs_human" | .humanReviewReason = "검증 실패: auto_close로 판단했으나 all_issues_addressed가 false로 모순됨 - 안전을 위해 확인 필요로 전환"')
+            # 게이트 5: 리뷰 원문 재확인 결과(CONTENT_HAS_HIGH_SEVERITY) 실제
+            # P0/P1 배지가 있거나, Claude 자신이 highest_severity를 P0/P1로
+            # 보고했다면 - 둘 중 하나만 참이어도 - auto_close를 무조건
+            # needs_human으로 재정의한다. review_verdict 자체가 3-state
+            # enum이 되면서 "hasIssues==true를 전제로만 검사"하던 기존 구조적
+            # 결함(Codex 지적, Issue #87 1번 / #88 1번 - hasIssues:false 등
+            # "지적사항 없음" 튜플로 이 검사 전체를 우회할 수 있었음)이
+            # 사라졌다 - review_verdict=="auto_close"라는 단일 조건만으로
+            # 원인과 무관하게 항상 이 게이트를 통과시킨다.
             elif echo "$STRUCTURED_OUTPUT" | jq -e --argjson contentHigh "$CONTENT_HAS_HIGH_SEVERITY" \
-              '.needsHuman == false and $contentHigh == true and .hasHighSeverityIssue == false' \
+              '.review_verdict == "auto_close" and ($contentHigh == true or .highest_severity == "P0" or .highest_severity == "P1")' \
               > /dev/null 2>&1; then
-              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
-                '.needsHuman = true | .humanReviewReason = "리뷰 원문에 P0/P1 심각도 표시가 있는 것으로 확인됐는데 Claude는 hasHighSeverityIssue:false로 판단해(hasIssues 값과 무관하게) 판단 오류 가능성이 있어 사람 확인이 필요합니다"')
-            # fail-closed: 이슈가 있는데(hasIssues=true) 고치지도 않았고(fixed=false)
-            # 사람 확인도 불필요(needsHuman=false)하다는 모순된 결과는 무효 처리.
-            # hasIssues/fixed/issueSummary는 신뢰할 수 있으므로 그대로 보존하고
-            # needsHuman과 humanReviewReason만 안전한 값으로 덮어쓴다.
-            elif echo "$STRUCTURED_OUTPUT" | jq -e \
-              '.hasIssues == true and .fixed == false and .needsHuman == false' \
-              > /dev/null 2>&1; then
-              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
-                '.needsHuman = true | .humanReviewReason = "검증 실패: 이슈가 있는데 해결되지 않았음에도 사람 확인이 불필요하다고 판단됨 - 안전을 위해 확인 필요로 전환"')
-            # fail-closed: P0/P1(최고 심각도) 지적이 있거나(hasHighSeverityIssue)
-            # 심각도를 확신할 수 없는 지적이 하나라도 있으면(allSeverityKnown=false),
-            # Claude 자신이 needsHuman:false(자동 종료 가능)로 판단했더라도
-            # 무조건 사람 확인 필요로 재정의한다. 리뷰 원문과의 불일치 검증은
-            # 위에서 hasIssues 값과 무관하게 이미 먼저 처리됐으므로(바로 위
-            # 분기), 여기서는 Claude 자신의 보고가 스스로 일관되게 "심각하다/
-            # 모르겠다"고 말한 경우만 다룬다. 이 조건은 기존 조건들을 전혀
-            # 대체하지 않고 그 위에 OR로 추가되는 것이라, 이미 안전한 경로가
-            # 넓어지는 일은 없고 좁아지기만 한다.
-            elif echo "$STRUCTURED_OUTPUT" | jq -e \
-              '.hasIssues == true and .needsHuman == false and (.hasHighSeverityIssue == true or .allSeverityKnown == false)' \
-              > /dev/null 2>&1; then
-              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq \
-                '.needsHuman = true | .humanReviewReason = (if .hasHighSeverityIssue then "P0/P1(최고 심각도) 지적이 포함되어 있어 자동 종료 대상에서 제외하고 항상 사람 확인이 필요합니다" else "지적사항의 심각도(P0/P1/P2 등)를 명확히 판별할 수 없어 안전을 위해 사람 확인이 필요합니다" end)')
+              PARSED=$(echo "$STRUCTURED_OUTPUT" | jq --argjson contentHigh "$CONTENT_HAS_HIGH_SEVERITY" \
+                '.review_verdict = "needs_human" | .humanReviewReason = (if $contentHigh and (.highest_severity != "P0" and .highest_severity != "P1") then "리뷰 원문에 P0/P1 심각도 표시가 있는 것으로 확인됐는데 Claude는 highest_severity를 그보다 낮게 보고해 판단 오류 가능성이 있어 사람 확인이 필요합니다" else "P0/P1(최고 심각도) 지적이 포함되어 있어 자동 종료 대상에서 제외하고 항상 사람 확인이 필요합니다" end)')
             else
               PARSED="$STRUCTURED_OUTPUT"
             fi
           else
-            PARSED='{"hasIssues":true,"fixed":false,"needsHuman":true,"issueSummary":"","humanReviewReason":"자동 판단 실패, 확인 필요","causeExplanation":"","fixExplanation":"","hasHighSeverityIssue":true,"allSeverityKnown":false}'
+            PARSED='{"review_verdict":"needs_human","all_issues_addressed":false,"highest_severity":"unknown","issueSummary":"","humanReviewReason":"자동 판단 실패, 확인 필요","causeExplanation":"","fixExplanation":""}'
           fi
 
           # jq 실패가 조용히 묻히지 않도록 각각 독립된 대입문으로 계산한다 -
           # echo 안에 인라인으로 넣으면 jq가 실패해도 바깥 echo는 항상 성공해
           # -e가 이를 감지하지 못한다
-          NEEDS_HUMAN=$(echo "$PARSED" | jq -r '.needsHuman')
-          HAS_ISSUES=$(echo "$PARSED" | jq -r '.hasIssues')
+          REVIEW_VERDICT=$(echo "$PARSED" | jq -r '.review_verdict')
           ISSUE_SUMMARY=$(echo "$PARSED" | jq -r '.issueSummary')
           HUMAN_REVIEW_REASON=$(echo "$PARSED" | jq -r '.humanReviewReason')
           CAUSE_EXPLANATION=$(echo "$PARSED" | jq -r '.causeExplanation')
@@ -572,22 +588,27 @@ jobs:
 
       - name: 실제 git 상태 검증
         id: verify
+        # Issue #88 재설계의 게이트 4(MISMATCH) - 기존 구조 그대로 재사용.
+        # git 상태 불일치가 확인되면 파싱 스텝의 판정이 무엇이었든(auto_close/
+        # needs_human/review_incomplete) 최종 review_verdict를 여기서 무조건
+        # needs_human으로 덮어쓴다(docs/issue-88-redesign.md 3장).
         if: always() && steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           IS_REVIEW_SKIPPED: ${{ steps.pr.outputs.is_review_skipped }}
           PARSE_OUTCOME: ${{ steps.parse.outcome }}
-          PARSE_NEEDS_HUMAN: ${{ steps.parse.outputs.needs_human }}
+          PARSE_REVIEW_VERDICT: ${{ steps.parse.outputs.review_verdict }}
           PARSE_ISSUE_SUMMARY: ${{ steps.parse.outputs.issue_summary }}
           PARSE_HUMAN_REVIEW_REASON: ${{ steps.parse.outputs.human_review_reason }}
           PARSE_CAUSE_EXPLANATION: ${{ steps.parse.outputs.cause_explanation }}
           PARSE_FIX_EXPLANATION: ${{ steps.parse.outputs.fix_explanation }}
         run: |
-          # Claude의 자기 보고(fixed:true 등)를 그대로 믿지 않고 실제 git 상태로 재검증.
-          # 기본 bash -e 동작을 그대로 사용: 아래 명령 중 하나라도 실패하면 스크립트가
-          # 즉시 종료되고, trap이 지금까지 설정된 기본값(fail-closed)을 그대로 출력한다.
-          NEEDS_HUMAN=true
+          # Claude의 자기 보고(all_issues_addressed:true 등)를 그대로 믿지 않고
+          # 실제 git 상태로 재검증. 기본 bash -e 동작을 그대로 사용: 아래 명령
+          # 중 하나라도 실패하면 스크립트가 즉시 종료되고, trap이 지금까지
+          # 설정된 기본값(fail-closed)을 그대로 출력한다.
+          REVIEW_VERDICT=needs_human
           ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
           HUMAN_REVIEW_REASON="git 상태 검증 스크립트가 완료되지 못함 - 확인 필요"
           DIRTY_FILES=""
@@ -595,14 +616,15 @@ jobs:
           # 원인 설명은 검증 결과와 무관하게(수정이 검증됐든 안됐든) Codex
           # 지적사항 자체에 대한 설명이라 항상 유효하므로 기본값으로 그대로
           # 이어받는다. 수정 내용 설명은 아래에서 실제 git 상태 검증을
-          # 통과했을 때만(needs_human=false) 신뢰해 채운다 - Claude가
-          # fixed:true라고 자기 보고했어도 실제로 push되지 않았거나 원격과
-          # 어긋나면(MISMATCH) 고쳤다는 내용을 이슈에 그대로 옮기면 안 된다.
+          # 통과했을 때만(review_verdict=auto_close) 신뢰해 채운다 - Claude가
+          # all_issues_addressed:true라고 자기 보고했어도 실제로 push되지
+          # 않았거나 원격과 어긋나면(MISMATCH) 고쳤다는 내용을 이슈에 그대로
+          # 옮기면 안 된다.
           CAUSE_EXPLANATION="$PARSE_CAUSE_EXPLANATION"
           FIX_EXPLANATION=""
 
           write_result() {
-            echo "needs_human=$NEEDS_HUMAN" >> "$GITHUB_OUTPUT"
+            echo "review_verdict=$REVIEW_VERDICT" >> "$GITHUB_OUTPUT"
             echo "claude_md_only=$CLAUDE_MD_ONLY" >> "$GITHUB_OUTPUT"
             delimiter1=$(openssl rand -hex 8)
             {
@@ -643,7 +665,7 @@ jobs:
           # (CodeRabbit의 "star 10개 미만이라 리뷰 안 함" 안내를 "지적사항
           # 없음"으로 오인해 PR #49가 검증 없이 자동 merge된 사고 재발 방지)
           if [ "$IS_REVIEW_SKIPPED" = "true" ]; then
-            NEEDS_HUMAN=true
+            REVIEW_VERDICT=needs_human
             ISSUE_SUMMARY=""
             HUMAN_REVIEW_REASON="리뷰 봇이 리뷰를 실행하지 않았다는 취지의 안내(스킵/미실행/레이트리밋 등)만 남겼습니다. 실제 코드 검증이 이뤄지지 않았으므로 반드시 사람이 직접 확인해야 합니다."
             exit 0
@@ -676,25 +698,32 @@ jobs:
             MISMATCH="true"
           fi
 
-          # 모든 명령이 성공했을 때만 여기 도달한다. "문제없음" 경로는 파싱
-          # 스텝이 성공(outcome=success)했고 needsHuman이 정확히 false로
-          # 확인된 단 하나의 경우에만 허용한다 (fail-closed). 그 외 - 파싱
-          # 스텝 자체가 실패했거나, 값이 비어있거나, true거나, 예상 못한 값인
-          # 경우 - 는 전부 사람 확인 필요 경로로 보낸다.
+          # 모든 명령이 성공했을 때만 여기 도달한다. MISMATCH가 확인되면
+          # 파싱 스텝의 판정과 무관하게(auto_close/review_incomplete
+          # 포함) 무조건 needs_human으로 확정한다 - git 상태가 이상하다는
+          # 신호 자체가 review_incomplete보다도 더 사람 확인이 필요한
+          # 상황이기 때문이다. MISMATCH가 없으면 파싱 스텝이 성공
+          # (outcome=success)했을 때 그 review_verdict를 그대로 신뢰해
+          # 이어받는다(auto_close/needs_human/review_incomplete 모두).
+          # 파싱 스텝 자체가 실패했으면 fail-closed로 needs_human 확정.
           if [ "$MISMATCH" = "true" ]; then
-            NEEDS_HUMAN=true
+            REVIEW_VERDICT=needs_human
             FIX_EXPLANATION=""
             if [ -n "$PARSE_HUMAN_REVIEW_REASON" ]; then
               HUMAN_REVIEW_REASON="$(printf '%s\n\nClaude 자기 보고와 실제 git 상태 불일치 - 확인 필요' "$PARSE_HUMAN_REVIEW_REASON")"
             else
               HUMAN_REVIEW_REASON="Claude 자기 보고와 실제 git 상태 불일치 - 확인 필요"
             fi
-          elif [ "$PARSE_OUTCOME" = "success" ] && [ "$PARSE_NEEDS_HUMAN" = "false" ]; then
-            NEEDS_HUMAN=false
+          elif [ "$PARSE_OUTCOME" = "success" ] && [ "$PARSE_REVIEW_VERDICT" = "auto_close" ]; then
+            REVIEW_VERDICT=auto_close
             HUMAN_REVIEW_REASON=""
             FIX_EXPLANATION="$PARSE_FIX_EXPLANATION"
+          elif [ "$PARSE_OUTCOME" = "success" ] && [ "$PARSE_REVIEW_VERDICT" = "review_incomplete" ]; then
+            REVIEW_VERDICT=review_incomplete
+            HUMAN_REVIEW_REASON="$PARSE_HUMAN_REVIEW_REASON"
+            FIX_EXPLANATION=""
           else
-            NEEDS_HUMAN=true
+            REVIEW_VERDICT=needs_human
             HUMAN_REVIEW_REASON="$PARSE_HUMAN_REVIEW_REASON"
             FIX_EXPLANATION=""
           fi
@@ -703,7 +732,15 @@ jobs:
 
       - name: GitHub Issue 자동 등록
         id: github_issue
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outcome == 'success' && steps.parse.outputs.has_issues == 'true'
+        # review_verdict가 review_incomplete가 아닌 모든 경우(auto_close/
+        # needs_human)에 대해 트리거한다 - docs/issue-88-redesign.md 2.2절.
+        # review_incomplete는 애초에 지적사항 유무 자체를 판단하지 못한
+        # 상태라 이슈를 만들 근거가 없다. 파싱 스텝(steps.parse)의 판정을
+        # 트리거 조건으로 쓰고, 실제 본문 완성 여부(완료 템플릿 vs 대기
+        # 템플릿)는 아래에서 검증 스텝(steps.verify)의 최종 review_verdict를
+        # 기준으로 판단한다 - 기존 has_issues(parse 기준)/needs_human(verify
+        # 기준) 분리 구조를 그대로 유지.
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outcome == 'success' && steps.parse.outputs.review_verdict != 'review_incomplete'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -715,7 +752,7 @@ jobs:
           ISSUE_SUMMARY: ${{ steps.verify.outputs.issue_summary }}
           CAUSE_EXPLANATION: ${{ steps.verify.outputs.cause_explanation }}
           FIX_EXPLANATION: ${{ steps.verify.outputs.fix_explanation }}
-          NEEDS_HUMAN: ${{ steps.verify.outputs.needs_human }}
+          REVIEW_VERDICT: ${{ steps.verify.outputs.review_verdict }}
           HUMAN_REVIEW_REASON: ${{ steps.verify.outputs.human_review_reason }}
         run: |
           # 같은 리뷰/코멘트에 대해 워크플로우가 재실행되어도(또는 같은 리뷰
@@ -770,7 +807,7 @@ jobs:
             # Slack에도 "사람 확인 필요"처럼 잘못 안내됐다(Codex 지적,
             # Issue #67). "재사용된 이슈이지만 이번 실행 기준으로는 이미
             # 닫혔어야 함"을 감지해 close를 재시도한다.
-            if [ "$EXISTING_CLOSED" = "false" ] && [ "$NEEDS_HUMAN" = "false" ]; then
+            if [ "$EXISTING_CLOSED" = "false" ] && [ "$REVIEW_VERDICT" = "auto_close" ]; then
               if gh issue close "$ISSUE_NUMBER" --repo yoobilee/worky; then
                 echo "재사용된 이슈를 close 재시도로 닫음: $ISSUE_URL"
                 echo "issue_closed=true" >> "$GITHUB_OUTPUT"
@@ -786,16 +823,16 @@ jobs:
               echo "issue_closed=$EXISTING_CLOSED" >> "$GITHUB_OUTPUT"
             fi
           else
-            # needs_human=='false'(자동 수정 + "실제 git 상태 검증" 스텝의
-            # 검증까지 통과)인 경우에만, 이 시점에 "실제 수정 내용"/"검증"
-            # 섹션까지 채운 완성된 본문으로 등록하고 바로 close한다.
-            # needs_human=='true'인 경우는 아직 아무도(사람도) 고치지 않은
-            # 시점이라 완성된 내용을 만들어낼 수 없으므로, 나중에 사람이
-            # 직접 고친 뒤 채워 넣을 수 있게 빈 템플릿만 남기고 이슈는
-            # 열어둔다. Claude의 자기 보고(fixed)가 아니라 git 상태까지
-            # 재검증한 needs_human을 기준으로 판단하는 이유는 "실제 git
+            # review_verdict=='auto_close'(자동 수정 + "실제 git 상태 검증"
+            # 스텝의 검증까지 통과)인 경우에만, 이 시점에 "실제 수정 내용"/
+            # "검증" 섹션까지 채운 완성된 본문으로 등록하고 바로 close한다.
+            # 그 외(needs_human)는 아직 아무도(사람도) 고치지 않은 시점이라
+            # 완성된 내용을 만들어낼 수 없으므로, 나중에 사람이 직접 고친
+            # 뒤 채워 넣을 수 있게 빈 템플릿만 남기고 이슈는 열어둔다.
+            # Claude의 자기 보고(all_issues_addressed)가 아니라 git 상태까지
+            # 재검증한 review_verdict를 기준으로 판단하는 이유는 "실제 git
             # 상태 검증" 스텝과 동일 - 자기 보고만으로는 신뢰할 수 없다.
-            if [ "$NEEDS_HUMAN" = "false" ]; then
+            if [ "$REVIEW_VERDICT" = "auto_close" ]; then
               COMMIT_HASH=$(git log -1 --format=%H 2>/dev/null || echo "")
               BODY_TEXT=$(printf '%s\n\n**발견: Codex 자동 리뷰 (PR #%s)**\n자동 검증 파이프라인(claude-review-response.yml)이 Codex의 리뷰를 확인하고 자동으로 등록한 이슈입니다.\n\n**원인 / Codex 지적 내용**\n%s\n\n%s\n\n**실제 수정 내용**\n%s\n\n수정 커밋: `%s`\n반영된 PR: %s\n\n**검증**\n자동 파이프라인이 실제 git 상태 검증(커밋이 실제로 push됐는지, 원격 브랜치와 일치하는지 확인)을 통과했습니다. 이 PR의 GitHub Actions 빌드 체크(CI) 통과 후 자동 merge됩니다.\n\n자동으로 수정 및 검증이 완료되어 즉시 close합니다.' \
                 "$MARKER" "$PR_NUMBER" "$REVIEW_CONTENT" "$CAUSE_EXPLANATION" "$FIX_EXPLANATION" "$COMMIT_HASH" "$PR_URL")
@@ -836,7 +873,9 @@ jobs:
           echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Supabase issues 테이블 기록
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outcome == 'success' && steps.parse.outputs.has_issues == 'true'
+        # GitHub Issue 자동 등록 스텝과 동일한 트리거 조건(review_verdict
+        # 기준)으로 통일 - docs/issue-88-redesign.md 2.2절.
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.parse.outcome == 'success' && steps.parse.outputs.review_verdict != 'review_incomplete'
         continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -1081,10 +1120,14 @@ jobs:
 
       - name: 특이사항 알림 (사람 판단 필요한 경우)
         # steps.verify는 is_trusted_bot=='false'일 때 통째로 스킵되어
-        # outputs.needs_human이 빈 문자열이 되므로(!= 'false'가 참이 되어
-        # 버림), is_trusted_bot을 여기서도 명시적으로 확인해야 다른 봇의
-        # 코멘트(vercel[bot] 배포 알림 등)에 잘못 반응하지 않는다
-        if: always() && steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.needs_human != 'false'
+        # outputs.review_verdict가 빈 문자열이 되므로(!= 'auto_close'가
+        # 참이 되어버림), is_trusted_bot을 여기서도 명시적으로 확인해야
+        # 다른 봇의 코멘트(vercel[bot] 배포 알림 등)에 잘못 반응하지 않는다.
+        # review_verdict가 needs_human이든 review_incomplete든(즉
+        # auto_close가 아니면 전부) 이 알림을 보낸다 -
+        # docs/issue-88-redesign.md 2.2절(review_incomplete도 사람이 봐야
+        # 하므로 포함).
+        if: always() && steps.pr.outputs.is_trusted_bot == 'true' && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.review_verdict != 'auto_close'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -1113,7 +1156,7 @@ jobs:
 
           # dirty 파일이 CLAUDE.md 하나뿐이면 claude-code-action의 보안
           # 되돌려쓰기로 인한 알려진 오탐일 가능성이 높다는 안내를 덧붙인다
-          # (CLAUDE.md 참고). needs_human 판정 자체는 그대로 fail-closed로
+          # (CLAUDE.md 참고). review_verdict 판정 자체는 그대로 fail-closed로
           # 유지되고, 이 안내는 사람이 더 빨리 원인을 파악하도록 돕는
           # 참고 정보일 뿐이다.
           if [ "$CLAUDE_MD_ONLY" = "true" ]; then
@@ -1132,7 +1175,9 @@ jobs:
           gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$NOTIFY_LABEL" || true
 
       - name: 자동 merge 요청 (사람 판단 불필요한 경우만)
-        if: steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.needs_human == 'false'
+        # review_verdict가 정확히 auto_close일 때만 - docs/issue-88-redesign.md
+        # 2.2절.
+        if: steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outputs.review_verdict == 'auto_close'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
