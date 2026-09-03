@@ -35,6 +35,17 @@ env:
 concurrency:
   group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
+  # queue: max - Issue #24. cancel-in-progress:false 상태에서 GitHub Actions
+  # 기본 동작(queue 옵션 미지정)은 같은 그룹에 최대 "실행 중 1개 + 대기 1개"만
+  # 유지하고, 그 사이 새 이벤트가 도착하면 대기 중이던 실행을 취소하고
+  # 새 이벤트로 교체한다 - 짧은 시간에 리뷰 이벤트(pull_request_review +
+  # 인라인 코멘트 여러 건)가 몰리면 일부가 조용히 취소되어 리뷰 대응이
+  # 누락될 수 있었다. queue: max는 이 그룹의 대기열을 GitHub가 지원하는
+  # 최대치(최대 100개)까지 넓혀 도착 순서대로 전부 순차 실행되게 한다
+  # (cancel-in-progress:true와는 동시에 쓸 수 없음 - 이미 false이므로 무관).
+  # 참고: 이 옵션에 큐 크기를 직접 지정하는 숫자 파라미터는 없다 - "max"
+  # 하나만 유효한 값이고, 그 상한(100)은 GitHub가 고정한 값이다.
+  queue: max
 
 jobs:
   respond:
