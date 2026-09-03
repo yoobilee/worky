@@ -11,6 +11,10 @@ All notable changes to Worky will be documented in this file.
 - QnA의 데이터 연동 필요 여부 판단(judge) 호출이 Groq 카탈로그에서 제거된 모델(`llama-3.1-8b-instant`)을 참조해 매번 실패, 데이터 연동 답변 기능이 사실상 항상 비활성화(needsData 항상 false)되어 있던 문제 수정
 - QnA/문서 요약/템플릿 생성이 각자 들고 있던 수제 마크다운 파서를 `react-markdown` + `remark-gfm` 기반 공용 컴포넌트(`MarkdownRenderer`)로 교체 - GFM 표 미지원으로 표/서식이 깨져 텍스트 그대로 노출되던 문제 해결
 
+### 🔑 로그인 안내 개선
+- 게스트 로그인 버튼 시인성 개선 (로그인 없이 먼저 둘러볼 수 있다는 안내 문구 `login_guest_hint` 추가)
+- Google 로그인이 승인된 테스트 계정만 가능하다는 안내와, 처음 사용자는 게스트로 체험 가능하다는 안내 문구(`login_google_restricted_note`) 추가
+
 ### ⚡ 성능
 - Groq API 호출에 `reasoning_effort: "low"` 전역 적용 (모델별 응답 품질/속도 비교 테스트 후 결정)
 
