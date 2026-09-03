@@ -4,6 +4,22 @@ All notable changes to Worky will be documented in this file.
 
 ---
 
+## [v1.6.1] - 2026-09-02
+
+### 🐛 버그 수정
+- 데이터 정리 페이지에서 TPM(분당 토큰) 레이트리밋 초과로 "AI 응답 생성 중 오류가 발생했습니다"가 뜨던 문제 수정 (max_tokens 조정)
+- QnA의 데이터 연동 필요 여부 판단(judge) 호출이 Groq 카탈로그에서 제거된 모델(`llama-3.1-8b-instant`)을 참조해 매번 실패, 데이터 연동 답변 기능이 사실상 항상 비활성화(needsData 항상 false)되어 있던 문제 수정
+- QnA/문서 요약/템플릿 생성이 각자 들고 있던 수제 마크다운 파서를 `react-markdown` + `remark-gfm` 기반 공용 컴포넌트(`MarkdownRenderer`)로 교체 - GFM 표 미지원으로 표/서식이 깨져 텍스트 그대로 노출되던 문제 해결
+
+### ⚡ 성능
+- Groq API 호출에 `reasoning_effort: "low"` 전역 적용 (모델별 응답 품질/속도 비교 테스트 후 결정)
+
+### 🤖 AI 기반 PR 검증 자동화 개선
+- PR 검증 파이프라인을 CodeRabbit에서 OpenAI Codex(chatgpt-codex-connector)로 전환
+- 인라인 리뷰 코멘트 감지, GitHub Issue 자동 등록/알림 로직 재설계, 심각도(P0/P1 등) 기반 자동 수정 허용 범위 확장 등 파이프라인 안정성 개선 다수 (Worky 자체 개발 프로세스 - 사용자에게 보이는 변화는 없음)
+
+---
+
 ## [v1.6.0] - 2026-08-18
 
 ### 🐞 이슈 정리 페이지 신설
