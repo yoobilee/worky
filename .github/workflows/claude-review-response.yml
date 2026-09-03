@@ -451,6 +451,7 @@ jobs:
           # fail-closed 기본값: 아래 로직 도중 예기치 않게(jq 실패 등) 죽어도
           # trap이 이 안전한 값을 그대로 출력한다
           REVIEW_VERDICT=needs_human
+          HIGHEST_SEVERITY=unknown
           ISSUE_SUMMARY=""
           HUMAN_REVIEW_REASON="파싱 스크립트가 완료되지 못함 - 확인 필요"
           CAUSE_EXPLANATION=""
@@ -458,6 +459,7 @@ jobs:
 
           write_result() {
             echo "review_verdict=$REVIEW_VERDICT" >> "$GITHUB_OUTPUT"
+            echo "highest_severity=$HIGHEST_SEVERITY" >> "$GITHUB_OUTPUT"
             delimiter1=$(openssl rand -hex 8)
             {
               echo "issue_summary<<$delimiter1"
@@ -590,6 +592,7 @@ jobs:
           # echo 안에 인라인으로 넣으면 jq가 실패해도 바깥 echo는 항상 성공해
           # -e가 이를 감지하지 못한다
           REVIEW_VERDICT=$(echo "$PARSED" | jq -r '.review_verdict')
+          HIGHEST_SEVERITY=$(echo "$PARSED" | jq -r '.highest_severity')
           ISSUE_SUMMARY=$(echo "$PARSED" | jq -r '.issueSummary')
           HUMAN_REVIEW_REASON=$(echo "$PARSED" | jq -r '.humanReviewReason')
           CAUSE_EXPLANATION=$(echo "$PARSED" | jq -r '.causeExplanation')
@@ -608,6 +611,7 @@ jobs:
           IS_REVIEW_SKIPPED: ${{ steps.pr.outputs.is_review_skipped }}
           PARSE_OUTCOME: ${{ steps.parse.outcome }}
           PARSE_REVIEW_VERDICT: ${{ steps.parse.outputs.review_verdict }}
+          PARSE_HIGHEST_SEVERITY: ${{ steps.parse.outputs.highest_severity }}
           PARSE_ISSUE_SUMMARY: ${{ steps.parse.outputs.issue_summary }}
           PARSE_HUMAN_REVIEW_REASON: ${{ steps.parse.outputs.human_review_reason }}
           PARSE_CAUSE_EXPLANATION: ${{ steps.parse.outputs.cause_explanation }}
@@ -618,6 +622,7 @@ jobs:
           # 중 하나라도 실패하면 스크립트가 즉시 종료되고, trap이 지금까지
           # 설정된 기본값(fail-closed)을 그대로 출력한다.
           REVIEW_VERDICT=needs_human
+          HIGHEST_SEVERITY="$PARSE_HIGHEST_SEVERITY"
           ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
           HUMAN_REVIEW_REASON="git 상태 검증 스크립트가 완료되지 못함 - 확인 필요"
           DIRTY_FILES=""
@@ -634,6 +639,7 @@ jobs:
 
           write_result() {
             echo "review_verdict=$REVIEW_VERDICT" >> "$GITHUB_OUTPUT"
+            echo "highest_severity=$HIGHEST_SEVERITY" >> "$GITHUB_OUTPUT"
             echo "claude_md_only=$CLAUDE_MD_ONLY" >> "$GITHUB_OUTPUT"
             delimiter1=$(openssl rand -hex 8)
             {
@@ -769,6 +775,7 @@ jobs:
 
           ISSUE_SUMMARY="$PARSE_ISSUE_SUMMARY"
           CAUSE_EXPLANATION="$PARSE_CAUSE_EXPLANATION"
+          HIGHEST_SEVERITY="$PARSE_HIGHEST_SEVERITY"
 
       - name: GitHub Issue 자동 등록
         id: github_issue
@@ -790,7 +797,17 @@ jobs:
         # 최종 review_verdict로 수렴시키므로, 트리거와 완성도 판단 모두
         # verify 하나로 통일해도 안전하다 - verify는 이슈를 "덜" 만드는
         # 방향으로만 값을 바꾸지 않는다(needs_human 쪽으로만 강화됨).
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outcome == 'success' && steps.verify.outputs.review_verdict != 'review_incomplete'
+        #
+        # 추가 게이트(Issue #102): review_verdict=="auto_close"이면서
+        # highest_severity=="none"인 "클린 리뷰"(애초에 지적사항 자체가
+        # 없었던 경우, 위 원칙 3번 경로)까지 이슈를 만들 필요는 없다 -
+        # 만들어봐야 본문이 통째로 빈 내용이라 노이즈만 늘어난다. 이
+        # 조건은 De Morgan 형태로 썼다: "review_incomplete가 아니고,
+        # (auto_close가 아니거나 severity가 none이 아니면)" - needs_human/
+        # review_incomplete 경로는 severity 값과 무관하게 항상 그대로
+        # 트리거되고(전자는 두 번째 괄호가 항상 참이 되므로), auto_close
+        # 경로만 severity=="none"일 때 걸러진다.
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outcome == 'success' && steps.verify.outputs.review_verdict != 'review_incomplete' && (steps.verify.outputs.review_verdict != 'auto_close' || steps.verify.outputs.highest_severity != 'none')
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -923,11 +940,14 @@ jobs:
           echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Supabase issues 테이블 기록
-        # GitHub Issue 자동 등록 스텝과 동일한 트리거 조건(steps.verify의
-        # 최종 review_verdict 기준)으로 통일 - docs/issue-88-redesign.md
-        # 2.2절, Issue #101 2번(parse 기준이면 is_review_skipped 경로에서
-        # 누락됨).
-        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outcome == 'success' && steps.verify.outputs.review_verdict != 'review_incomplete'
+        # GitHub Issue 자동 등록 스텝과 완전히 동일한 트리거 조건(steps.verify의
+        # 최종 review_verdict/highest_severity 기준)으로 통일 -
+        # docs/issue-88-redesign.md 2.2절, Issue #101 2번(parse 기준이면
+        # is_review_skipped 경로에서 누락됨), Issue #102(클린 auto_close는
+        # 애초에 이슈 자체가 안 만들어지므로 여기서도 동일하게 스킵해야
+        # steps.github_issue.outputs.issue_number가 비어 있는데 이 스텝만
+        # 실행되는 불일치가 없다).
+        if: always() && steps.pr.outputs.is_fork == 'false' && steps.pr.outputs.is_placeholder == 'false' && steps.verify.outcome == 'success' && steps.verify.outputs.review_verdict != 'review_incomplete' && (steps.verify.outputs.review_verdict != 'auto_close' || steps.verify.outputs.highest_severity != 'none')
         continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
