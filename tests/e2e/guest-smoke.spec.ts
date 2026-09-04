@@ -1,18 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("게스트가 대시보드에서 일정 관리 페이지로 이동할 수 있다", async ({ page }) => {
-  let successfulDataReads = 0;
   let mockedGroqRequests = 0;
-
-  page.on("response", (response) => {
-    if (
-      response.request().method() === "GET" &&
-      response.url().includes("/rest/v1/") &&
-      response.ok()
-    ) {
-      successfulDataReads += 1;
-    }
-  });
 
   await page.route("**/api/groq", async (route) => {
     mockedGroqRequests += 1;
@@ -60,6 +49,11 @@ test("게스트가 대시보드에서 일정 관리 페이지로 이동할 수 �
     response.request().method() === "POST" &&
     new URL(response.url()).pathname === "/auth/v1/token"
   );
+  const dataReadResponsePromise = page.waitForResponse((response) =>
+    response.request().method() === "GET" &&
+    response.url().includes("/rest/v1/") &&
+    response.ok()
+  );
 
   await page.getByRole("button", { name: "게스트로 체험하기" }).click();
   const [authRequest, authResponse] = await Promise.all([
@@ -69,8 +63,8 @@ test("게스트가 대시보드에서 일정 관리 페이지로 이동할 수 �
   const authPayload = authRequest.postDataJSON() as { email?: string };
   expect(authPayload.email).toBe("guest@worky-demo.com");
   expect(authResponse.ok()).toBeTruthy();
-  await expect.poll(() => successfulDataReads).toBeGreaterThan(0);
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  await dataReadResponsePromise;
   expect(mockedGroqRequests).toBeGreaterThan(0);
 
   // 게스트 계정의 language 설정이 en/ko 중 무엇으로 렌더링되든 안정적으로
