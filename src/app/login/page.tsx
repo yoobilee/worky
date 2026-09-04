@@ -51,7 +51,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* 로고 */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/favicon.svg" alt="Worky" width={48} height={48} className="mb-3" />
+          <img src="/favicon-96.png" alt="Worky" width={48} height={48} className="mb-3" />
           <h1
             className="text-2xl font-bold tracking-tight"
             style={{ color: "var(--primary)" }}
