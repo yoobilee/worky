@@ -233,7 +233,7 @@ test("테스트 계정이 고유 일정을 생성·수정·삭제한다", async 
     await openEventActions(page, updatedTitle);
     await page.getByRole("button", { name: new RegExp(`^(삭제|Delete): ${updatedTitle}$`) }).click();
     const deleteResponsePromise = page.waitForResponse((response) => isCalendarResponse(response, "DELETE"));
-    await page.getByRole("button", { name: "삭제", exact: true }).click();
+    await page.getByRole("button", { name: /^(삭제|Delete)$/ }).click();
     const deletedRow = await responseRow(await deleteResponsePromise, "Calendar event deletion");
     expect(deletedRow.id).toBe(eventId);
     expect(deletedRow.user_id).toBe(ownerId);
@@ -341,7 +341,7 @@ test("수정 실패와 삭제 0건 응답을 성공처럼 반영하지 않는다
   await expect(visibleText(page, originalTitle)).toBeVisible();
   await openEventActions(page, originalTitle);
   await page.getByRole("button", { name: new RegExp(`^(삭제|Delete): ${originalTitle}$`) }).click();
-  await page.getByRole("button", { name: "삭제", exact: true }).click();
+  await page.getByRole("button", { name: /^(삭제|Delete)$/ }).click();
   await expect(page.getByText(/^(일정 삭제에 실패했습니다\.|Failed to delete the event\.)$/)).toBeVisible();
   await expect(visibleText(page, originalTitle)).toBeVisible();
 });
