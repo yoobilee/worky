@@ -130,8 +130,17 @@ function isCalendarResponse(response: Response, method: string) {
     new URL(response.url()).pathname.endsWith("/rest/v1/calendar_events");
 }
 
-async function responseRow(response: Response): Promise<CalendarRow> {
-  expect(response.ok()).toBeTruthy();
+function expectSuccessfulResponse(response: Response, stage: string) {
+  const method = response.request().method();
+  const path = new URL(response.url()).pathname;
+  expect(
+    response.ok(),
+    `${stage} failed: ${method} ${path} returned HTTP ${response.status()}`,
+  ).toBeTruthy();
+}
+
+async function responseRow(response: Response, stage: string): Promise<CalendarRow> {
+  expectSuccessfulResponse(response, stage);
   const body = await response.json() as CalendarRow | CalendarRow[];
   const row = Array.isArray(body) ? body[0] : body;
   expect(row).toBeTruthy();
@@ -175,7 +184,7 @@ test("테스트 계정이 고유 일정을 생성·수정·삭제한다", async 
 
     const initialRead = page.waitForResponse((response) => isCalendarResponse(response, "GET"));
     await page.goto("/calendar");
-    expect((await initialRead).ok()).toBeTruthy();
+    expectSuccessfulResponse(await initialRead, "Initial calendar read");
 
     await selectCalendarDate(page, createdDate);
     await page.getByRole("button", { name: /^(일정 추가|Add Event)$/ }).click();
@@ -185,7 +194,7 @@ test("테스트 계정이 고유 일정을 생성·수정·삭제한다", async 
       .fill(createdTitle);
     const createResponsePromise = page.waitForResponse((response) => isCalendarResponse(response, "POST"));
     await page.getByRole("button", { name: /^(추가|Add)$/ }).click();
-    const createdRow = await responseRow(await createResponsePromise);
+    const createdRow = await responseRow(await createResponsePromise, "Calendar event creation");
     eventId = createdRow.id;
     expect(createdRow.user_id).toBe(ownerId);
     expect(createdRow.title).toBe(createdTitle);
@@ -211,7 +220,7 @@ test("테스트 계정이 고유 일정을 생성·수정·삭제한다", async 
     await page.locator(`button[data-picker-date="${updatedDate}"]`).click();
     const updateResponsePromise = page.waitForResponse((response) => isCalendarResponse(response, "PATCH"));
     await page.getByRole("button", { name: /^(저장|Save)$/ }).click();
-    const updatedRow = await responseRow(await updateResponsePromise);
+    const updatedRow = await responseRow(await updateResponsePromise, "Calendar event update");
     expect(updatedRow.id).toBe(eventId);
     expect(updatedRow.user_id).toBe(ownerId);
     expect(updatedRow.title).toBe(updatedTitle);
@@ -225,7 +234,7 @@ test("테스트 계정이 고유 일정을 생성·수정·삭제한다", async 
     await page.getByRole("button", { name: new RegExp(`^(삭제|Delete): ${updatedTitle}$`) }).click();
     const deleteResponsePromise = page.waitForResponse((response) => isCalendarResponse(response, "DELETE"));
     await page.getByRole("button", { name: "삭제", exact: true }).click();
-    const deletedRow = await responseRow(await deleteResponsePromise);
+    const deletedRow = await responseRow(await deleteResponsePromise, "Calendar event deletion");
     expect(deletedRow.id).toBe(eventId);
     expect(deletedRow.user_id).toBe(ownerId);
 
