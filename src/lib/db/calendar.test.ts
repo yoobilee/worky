@@ -8,7 +8,7 @@ vi.mock("@/lib/supabase/client", () => ({
   createClient: createClientMock,
 }));
 
-import { deleteEvent, updateEvent } from "./calendar";
+import { deleteEvent, getEvents, updateEvent } from "./calendar";
 
 function mockMutationResult(result: { data: unknown; error: unknown }) {
   const query = {
@@ -22,6 +22,22 @@ function mockMutationResult(result: { data: unknown; error: unknown }) {
   query.delete.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   query.select.mockReturnValue(query);
+  createClientMock.mockReturnValue({
+    from: vi.fn().mockReturnValue(query),
+  });
+  return query;
+}
+
+function mockReadResult(result: { data: unknown; error: unknown }) {
+  const query = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn().mockResolvedValue(result),
+  };
+  query.select.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
+  query.order.mockReturnValue(query);
   createClientMock.mockReturnValue({
     from: vi.fn().mockReturnValue(query),
   });
@@ -65,5 +81,22 @@ describe("calendar event mutations", () => {
     );
     expect(query.eq).toHaveBeenNthCalledWith(1, "id", "event-1");
     expect(query.eq).toHaveBeenNthCalledWith(2, "user_id", "user-1");
+  });
+});
+
+describe("calendar event reads", () => {
+  beforeEach(() => {
+    createClientMock.mockReset();
+  });
+
+  it("does not include the owner ID in returned calendar data", async () => {
+    const query = mockReadResult({ data: [], error: null });
+
+    await getEvents("user-1");
+
+    expect(query.select).toHaveBeenCalledWith(
+      "id, date, title, time, location, location_url, description, recurrence_group_id",
+    );
+    expect(query.eq).toHaveBeenCalledWith("user_id", "user-1");
   });
 });

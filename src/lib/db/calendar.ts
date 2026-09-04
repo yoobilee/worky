@@ -6,10 +6,13 @@ type DbEventInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
 type DbEventUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
 
 export type DbEvent = Pick<DbEventRow,
-  "id" | "user_id" | "date" | "title" | "time" | "location" | "location_url" | "description"
+  "id" | "date" | "title" | "time" | "location" | "location_url" | "description"
 > & { recurrence_group_id?: string | null };
 
-const SELECT_COLS = "id, user_id, date, title, time, location, location_url, description, recurrence_group_id";
+type DbMutationEvent = DbEvent & Pick<DbEventRow, "user_id">;
+
+const READ_COLS = "id, date, title, time, location, location_url, description, recurrence_group_id";
+const MUTATION_COLS = `${READ_COLS}, user_id`;
 
 function requireMutationRow<T>(
   data: T | null,
@@ -27,7 +30,7 @@ export async function getEvents(userId: string): Promise<DbEvent[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("calendar_events")
-    .select(SELECT_COLS)
+    .select(READ_COLS)
     .eq("user_id", userId)
     .order("date")
     .limit(500);
@@ -40,7 +43,7 @@ export async function getEventsInRange(
   const supabase = createClient();
   const { data } = await supabase
     .from("calendar_events")
-    .select(SELECT_COLS)
+    .select(READ_COLS)
     .eq("user_id", userId)
     .gte("date", startDate)
     .lte("date", endDate)
@@ -56,9 +59,9 @@ export async function addEvent(
   const { data, error } = await supabase
     .from("calendar_events")
     .insert({ user_id: userId, ...event })
-    .select(SELECT_COLS)
+    .select(MUTATION_COLS)
     .single();
-  return requireMutationRow(data as DbEvent | null, error, "create");
+  return requireMutationRow(data as DbMutationEvent | null, error, "create");
 }
 
 export async function addEvents(
@@ -69,9 +72,9 @@ export async function addEvents(
   const { data, error } = await supabase
     .from("calendar_events")
     .insert(events.map(e => ({ user_id: userId, ...e })))
-    .select(SELECT_COLS);
+    .select(MUTATION_COLS);
   if (error) throw error;
-  const rows = (data ?? []) as DbEvent[];
+  const rows = (data ?? []) as DbMutationEvent[];
   if (events.length > 0 && rows.length !== events.length) {
     throw new Error("Calendar event create affected an unexpected number of rows.");
   }
@@ -85,12 +88,12 @@ export async function updateEvent(userId: string, id: string, patch: DbEventUpda
     .update(patch)
     .eq("id", id)
     .eq("user_id", userId)
-    .select(SELECT_COLS)
+    .select(MUTATION_COLS)
     .maybeSingle();
-  return requireMutationRow(data as DbEvent | null, error, "update");
+  return requireMutationRow(data as DbMutationEvent | null, error, "update");
 }
 
-export async function deleteEvent(userId: string, id: string): Promise<Pick<DbEvent, "id" | "user_id">> {
+export async function deleteEvent(userId: string, id: string): Promise<Pick<DbEventRow, "id" | "user_id">> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("calendar_events")
@@ -100,7 +103,7 @@ export async function deleteEvent(userId: string, id: string): Promise<Pick<DbEv
     .select("id, user_id")
     .maybeSingle();
   return requireMutationRow(
-    data as Pick<DbEvent, "id" | "user_id"> | null,
+    data as Pick<DbEventRow, "id" | "user_id"> | null,
     error,
     "delete",
   );
