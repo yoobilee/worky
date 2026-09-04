@@ -2,10 +2,9 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import remarkParse from "remark-parse";
-import { unified } from "unified";
 import type { Components } from "react-markdown";
-import type { Root, RootContent } from "mdast";
+
+import { normalizeBulletMarkers } from "@/lib/markdown";
 
 /*
  * QnA/DocSummary/TemplateGen이 각자 들고 있던 수제 마크다운 파서를
@@ -105,69 +104,6 @@ const components: Components = {
     <td className="px-3 py-2 text-slate-800 dark:text-zinc-100 align-top">{children}</td>
   ),
 };
-
-// "• "로 시작하는 줄을 CommonMark/GFM이 인식하는 "- " 불릿 마커로 정규화한다.
-// DocSummary의 "요점 정리" 스타일은 시스템 프롬프트에서 각 항목이 "• "로
-// 시작하도록 명시적으로 요청하는데(DocSummary.tsx), "•"는 CommonMark/GFM
-// 리스트 마커가 아니라서 remark-gfm이 이를 리스트로 인식하지 못하고 연속된
-// 항목들이 하나의 문단으로 뭉쳐버린다 - 기존 수제 파서는 "•"를 직접
-// 처리했었지만 react-markdown으로 교체하며 사라진 동작이라 여기서 보정한다.
-//
-// "어떤 범위가 코드 블록인가"를 정규식으로 나열하는 대신(fenced ```/~~~,
-// 4-backtick, 들여쓰기 등 형태를 하나씩 추가하다 계속 놓치는 경우가
-// 나왔음 - Codex 리뷰에서 반복 지적됨) remark-parse로 실제 파싱해 얻은
-// code 노드들의 위치(offset) 범위를 구하고, 그 범위 밖에서만 치환한다 -
-// "코드 블록인지" 판단 자체를 정규식이 아니라 실제 마크다운 파서에
-// 위임하므로 어떤 코드 블록 문법이 와도 항상 정확하다.
-function findCodeRanges(text: string): Array<[number, number]> {
-  const tree = unified().use(remarkParse).parse(text) as Root;
-  const ranges: Array<[number, number]> = [];
-  const walk = (node: RootContent | Root) => {
-    if (node.type === "code") {
-      if (node.position) {
-        ranges.push([node.position.start.offset ?? 0, node.position.end.offset ?? 0]);
-      }
-      return; // code 노드는 자식이 없으므로 더 내려갈 필요 없음
-    }
-    if ("children" in node && Array.isArray(node.children)) {
-      for (const child of node.children) walk(child as RootContent);
-    }
-  };
-  walk(tree);
-  return ranges;
-}
-
-// 코드 범위 판정은 정규화 전 "원본" 텍스트 기준이다. 치환 후 "•"가 "-"로
-// 바뀌면 그 줄이 진짜 리스트 항목이 되므로, 그 뒤에 들여쓰기 코드 블록이
-// 바로 이어지는 경우 CommonMark의 리스트 연속 규칙상 별도 코드 블록이
-// 아니라 리스트 항목의 연속 문단으로 파싱될 수 있다 - 이는 CommonMark
-// 자체의 리스트/코드블록 인접 규칙이고(사람이 직접 "-"로 쓴 리스트에도
-// 동일하게 적용됨), 이 함수가 지키려는 것(코드 블록 "안의 텍스트 내용"이
-// 뒤바뀌지 않는 것)과는 별개 - 실제로 원본 코드 텍스트 자체는 그대로
-// 보존된다.
-//
-// 코드 범위와의 겹침은 "점(point) 포함"이 아니라 "구간 겹침(overlap)"으로
-// 판정한다. 리스트 항목 안에 들여쓰기 코드 블록이 중첩된 경우(예:
-// "- item\n\n      • literal"), remark가 계산하는 code 노드의 시작
-// offset이 물리적 줄 시작이 아니라 "리스트 자체의 들여쓰기만 제외한"
-// 위치를 가리켜 정규식 매치의 줄-시작 offset보다 뒤에 오는 경우가 있다
-// (Codex 지적, Issue #71 - 실측: "      • literal"에서 code 노드
-// start.offset=10인데 매치 시작 offset은 8이라 point 비교(offset >= start)가
-// 거짓이 되어 코드 "밖"으로 오판됨). 매치가 차지하는 구간
-// [matchStart, matchEnd)와 코드 구간 [start, end)이 조금이라도 겹치면
-// 코드로 취급하도록 바꾸면, 컨테이너(리스트 등)에 따라 remark가 code
-// 노드의 시작 offset을 정확히 어디로 잡는지와 무관하게 항상 안전하다 -
-// 정규식이 매치한 줄 전체가 어차피 코드 블록의 물리적 범위 안에 있으므로
-// 두 구간은 반드시 겹친다.
-function normalizeBulletMarkers(text: string): string {
-  const codeRanges = findCodeRanges(text);
-  return text.replace(/^([ \t]*)[•‣▪] /gm, (match, indent: string, offset: number) => {
-    const matchStart = offset;
-    const matchEnd = offset + match.length;
-    const overlapsCode = codeRanges.some(([start, end]) => matchStart < end && matchEnd > start);
-    return overlapsCode ? match : `${indent}- `;
-  });
-}
 
 interface MarkdownRendererProps {
   content: string;
