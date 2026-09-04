@@ -69,10 +69,14 @@ test("게스트가 대시보드에서 일정 관리 페이지로 이동할 수 �
 
   // 게스트 계정의 language 설정이 en/ko 중 무엇으로 렌더링되든 안정적으로
   // 동작하도록 하드코딩 텍스트 대신 href 기반 selector 사용
-  const calendarDataResponsePromise = page.waitForResponse((response) =>
-    response.request().method() === "GET" &&
-    response.url().includes("/rest/v1/calendar_events")
-  );
+  const calendarDataResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    const dateFilters = url.searchParams.getAll("date");
+    return response.request().method() === "GET" &&
+      url.pathname.endsWith("/rest/v1/calendar_events") &&
+      dateFilters.some((value) => value.startsWith("gte.")) &&
+      dateFilters.some((value) => value.startsWith("lte."));
+  });
   await page
     .getByRole("navigation")
     .locator('a[href="/calendar"]')
