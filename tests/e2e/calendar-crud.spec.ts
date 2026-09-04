@@ -1,6 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { expect, test, type BrowserContext, type Page, type Response } from "@playwright/test";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import WebSocket from "ws";
 
 import type { Database } from "../../src/types/supabase";
 
@@ -42,6 +43,7 @@ async function authenticateTestUser(
   const environment = requiredEnvironment();
   const supabase = createBrowserClient<Database>(environment.url, environment.anonKey, {
     isSingleton: false,
+    realtime: { transport: WebSocket },
     cookies: {
       getAll: async () => (await context.cookies(APP_URL)).map(({ name, value }) => ({ name, value })),
       setAll: async (cookiesToSet) => {
