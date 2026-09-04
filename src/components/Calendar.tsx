@@ -438,6 +438,7 @@ export default function CalendarComponent() {
   const [hydrated,        setHydrated]        = useState(false);
   const [userId,          setUserId]          = useState<string | null>(null);
   const [editingId,       setEditingId]       = useState<string | null>(null);
+  const [editDate,        setEditDate]        = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [displayed,       setDisplayed]       = useState<string | null>(null);
   const [editTitle,       setEditTitle]       = useState("");
@@ -527,32 +528,41 @@ export default function CalendarComponent() {
       location_url: formLocation.trim() ? formLocationUrl : undefined,
     };
 
-    if (formRepeat === "none") {
-      const row = await addEvent(userId, { date: displayed, ...base });
-      if (row) setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time ?? undefined, location: row.location ?? undefined, location_url: row.location_url ?? undefined }]);
-      resetForm();
-      return;
-    }
+    try {
+      if (formRepeat === "none") {
+        const row = await addEvent(userId, { date: displayed, ...base });
+        setEvents((prev) => [...prev, { id: row.id, date: row.date, title: row.title, time: row.time ?? undefined, location: row.location ?? undefined, location_url: row.location_url ?? undefined }]);
+        resetForm();
+        return;
+      }
 
-    const dates   = buildRepeatDates(displayed, formRepeatEnd || null, formRepeat, MAX_REPEAT_COUNT);
-    const groupId = crypto.randomUUID();
-    const rows    = await addEvents(userId, dates.map(date => ({ ...base, date, recurrence_group_id: groupId })));
-    setEvents(prev => [...prev, ...rows.map(r => ({ id: r.id, date: r.date, title: r.title, time: r.time ?? undefined, location: r.location ?? undefined, location_url: r.location_url ?? undefined }))]);
-    toast.success(tFormat(t("toast_events_created"), { n: rows.length }));
-    resetForm();
+      const dates   = buildRepeatDates(displayed, formRepeatEnd || null, formRepeat, MAX_REPEAT_COUNT);
+      const groupId = crypto.randomUUID();
+      const rows    = await addEvents(userId, dates.map(date => ({ ...base, date, recurrence_group_id: groupId })));
+      setEvents(prev => [...prev, ...rows.map(r => ({ id: r.id, date: r.date, title: r.title, time: r.time ?? undefined, location: r.location ?? undefined, location_url: r.location_url ?? undefined }))]);
+      toast.success(tFormat(t("toast_events_created"), { n: rows.length }));
+      resetForm();
+    } catch {
+      toast.error(t("toast_event_create_fail"));
+    }
   };
 
   const handleDelete = (id: string) => setConfirmDeleteId(id);
   const doDelete = async () => {
-    if (!confirmDeleteId) return;
-    await deleteEvent(confirmDeleteId);
-    setEvents((prev) => prev.filter(e => e.id !== confirmDeleteId));
-    if (editingId === confirmDeleteId) setEditingId(null);
-    setConfirmDeleteId(null);
+    if (!confirmDeleteId || !userId) return;
+    try {
+      await deleteEvent(userId, confirmDeleteId);
+      setEvents((prev) => prev.filter(e => e.id !== confirmDeleteId));
+      if (editingId === confirmDeleteId) setEditingId(null);
+      setConfirmDeleteId(null);
+    } catch {
+      toast.error(t("toast_event_delete_fail"));
+    }
   };
 
   const startEdit = (ev: CalendarEvent) => {
     setEditingId(ev.id);
+    setEditDate(ev.date);
     setEditTitle(ev.title);
     setEditTime(ev.time || "");
     setEditLocation(ev.location || "");
@@ -560,16 +570,28 @@ export default function CalendarComponent() {
   };
 
   const saveEdit = async (id: string) => {
-    if (!editTitle.trim()) return;
+    if (!editTitle.trim() || !editDate || !userId) return;
     const patch = {
+      date: editDate,
       title: editTitle.trim(),
       time: editTime.trim() || undefined,
       location: editLocation.trim() || undefined,
       location_url: editLocation.trim() ? editLocationUrl : undefined,
     };
-    await updateEvent(id, patch);
-    setEvents((prev) => prev.map(e => e.id !== id ? e : { ...e, ...patch }));
-    setEditingId(null);
+    try {
+      const row = await updateEvent(userId, id, patch);
+      setEvents((prev) => prev.map(e => e.id !== id ? e : {
+        ...e,
+        date: row.date,
+        title: row.title,
+        time: row.time ?? undefined,
+        location: row.location ?? undefined,
+        location_url: row.location_url ?? undefined,
+      }));
+      setEditingId(null);
+    } catch {
+      toast.error(t("toast_event_update_fail"));
+    }
   };
 
   if (!hydrated) {
@@ -616,8 +638,14 @@ export default function CalendarComponent() {
                     <input
                       value={editTitle}
                       onChange={e => setEditTitle(e.target.value)}
+                      aria-label={t("event_title_ph")}
                       autoFocus
                       className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
+                    />
+                    <DatePickerInput
+                      value={editDate}
+                      onChange={setEditDate}
+                      ariaLabel={t("date_select")}
                     />
                     <div className="flex flex-col gap-2">
                       <TimePickerInput value={editTime} onChange={setEditTime} />
@@ -668,12 +696,12 @@ export default function CalendarComponent() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
-                      <button onClick={() => startEdit(ev)}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition shrink-0">
+                      <button onClick={() => startEdit(ev)} aria-label={`${t("modify")}: ${ev.title}`}
                         className="p-1 rounded-lg hover:bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF] transition">
                         <IconPencil className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDelete(ev.id)}
+                      <button onClick={() => handleDelete(ev.id)} aria-label={`${t("delete")}: ${ev.title}`}
                         className="p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-400 transition">
                         <IconTrash className="w-3.5 h-3.5" />
                       </button>
@@ -802,7 +830,7 @@ export default function CalendarComponent() {
               const isSun   = dow === 0;
               const isSat   = dow === 6;
               return (
-                <button key={idx} onClick={() => setSelected(prev => prev === key ? null : key)}
+                <button key={idx} data-calendar-date={key} aria-label={key} onClick={() => setSelected(prev => prev === key ? null : key)}
                   className={[
                     "flex flex-col items-center justify-start pt-1.5 pb-1 px-0.5 rounded-xl transition-all min-h-[88px]",
                     isSel
