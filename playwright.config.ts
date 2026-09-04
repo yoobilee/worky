@@ -1,11 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const isCI = Boolean(process.env.CI);
+
 export default defineConfig({
   testDir: "./tests/e2e",
-  reporter: "html",
+  timeout: 60_000,
+  workers: isCI ? 1 : undefined,
+  reporter: isCI ? "line" : "html",
   use: {
     baseURL: "http://127.0.0.1:3000",
-    trace: "on-first-retry",
+    trace: isCI ? "off" : "on-first-retry",
   },
   projects: [
     {
@@ -16,7 +20,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --hostname 127.0.0.1 --port 3000",
     url: "http://127.0.0.1:3000/login",
-    reuseExistingServer: true,
+    reuseExistingServer: !isCI,
     timeout: 120_000,
   },
 });
