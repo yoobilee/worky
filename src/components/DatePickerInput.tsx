@@ -12,7 +12,7 @@ function toDateKey(d: Date): string {
 const THIS_YEAR   = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: THIS_YEAR + 5 - (THIS_YEAR - 100) + 1 }, (_, i) => THIS_YEAR + 5 - i);
 
-export default function DatePickerInput({ value, onChange, placeholder, forceDown }: { value: string; onChange: (v: string) => void; placeholder?: string; forceDown?: boolean }) {
+export default function DatePickerInput({ value, onChange, placeholder, forceDown, ariaLabel }: { value: string; onChange: (v: string) => void; placeholder?: string; forceDown?: boolean; ariaLabel?: string }) {
   const { locale, t } = useLocale();
 
   const PICKER_DAYS = locale === "en"
@@ -185,7 +185,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
               const isToday = key === todayStr;
               const dow     = (firstDow + day - 1) % 7;
               return (
-                <button key={idx} type="button" onClick={() => { onChange(key); setOpen(false); }}
+                <button key={idx} type="button" data-picker-date={key} aria-label={key} onClick={() => { onChange(key); setOpen(false); }}
                   className={[
                     "h-7 w-full rounded-lg text-xs font-medium transition-all",
                     isSel?"text-white shadow-sm":isToday?"bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]":"hover:bg-slate-100 dark:hover:bg-zinc-800",
@@ -203,7 +203,7 @@ export default function DatePickerInput({ value, onChange, placeholder, forceDow
 
   return (
     <div className="relative">
-      <button ref={triggerRef} type="button" onClick={handleOpen}
+      <button ref={triggerRef} type="button" onClick={handleOpen} aria-label={ariaLabel}
         className={[
           "w-full px-3 py-2 rounded-xl border text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40",
           "border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800",

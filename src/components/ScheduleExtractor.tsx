@@ -111,17 +111,17 @@ export default function ScheduleExtractor() {
       return;
     }
     const date = parseKoreanDate(s.date) ?? new Date().toISOString().slice(0, 10);
-    const row = await addEvent(userId, {
-      date,
-      title: s.content,
-      time:  s.time     || undefined,
-      location: s.location || undefined,
-    });
-    if (row) {
+    try {
+      await addEvent(userId, {
+        date,
+        title: s.content,
+        time:  s.time     || undefined,
+        location: s.location || undefined,
+      });
       setSavedIndex(index);
       setTimeout(() => setSavedIndex(null), 2000);
       showToast(true, t("se_toast_saved"));
-    } else {
+    } catch {
       showToast(false, t("se_toast_save_fail"));
     }
   };
@@ -168,13 +168,13 @@ export default function ScheduleExtractor() {
       showToast(false, t("se_toast_login"));
       return;
     }
-    const results = await Promise.all(
+    const results = await Promise.allSettled(
       schedules.map((s) => {
         const date = parseKoreanDate(s.date) ?? new Date().toISOString().slice(0, 10);
         return addEvent(userId, { date, title: s.content, time: s.time || undefined, location: s.location || undefined });
       })
     );
-    if (results.every((r) => r)) {
+    if (results.every((result) => result.status === "fulfilled")) {
       setSavedAll(true);
       setTimeout(() => setSavedAll(false), 2000);
       showToast(true, t("se_toast_all_saved"));
