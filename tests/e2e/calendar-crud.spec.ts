@@ -285,6 +285,76 @@ test("테스트 계정이 고유 일정을 생성·수정·삭제한다", async 
   if (cleanupError) throw new Error("Calendar CRUD cleanup failed.", { cause: cleanupError });
 });
 
+test("삭제 확인을 연속 실행해도 요청 중에는 한 번만 삭제한다", async ({ context, page }) => {
+  const { user } = await authenticateTestUser(context);
+  await installExternalRequestMocks(page);
+  await installWriteGuard(page);
+
+  const runId = crypto.randomUUID();
+  const title = `E2E duplicate delete ${runId}`;
+  const now = new Date();
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-13`;
+  const syntheticRow: CalendarRow = {
+    id: crypto.randomUUID(),
+    user_id: user.id,
+    title,
+    date,
+    time: null,
+    location: null,
+    location_url: null,
+    description: null,
+    recurrence_group_id: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  let deleteRequests = 0;
+  let finishDelete!: () => void;
+  const deleteCanFinish = new Promise<void>((resolve) => {
+    finishDelete = resolve;
+  });
+
+  await page.route("**/rest/v1/calendar_events?**", async (route) => {
+    const method = route.request().method();
+    if (method === "GET") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([syntheticRow]) });
+      return;
+    }
+    if (method === "DELETE") {
+      deleteRequests += 1;
+      await deleteCanFinish;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([syntheticRow]) });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/calendar");
+  await selectCalendarDate(page, date);
+  await expect(visibleText(page, title)).toBeVisible();
+  await openEventActions(page, title);
+  await page.getByRole("button", { name: new RegExp(`^(삭제|Delete): ${title}$`) }).click();
+
+  const confirmButton = page.getByRole("button", { name: /^(삭제|Delete)$/ });
+  const deleteResponsePromise = page.waitForResponse((response) => isCalendarResponse(response, "DELETE"));
+  try {
+    await confirmButton.evaluate((button) => {
+      button.click();
+      button.click();
+    });
+    await expect.poll(() => deleteRequests).toBe(1);
+    await expect(confirmButton).toBeDisabled();
+    await expect(page.getByRole("button", { name: /^(취소|Cancel)$/ })).toBeDisabled();
+  } finally {
+    finishDelete();
+  }
+
+  await responseRow(await deleteResponsePromise, "Duplicate-safe calendar event deletion");
+  await expect(visibleText(page, title)).toHaveCount(0);
+  await expect(confirmButton).toHaveCount(0);
+  await expect(page.getByText(/^(일정 삭제에 실패했습니다\.|Failed to delete the event\.)$/)).toHaveCount(0);
+  expect(deleteRequests).toBe(1);
+});
+
 test("수정 실패와 삭제 0건 응답을 성공처럼 반영하지 않는다", async ({ context, page }) => {
   const { user } = await authenticateTestUser(context);
   await installExternalRequestMocks(page);
@@ -308,6 +378,7 @@ test("수정 실패와 삭제 0건 응답을 성공처럼 반영하지 않는다
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
+  let deleteRequests = 0;
 
   await page.route("**/rest/v1/calendar_events?**", async (route) => {
     const method = route.request().method();
@@ -320,6 +391,7 @@ test("수정 실패와 삭제 0건 응답을 성공처럼 반영하지 않는다
       return;
     }
     if (method === "DELETE") {
+      deleteRequests += 1;
       await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
       return;
     }
@@ -341,7 +413,16 @@ test("수정 실패와 삭제 0건 응답을 성공처럼 반영하지 않는다
   await expect(visibleText(page, originalTitle)).toBeVisible();
   await openEventActions(page, originalTitle);
   await page.getByRole("button", { name: new RegExp(`^(삭제|Delete): ${originalTitle}$`) }).click();
-  await page.getByRole("button", { name: /^(삭제|Delete)$/ }).click();
+  const confirmButton = page.getByRole("button", { name: /^(삭제|Delete)$/ });
+  await confirmButton.click();
   await expect(page.getByText(/^(일정 삭제에 실패했습니다\.|Failed to delete the event\.)$/)).toBeVisible();
   await expect(visibleText(page, originalTitle)).toBeVisible();
+  await expect(confirmButton).toBeEnabled();
+  expect(deleteRequests).toBe(1);
+
+  const retryResponsePromise = page.waitForResponse((response) => isCalendarResponse(response, "DELETE"));
+  await confirmButton.click();
+  await retryResponsePromise;
+  await expect(confirmButton).toBeEnabled();
+  expect(deleteRequests).toBe(2);
 });

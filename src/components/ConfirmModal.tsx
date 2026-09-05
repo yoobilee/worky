@@ -6,12 +6,13 @@ import { IconAlertTriangle, IconX } from "@tabler/icons-react";
 interface ConfirmModalProps {
   message: string;
   confirmLabel?: string;
+  pending?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 export default function ConfirmModal({
-  message, confirmLabel = "삭제", onConfirm, onCancel,
+  message, confirmLabel = "삭제", pending = false, onConfirm, onCancel,
 }: ConfirmModalProps) {
   return typeof document !== "undefined" ? createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -23,18 +24,18 @@ export default function ConfirmModal({
             </div>
             <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">삭제 확인</p>
           </div>
-          <button onClick={onCancel} aria-label="닫기" className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition">
+          <button onClick={onCancel} disabled={pending} aria-label="닫기" className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition disabled:opacity-40 disabled:cursor-not-allowed">
             <IconX className="w-4 h-4" />
           </button>
         </div>
         <p className="text-sm text-slate-600 dark:text-zinc-300 leading-relaxed mb-5">{message}</p>
         <div className="flex gap-2">
-          <button onClick={onCancel}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition">
+          <button onClick={onCancel} disabled={pending}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition disabled:opacity-40 disabled:cursor-not-allowed">
             취소
           </button>
-          <button onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition">
+          <button onClick={onConfirm} disabled={pending}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed">
             {confirmLabel}
           </button>
         </div>

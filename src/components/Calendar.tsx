@@ -440,6 +440,8 @@ export default function CalendarComponent() {
   const [editingId,       setEditingId]       = useState<string | null>(null);
   const [editDate,        setEditDate]        = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletePending,   setDeletePending]   = useState(false);
+  const deleteInFlightRef = useRef(false);
   const [displayed,       setDisplayed]       = useState<string | null>(null);
   const [editTitle,       setEditTitle]       = useState("");
   const [editTime,        setEditTime]        = useState("");
@@ -547,16 +549,25 @@ export default function CalendarComponent() {
     }
   };
 
-  const handleDelete = (id: string) => setConfirmDeleteId(id);
+  const handleDelete = (id: string) => {
+    if (deleteInFlightRef.current) return;
+    setConfirmDeleteId(id);
+  };
   const doDelete = async () => {
-    if (!confirmDeleteId || !userId) return;
+    if (deleteInFlightRef.current || !confirmDeleteId || !userId) return;
+    const deleteId = confirmDeleteId;
+    deleteInFlightRef.current = true;
+    setDeletePending(true);
     try {
-      await deleteEvent(userId, confirmDeleteId);
-      setEvents((prev) => prev.filter(e => e.id !== confirmDeleteId));
-      if (editingId === confirmDeleteId) setEditingId(null);
+      await deleteEvent(userId, deleteId);
+      setEvents((prev) => prev.filter(e => e.id !== deleteId));
+      setEditingId((currentId) => currentId === deleteId ? null : currentId);
       setConfirmDeleteId(null);
     } catch {
       toast.error(t("toast_event_delete_fail"));
+    } finally {
+      deleteInFlightRef.current = false;
+      setDeletePending(false);
     }
   };
 
@@ -784,7 +795,10 @@ export default function CalendarComponent() {
         <ConfirmModal
           message={t("confirm_delete_event")}
           onConfirm={doDelete}
-          onCancel={() => setConfirmDeleteId(null)}
+          onCancel={() => {
+            if (!deleteInFlightRef.current) setConfirmDeleteId(null);
+          }}
+          pending={deletePending}
         />
       )}
 
