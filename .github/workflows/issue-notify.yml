@@ -24,11 +24,12 @@ jobs:
           fi
 
           # Slack mrkdwn 컨트롤 시퀀스 무력화: <, >, & 는 Slack 자체 escape 규칙,
-          # @channel/@here/@everyone 및 special mention 트리거 무력화
+          # @channel/@here/@everyone 멘션 트리거는 단어 경계를 확인해
+          # support@here.com, @everyoneelse 같은 무해한 텍스트는 건드리지 않음
           sanitize() {
             printf '%s' "$1" \
               | sed -E 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' \
-              | sed -E 's/@(channel|here|everyone)/@\xe2\x80\x8b\1/g'
+              | sed -E 's/(^|[^a-zA-Z0-9._-])@(channel|here|everyone)([^a-zA-Z0-9._-]|$)/\1@\xe2\x80\x8b\2\3/g'
           }
           SAFE_TITLE=$(sanitize "$ISSUE_TITLE")
           SAFE_AUTHOR=$(sanitize "$ISSUE_AUTHOR")
