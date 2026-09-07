@@ -318,7 +318,7 @@ PR이 열리면 Build Check와 E2E Check가 실행됩니다. [OpenAI Codex](http
 | 게스트 E2E | `npm run test:e2e` | 게스트 체험 흐름을 Playwright로 검증 |
 | 일정 CRUD E2E | `npx playwright test --config=playwright.crud.config.ts` | 테스트 계정으로 일정 생성·수정·삭제와 실패 처리를 검증 |
 | DB 보안 회귀 | `npm run test:db:security` | RLS, 권한, 정책 등 Supabase 보안 규칙 검증 |
-| 로컬 보안 E2E | `npm run test:e2e:local-security` | 로컬 Supabase 환경에서 사용자 간 데이터 접근 제한 검증 |
+| 로컬 보안 E2E | `npm run test:e2e:local-security` | 로컬 Supabase 환경에서 전체 마이그레이션과 게스트·로그인 일정 흐름 검증 |
 
 PR의 Build Check는 단위 테스트와 `npm run build`를 실행합니다. E2E Check는 게스트 흐름과 로그인한 테스트 계정의 일정 CRUD 흐름을 각각 실행합니다. 일정 E2E는 사용자 access token을 REST 요청에 함께 전달해, 익명 권한이 아닌 실제 로그인 사용자 권한과 정책을 검증합니다.
 
