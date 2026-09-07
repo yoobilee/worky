@@ -11,11 +11,15 @@ No production migration or data mutation is performed by this work.
    owner policies. Preserve legacy contacts_pkey and contacts_user_id_fkey names.
    All four tables have RLS enabled without FORCE, only PK indexes, and no
    additional UNIQUE/CHECK constraints. No privilege hardening belongs here.
-2. `20260906005000_restore_user_settings_columns.sql`: reproduce six missing
+2. `20260906005000_restore_user_settings_columns.sql`: reproduce five missing
    settings columns discovered during local browser validation. Preserve their
    nullable types/defaults; local ordinal positions differ because ALTER appends
    columns after the already-recorded GitHub columns. No table rebuild is done.
-3. `20260906010000_public_api_least_privileges.sql`: explicitly reduce client
+3. `20260906007500_restore_remaining_public_schema.sql`: reproduce the remaining
+   hosted application schema used by announcements, Q&A updates, clients,
+   language selection, and speed-dial customization. Preserve announcement read
+   rows while restoring its hosted primary/unique key shape and owner policies.
+4. `20260906010000_public_api_least_privileges.sql`: explicitly reduce client
    privileges and add restrictive INSERT/UPDATE seating member-owner guards.
    Keep notification INSERT because the browser uses it. Preserve service_role.
 
@@ -133,7 +137,7 @@ Future column grants or global/inherited grants require renewed auditing.
 - Guest and Calendar CRUD browser E2E were not covered by the PostgreSQL-only
   fixture. Subsequent local Auth/API results are recorded below.
 - Clean full-history replay: passed twice through Supabase CLI, first with
-  `supabase start` and then `supabase db reset`; all 21 migrations applied.
+  `supabase start` and then `supabase db reset`; all 22 migrations applied.
 - Hosted migration-runner privileges, full production-schema parity outside
   these four tables, external Realtime consumers, and rollout behavior are not
   validated by this fixture.
@@ -150,7 +154,7 @@ port 55322. It refuses existing fixture containers/volumes or occupied ports.
 The normal Worky project configuration and historical migrations are preserved.
 The local stack uses PostgreSQL, GoTrue, PostgREST, Kong, and Realtime.
 
-The runner applies all 21 repository migrations without exclusions, then creates
+The runner applies all 22 repository migrations without exclusions, then creates
 two synthetic accounts via the local Auth admin API. Account IDs are newly
 generated; no production Auth
 rows or fixed production account ID are imported. The guest account follows the
@@ -174,15 +178,16 @@ abruptly interrupted runner may need its specific local project cleaned up.
 
 The first real local-stack run passed all three Calendar scenarios but timed out
 in guest navigation. The guest was logged in and on Home; an onboarding overlay
-blocked the calendar link. Investigation found that getSettings() requests six
-columns missing from repository migrations, so its API error returned null and
-was interpreted as a new account. Empty fixture data alone was not the cause.
+blocked the calendar link. Investigation found that five columns requested by
+getSettings() were missing from repository migrations, so its API error returned
+null and was interpreted as a new account. Empty fixture data alone was not the
+cause. `custom_field_keys` was already recorded by the earlier clients custom
+fields migration.
 
 Read-only production catalog queries confirmed these nullable columns and defaults:
 
 | Column | Type | Default |
 | --- | --- | --- |
-| custom_field_keys | jsonb | '[]'::jsonb |
 | join_date | date | none |
 | leave_standard | text | 'fiscal_year'::text |
 | used_leaves | numeric (unbounded) | 0 |

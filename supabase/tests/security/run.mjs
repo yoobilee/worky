@@ -44,8 +44,10 @@ function assertSQL(expression, label, prefix = '') {
 const actorA = randomUUID(), actorB = randomUUID();
 const memberA = randomUUID(), memberB = randomUUID();
 const deskA = randomUUID(), deskB = randomUUID();
+const preservedReader = randomUUID(), preservedAnnouncement = randomUUID();
 const asA = `SET LOCAL ROLE authenticated; SET LOCAL "request.jwt.claim.sub" = '${actorA}';`;
 const restore = read('../../migrations/20260906000000_restore_missing_public_tables.sql');
+const reconcile = read('../../migrations/20260906007500_restore_remaining_public_schema.sql');
 const harden = read('../../migrations/20260906010000_public_api_least_privileges.sql');
 const schemaQuery = read('./schema-snapshot.sql');
 const expectedSchema = JSON.parse(read('./production-schema.json'));
@@ -87,6 +89,67 @@ try {
   expectFailure(`BEGIN; ${harden} ROLLBACK;`, 'P0001', 'missing prerequisite fails closed');
   run(`BEGIN; ${restore} COMMIT;`, 'restore schema');
   run(read('../../migrations/20260906005000_restore_user_settings_columns.sql'), 'restore settings columns');
+  run(`INSERT INTO auth.users VALUES ('${preservedReader}');
+    INSERT INTO public.announcements(id,title,content) VALUES ('${preservedAnnouncement}','fixture','fixture');
+    INSERT INTO public.announcement_reads(user_id,announcement_id) VALUES ('${preservedReader}','${preservedAnnouncement}');`, 'pre-reconciliation announcement read fixture');
+  run(`BEGIN; ${reconcile} COMMIT;`, 'restore remaining public schema');
+  assertSQL(`EXISTS (
+      SELECT 1 FROM public.announcement_reads
+      WHERE user_id='${preservedReader}' AND announcement_id='${preservedAnnouncement}' AND id IS NOT NULL
+    )`, 'announcement read row preserved during primary key restoration');
+  assertSQL(`EXISTS (
+      SELECT 1 FROM pg_catalog.pg_constraint AS constraint_row
+      WHERE constraint_row.conrelid='public.announcement_reads'::regclass
+        AND constraint_row.contype='p'
+        AND constraint_row.conkey=ARRAY[(SELECT attnum::smallint FROM pg_catalog.pg_attribute WHERE attrelid='public.announcement_reads'::regclass AND attname='id')]::smallint[]
+    ) AND EXISTS (
+      SELECT 1 FROM pg_catalog.pg_constraint AS constraint_row
+      WHERE constraint_row.conrelid='public.announcement_reads'::regclass
+        AND constraint_row.contype='u'
+        AND constraint_row.conkey=ARRAY[
+          (SELECT attnum::smallint FROM pg_catalog.pg_attribute WHERE attrelid='public.announcement_reads'::regclass AND attname='user_id'),
+          (SELECT attnum::smallint FROM pg_catalog.pg_attribute WHERE attrelid='public.announcement_reads'::regclass AND attname='announcement_id')
+        ]::smallint[]
+    )`, 'announcement read primary and unique keys match production');
+  assertSQL(`(
+      SELECT count(*)=1 FROM pg_catalog.pg_policy
+      WHERE polrelid='public.announcement_reads'::regclass AND polcmd='*'
+        AND polroles=ARRAY[0]::oid[] AND polqual IS NOT NULL AND polwithcheck IS NOT NULL
+    ) AND (
+      SELECT count(*)=1 FROM pg_catalog.pg_policy
+      WHERE polrelid='public.qa_histories'::regclass AND polcmd='*'
+        AND polroles=ARRAY[0]::oid[] AND polqual IS NOT NULL AND polwithcheck IS NOT NULL
+    )`, 'owner policies include production-equivalent update paths');
+  assertSQL(`(
+      SELECT column_default='gen_random_uuid()' AND is_nullable='NO'
+      FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='announcement_reads' AND column_name='id'
+    ) AND (
+      SELECT column_default='''patch''::text'
+      FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='announcements' AND column_name='type'
+    ) AND (
+      SELECT is_nullable='YES'
+      FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='announcements' AND column_name='is_active'
+    )`, 'announcement column metadata matches production');
+  assertSQL(`(
+      SELECT count(*)=3 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='clients'
+        AND column_name IN ('group_name','kakao_chat_name','report_template')
+        AND data_type='text' AND is_nullable='YES' AND column_default IS NULL
+    ) AND (
+      SELECT count(*)=1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='user_settings' AND column_name='language'
+        AND data_type='text' AND is_nullable='NO' AND column_default='''ko''::text'
+    ) AND (
+      SELECT count(*)=1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='user_settings' AND column_name='speed_dial_custom'
+        AND data_type='jsonb' AND is_nullable='YES' AND column_default='''[]''::jsonb'
+    )`, 'client and settings columns match production');
+  run(`BEGIN; ${reconcile} COMMIT;`, 'repeat remaining public schema restoration');
+  run(`DELETE FROM auth.users WHERE id='${preservedReader}';
+    DELETE FROM public.announcements WHERE id='${preservedAnnouncement}';`, 'reconciliation fixture cleanup');
   const actual = JSON.parse(run(schemaQuery, 'schema snapshot'));
   for (const key of Object.keys(expectedSchema)) {
     // Canonicalize array order independently of database locale/collation.
@@ -148,6 +211,19 @@ try {
   assertSQL(`(SELECT count(*) FROM public.seating_desks WHERE id='${deskB}')=1 AND (SELECT x FROM public.seating_desks WHERE id='${deskB}')=0`, 'other-owner UPDATE/DELETE have no effect', `${asA} UPDATE public.seating_desks SET x=99 WHERE id='${deskB}'; DELETE FROM public.seating_desks WHERE id='${deskB}'; RESET ROLE;`);
   run(`BEGIN; ${asA} INSERT INTO public.user_notifications(user_id,title,content) VALUES ('${actorA}','fixture','fixture'); UPDATE public.user_notifications SET is_read=true WHERE user_id='${actorA}'; ROLLBACK;`, 'notification writes');
   pass('notification INSERT/UPDATE allowed');
+  run(`INSERT INTO public.announcements(id,title,content) VALUES ('${preservedAnnouncement}','fixture','fixture');
+    BEGIN; ${asA}
+    INSERT INTO public.announcement_reads(user_id,announcement_id) VALUES ('${actorA}','${preservedAnnouncement}');
+    INSERT INTO public.announcement_reads(user_id,announcement_id) VALUES ('${actorA}','${preservedAnnouncement}')
+      ON CONFLICT (user_id,announcement_id) DO UPDATE SET read_at=EXCLUDED.read_at;
+    ROLLBACK;
+    DELETE FROM public.announcements WHERE id='${preservedAnnouncement}';`, 'announcement read owner upsert');
+  pass('announcement read INSERT/UPDATE upsert allowed');
+  run(`BEGIN; ${asA}
+    INSERT INTO public.qa_histories(user_id,title,messages) VALUES ('${actorA}','fixture','[]'::jsonb);
+    UPDATE public.qa_histories SET title='updated' WHERE user_id='${actorA}';
+    ROLLBACK;`, 'Q&A history owner update');
+  pass('Q&A history UPDATE allowed');
   expectFailure(`BEGIN; ${asA} INSERT INTO public.user_notifications(user_id,title,content) VALUES ('${actorB}','fixture','fixture');`, '42501', 'cross-owner notification INSERT denied');
   run(`BEGIN; ${asA} INSERT INTO public.calendar_events(user_id,title,date) VALUES ('${actorA}','fixture','2030-01-01'); UPDATE public.calendar_events SET title='updated' WHERE user_id='${actorA}'; DELETE FROM public.calendar_events WHERE user_id='${actorA}'; ROLLBACK;`, 'calendar SQL CRUD');
   pass('calendar SQL CRUD and updated_at trigger execute');
