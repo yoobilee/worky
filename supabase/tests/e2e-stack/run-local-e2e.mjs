@@ -101,7 +101,7 @@ try {
     SUPABASE_SERVICE_ROLE_KEY: '', E2E_TEST_EMAIL: email, E2E_TEST_PASSWORD: password,
     WORKY_LOCAL_SECURITY_E2E: '1', NEXT_TELEMETRY_DISABLED: '1',
   });
-  console.log('Running guest smoke and three Calendar scenarios against local API.');
+  console.log('Running guest smoke, Calendar scenarios, and the Clients CRUD scenario against local API.');
   const result = await command(process.execPath, ['node_modules/@playwright/test/cli.js',
     'test','--config=playwright.local-security.config.ts'], { env });
   // Only forward controlled reporter lines; never raw application/Playwright logs.
@@ -110,9 +110,12 @@ try {
         /^(Browser suite:|Failure category:|Failure source:|Runner error)/.test(line)) console.log(line);
   }
   checked(result, 'local browser E2E');
-  const count = sql('SELECT count(*) FROM public.calendar_events;', 'local cleanup verification');
-  if (count !== '0') throw new Error('Calendar tests left synthetic rows behind');
-  console.log('PASS local calendar cleanup: 0 rows remain.');
+  const counts = sql(
+    "SELECT (SELECT count(*) FROM public.calendar_events) || ',' || (SELECT count(*) FROM public.clients);",
+    'local cleanup verification',
+  );
+  if (counts !== '0,0') throw new Error('CRUD tests left synthetic rows behind');
+  console.log('PASS local CRUD cleanup: 0 calendar and client rows remain.');
 } finally {
   if (started) {
     checked(await supabase(['stop','--project-id',project,'--no-backup']), 'local fixture cleanup');

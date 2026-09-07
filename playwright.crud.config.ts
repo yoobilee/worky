@@ -5,7 +5,7 @@ import baseConfig from "./playwright.config";
 export default defineConfig({
   ...baseConfig,
   testIgnore: undefined,
-  testMatch: "**/calendar-crud.spec.ts",
+  testMatch: "**/*-crud.spec.ts",
   timeout: 120_000,
   reporter: "line",
   use: {
@@ -16,7 +16,7 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "calendar-crud",
+      name: "authenticated-crud",
       use: { ...devices["Desktop Chrome"] },
     },
   ],

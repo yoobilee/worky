@@ -7,7 +7,7 @@ const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: "**/calendar-crud.spec.ts",
+  testIgnore: "**/*-crud.spec.ts",
   timeout: 60_000,
   workers: isCI ? 1 : undefined,
   reporter: isCI ? "line" : "html",
