@@ -11,6 +11,13 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 type CalendarClient = SupabaseClient<Database>;
 type CalendarRow = Database["public"]["Tables"]["calendar_events"]["Row"];
+type AuthenticatedTestUser = {
+  supabase: CalendarClient;
+  user: User;
+  accessToken: string;
+  anonKey: string;
+  supabaseUrl: string;
+};
 
 function requiredEnvironment() {
   const names = [
@@ -39,7 +46,7 @@ function requiredEnvironment() {
 
 async function authenticateTestUser(
   context: BrowserContext,
-): Promise<{ supabase: CalendarClient; user: User }> {
+): Promise<AuthenticatedTestUser> {
   const environment = requiredEnvironment();
   const supabase = createBrowserClient<Database>(environment.url, environment.anonKey, {
     isSingleton: false,
@@ -80,7 +87,9 @@ async function authenticateTestUser(
     email: environment.email,
     password: environment.password,
   });
-  if (error || !data.user) throw error ?? new Error("Supabase signInWithPassword returned no user.");
+  if (error || !data.user || !data.session?.access_token) {
+    throw error ?? new Error("Supabase signInWithPassword returned no user session.");
+  }
   if (data.user.email?.toLowerCase() !== environment.email.toLowerCase()) {
     throw new Error("Authenticated user does not match E2E_TEST_EMAIL.");
   }
@@ -88,7 +97,13 @@ async function authenticateTestUser(
     throw new Error("Authenticated user must not be the public guest account.");
   }
 
-  return { supabase, user: data.user };
+  return {
+    supabase,
+    user: data.user,
+    accessToken: data.session.access_token,
+    anonKey: environment.anonKey,
+    supabaseUrl: environment.url,
+  };
 }
 
 async function installExternalRequestMocks(page: Page) {
@@ -109,10 +124,16 @@ async function installExternalRequestMocks(page: Page) {
   }));
 }
 
-async function installWriteGuard(page: Page) {
+async function installWriteGuard(
+  page: Page,
+  { accessToken, anonKey, supabaseUrl }: AuthenticatedTestUser,
+) {
+  const supabaseOrigin = new URL(supabaseUrl).origin;
+
   await page.route("**/rest/v1/**", async (route) => {
     const request = route.request();
-    const pathname = new URL(request.url()).pathname;
+    const requestUrl = new URL(request.url());
+    const pathname = requestUrl.pathname;
     if (pathname.startsWith("/rest/v1/rpc/")) {
       await route.abort("blockedbyclient");
       return;
@@ -121,7 +142,17 @@ async function installWriteGuard(page: Page) {
       await route.abort("blockedbyclient");
       return;
     }
-    await route.continue();
+    if (requestUrl.origin !== supabaseOrigin) {
+      await route.continue();
+      return;
+    }
+    await route.continue({
+      headers: {
+        ...request.headers(),
+        apikey: anonKey,
+        authorization: `Bearer ${accessToken}`,
+      },
+    });
   });
 }
 
@@ -180,7 +211,7 @@ test("테스트 계정이 고유 일정을 생성·수정·삭제한다", async 
     supabase = authenticated.supabase;
     ownerId = authenticated.user.id;
     await installExternalRequestMocks(page);
-    await installWriteGuard(page);
+    await installWriteGuard(page, authenticated);
 
     const initialRead = page.waitForResponse((response) => isCalendarResponse(response, "GET"));
     await page.goto("/calendar");
@@ -286,9 +317,10 @@ test("테스트 계정이 고유 일정을 생성·수정·삭제한다", async 
 });
 
 test("삭제 확인을 연속 실행해도 요청 중에는 한 번만 삭제한다", async ({ context, page }) => {
-  const { user } = await authenticateTestUser(context);
+  const authenticated = await authenticateTestUser(context);
+  const { user } = authenticated;
   await installExternalRequestMocks(page);
-  await installWriteGuard(page);
+  await installWriteGuard(page, authenticated);
 
   const runId = crypto.randomUUID();
   const title = `E2E duplicate delete ${runId}`;
@@ -357,9 +389,10 @@ test("삭제 확인을 연속 실행해도 요청 중에는 한 번만 삭제한
 });
 
 test("수정 실패와 삭제 0건 응답을 성공처럼 반영하지 않는다", async ({ context, page }) => {
-  const { user } = await authenticateTestUser(context);
+  const authenticated = await authenticateTestUser(context);
+  const { user } = authenticated;
   await installExternalRequestMocks(page);
-  await installWriteGuard(page);
+  await installWriteGuard(page, authenticated);
 
   const runId = crypto.randomUUID();
   const originalTitle = `E2E mocked ${runId}`;
