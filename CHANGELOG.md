@@ -6,7 +6,14 @@ All notable changes to Worky will be documented in this file.
 
 ## [v1.6.3] - 2026-09-07
 
-###  테스트 자동화 및 DB 보안 검증 개선 (Worky 자체 개발 프로세스 - 사용자에게 보이는 변화는 없음)
+### 🎨 앱 아이콘 개선
+- 브라우저 favicon과 PWA 홈 화면 아이콘을 새 디자인으로 교체하고, 투명 모서리 때문에 iOS 홈 화면에서 아이콘 프레임이 이중으로 보이던 문제 수정
+
+### 📅 일정 관리 개선
+- 일정 수정 화면에서 날짜도 함께 변경할 수 있도록 개선
+- 일정 생성·수정·삭제 요청이 실패하면 성공한 것처럼 화면 상태를 바꾸지 않고 오류 안내를 표시하도록 보완
+
+### 테스트 자동화 및 DB 보안 검증 개선 (Worky 자체 개발 프로세스)
 - PR 검증에서 단위 테스트와 프로덕션 빌드를 순서대로 실행하고, 게스트 E2E와 로그인 일정 CRUD E2E를 별도 작업으로 실행하도록 검증 흐름을 분리
 - 일정 CRUD E2E가 로그인 후 발급된 사용자 access token과 anon key를 Supabase REST 요청에 전달해 실제 로그인 사용자 권한과 RLS 정책으로 CRUD를 검증하도록 보완
 - Supabase 공개 Data API 권한 최소화와 연계해 격리된 로컬 PostgreSQL 및 Auth/API 스택에서 DB 권한, RLS 정책, 스키마 메타데이터를 회귀 검증하도록 테스트를 정비하고, `announcement_reads` upsert 충돌 대상을 복합 UNIQUE 키와 일치시킴
