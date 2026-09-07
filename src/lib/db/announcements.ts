@@ -64,7 +64,10 @@ export async function markAsRead(userId: string, announcementId: string): Promis
   const supabase = createClient();
   const { error } = await supabase
     .from("announcement_reads")
-    .upsert({ user_id: userId, announcement_id: announcementId });
+    .upsert(
+      { user_id: userId, announcement_id: announcementId },
+      { onConflict: "user_id,announcement_id" },
+    );
 
   if (error) {
     console.error("[markAsRead] upsert error:", error);
@@ -77,7 +80,7 @@ export async function markAllAsRead(userId: string, announcementIds: string[]): 
   const rows = announcementIds.map((id) => ({ user_id: userId, announcement_id: id }));
   const { error } = await supabase
     .from("announcement_reads")
-    .upsert(rows);
+    .upsert(rows, { onConflict: "user_id,announcement_id" });
 
   if (error) {
     console.error("[markAllAsRead] upsert error:", error);
