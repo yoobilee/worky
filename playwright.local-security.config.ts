@@ -9,7 +9,7 @@ if (process.env.WORKY_LOCAL_SECURITY_E2E !== '1' ||
 export default defineConfig({
   ...baseConfig,
   testIgnore: undefined,
-  testMatch: ['**/guest-smoke.spec.ts', '**/calendar-crud.spec.ts'],
+  testMatch: ['**/guest-smoke.spec.ts', '**/*-crud.spec.ts'],
   workers: 1,
   timeout: 120_000,
   reporter: './supabase/tests/e2e-stack/safe-reporter.cjs',
