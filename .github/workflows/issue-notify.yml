@@ -22,9 +22,21 @@ jobs:
           if [ "${#BODY_PREVIEW}" -gt "$MAX_LEN" ]; then
             BODY_PREVIEW="${BODY_PREVIEW:0:$MAX_LEN}... (이하 생략)"
           fi
-          jq -n --arg title "$ISSUE_TITLE" \
-                --arg author "$ISSUE_AUTHOR" \
-                --arg body "$BODY_PREVIEW" \
+
+          # Slack mrkdwn 컨트롤 시퀀스 무력화: <, >, & 는 Slack 자체 escape 규칙,
+          # @channel/@here/@everyone 및 special mention 트리거 무력화
+          sanitize() {
+            printf '%s' "$1" \
+              | sed -E 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' \
+              | sed -E 's/@(channel|here|everyone)/@\xe2\x80\x8b\1/g'
+          }
+          SAFE_TITLE=$(sanitize "$ISSUE_TITLE")
+          SAFE_AUTHOR=$(sanitize "$ISSUE_AUTHOR")
+          SAFE_BODY=$(sanitize "$BODY_PREVIEW")
+
+          jq -n --arg title "$SAFE_TITLE" \
+                --arg author "$SAFE_AUTHOR" \
+                --arg body "$SAFE_BODY" \
                 --arg url "$ISSUE_URL" \
                 --arg number "$ISSUE_NUMBER" \
             '{text: ("🆕 새 이슈 #" + $number + ": " + $title + " (작성: " + $author + ")\n\n" + $body + "\n\n🔗 " + $url)}' | \
