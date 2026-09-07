@@ -146,11 +146,17 @@ async function installWriteGuard(
       await route.continue();
       return;
     }
+    const requestHeaders = request.headers();
+    const anonAuthorization = `Bearer ${anonKey}`;
+    const authorization = requestHeaders.authorization &&
+      requestHeaders.authorization !== anonAuthorization
+      ? requestHeaders.authorization
+      : `Bearer ${accessToken}`;
     await route.continue({
       headers: {
-        ...request.headers(),
+        ...requestHeaders,
         apikey: anonKey,
-        authorization: `Bearer ${accessToken}`,
+        authorization,
       },
     });
   });
