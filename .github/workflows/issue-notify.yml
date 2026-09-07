@@ -9,13 +9,19 @@ jobs:
       - name: Slack 알림
         env:
           SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
-          REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
+          # PR 리뷰 파이프라인(claude-review-response.yml)이 이미 자체적으로
+          # Slack 알림을 보내는 자동생성 이슈는 건너뛴다 (중복 알림 방지)
+          if printf '%s' "$ISSUE_BODY" | grep -q '<!-- worky-auto-issue:'; then
+            echo "자동생성 이슈(이미 별도 알림 발송됨) - 건너뜀"
+            exit 0
+          fi
+
           # Slack 메시지 길이 제한(약 3000자)을 넘으면 잘라내는 안전장치
           MAX_LEN=1000
           BODY_PREVIEW="$ISSUE_BODY"
@@ -23,22 +29,22 @@ jobs:
             BODY_PREVIEW="${BODY_PREVIEW:0:$MAX_LEN}... (이하 생략)"
           fi
 
-          # Slack mrkdwn 컨트롤 시퀀스 무력화: <, >, & 는 Slack 자체 escape 규칙,
-          # @channel/@here/@everyone 멘션 트리거는 단어 경계를 확인해
-          # support@here.com, @everyoneelse 같은 무해한 텍스트는 건드리지 않음
-          sanitize() {
-            printf '%s' "$1" \
-              | sed -E 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' \
-              | sed -E 's/(^|[^a-zA-Z0-9._-])@(channel|here|everyone)([^a-zA-Z0-9._-]|$)/\1@\xe2\x80\x8b\2\3/g'
-          }
-          SAFE_TITLE=$(sanitize "$ISSUE_TITLE")
-          SAFE_AUTHOR=$(sanitize "$ISSUE_AUTHOR")
-          SAFE_BODY=$(sanitize "$BODY_PREVIEW")
-
-          jq -n --arg title "$SAFE_TITLE" \
-                --arg author "$SAFE_AUTHOR" \
-                --arg body "$SAFE_BODY" \
+          # plain_text 타입은 Slack이 mrkdwn 서식(멘션, 링크 등)을 아예 해석하지
+          # 않으므로 @channel, <script> 같은 컨트롤 문자가 들어와도 안전함
+          jq -n --arg title "$ISSUE_TITLE" \
+                --arg author "$ISSUE_AUTHOR" \
+                --arg body "$BODY_PREVIEW" \
                 --arg url "$ISSUE_URL" \
                 --arg number "$ISSUE_NUMBER" \
-            '{text: ("🆕 새 이슈 #" + $number + ": " + $title + " (작성: " + $author + ")\n\n" + $body + "\n\n🔗 " + $url)}' | \
+            '{
+              blocks: [
+                {
+                  type: "section",
+                  text: {
+                    type: "plain_text",
+                    text: ("새 이슈 #" + $number + ": " + $title + " (작성: " + $author + ")\n\n" + $body + "\n\n" + $url)
+                  }
+                }
+              ]
+            }' | \
             curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
