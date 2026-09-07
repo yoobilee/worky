@@ -4,6 +4,17 @@ All notable changes to Worky will be documented in this file.
 
 ---
 
+## [v1.6.4] - 2026-09-07
+
+### 🔒 보안 강화
+- Supabase 공개 Data API 권한 최소화, `seating_desks` 등 교차 사용자 참조 차단 (Issue #132)
+
+### 🔔 CI/CD 알림 개선 (Worky 자체 개발 프로세스 - 사용자에게 보이는 변화는 없음)
+- 신규 이슈 생성 시 Slack `#worky-issues` 알림 워크플로우 신설
+- Slack 알림 메시지에 mrkdwn 컨트롤 시퀀스 새니타이즈 추가 (인젝션 방지)
+
+---
+
 ## [v1.6.3] - 2026-09-07
 
 ### 🎨 앱 아이콘 개선
