@@ -43,7 +43,7 @@ async function authenticateTestUser(
   const environment = requiredEnvironment();
   const supabase = createBrowserClient<Database>(environment.url, environment.anonKey, {
     isSingleton: false,
-    realtime: { transport: WebSocket },
+    realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
     cookies: {
       getAll: async () => (await context.cookies(APP_URL)).map(({ name, value }) => ({ name, value })),
       setAll: async (cookiesToSet) => {
@@ -338,8 +338,9 @@ test("삭제 확인을 연속 실행해도 요청 중에는 한 번만 삭제한
   const deleteResponsePromise = page.waitForResponse((response) => isCalendarResponse(response, "DELETE"));
   try {
     await confirmButton.evaluate((button) => {
-      button.click();
-      button.click();
+      const htmlButton = button as HTMLElement;
+      htmlButton.click();
+      htmlButton.click();
     });
     await expect.poll(() => deleteRequests).toBe(1);
     await expect(confirmButton).toBeDisabled();

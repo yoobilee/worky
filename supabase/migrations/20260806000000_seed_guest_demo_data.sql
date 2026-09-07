@@ -4,14 +4,18 @@
 -- 대상 계정: guest@worky-demo.com (auth.users.id = 681b2859-d377-460b-831d-f8fde5e34b72)
 -- ============================================================
 
-DO $$
+-- This migration may run before any Auth account exists in a fresh local stack.
+-- Keep the production demo behavior when the designated account exists, and
+-- skip the complete demo-data block when it does not. Local/test accounts are
+-- provisioned through Auth only after schema migrations finish.
+DO $guest_demo_seed$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM auth.users WHERE id = '681b2859-d377-460b-831d-f8fde5e34b72'
   ) THEN
-    RAISE EXCEPTION '게스트 계정(681b2859-d377-460b-831d-f8fde5e34b72)이 auth.users에 없습니다. 먼저 Supabase Auth에서 guest@worky-demo.com 계정을 생성하세요.';
+    RAISE NOTICE 'Designated guest Auth account is absent; skipping demo data';
+    RETURN;
   END IF;
-END $$;
 
 -- ──────────────────────────────────────────────────────────
 -- 1. todos — 오늘 날짜, 완료 2개 + 미완료 2개
@@ -218,3 +222,5 @@ SELECT
 WHERE NOT EXISTS (
   SELECT 1 FROM public.qa_histories WHERE user_id = '681b2859-d377-460b-831d-f8fde5e34b72' AND title = '보고서 작성법 문의'
 );
+END;
+$guest_demo_seed$;

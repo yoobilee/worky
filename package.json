@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "test:unit": "vitest run src",
+    "test:db:security": "node supabase/tests/security/run.mjs",
+    "test:e2e:local-security": "node supabase/tests/e2e-stack/run-local-e2e.mjs",
     "pretest:e2e": "playwright install chromium",
     "test:e2e": "playwright test"
   },
@@ -40,6 +42,7 @@
     "@types/react-dom": "^19",
     "@types/ws": "^8.18.1",
     "puppeteer": "^25.5.0",
+    "supabase": "^2.116.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.7",
