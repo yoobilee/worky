@@ -1,0 +1,31 @@
+name: Notify New Issue to Issues Channel
+on:
+  issues:
+    types: [opened]
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack 알림
+        env:
+          SLACK_ISSUES_WEBHOOK_URL: ${{ secrets.SLACK_ISSUES_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # Slack 메시지 길이 제한(약 3000자)을 넘으면 잘라내는 안전장치
+          MAX_LEN=1000
+          BODY_PREVIEW="$ISSUE_BODY"
+          if [ "${#BODY_PREVIEW}" -gt "$MAX_LEN" ]; then
+            BODY_PREVIEW="${BODY_PREVIEW:0:$MAX_LEN}... (이하 생략)"
+          fi
+          jq -n --arg title "$ISSUE_TITLE" \
+                --arg author "$ISSUE_AUTHOR" \
+                --arg body "$BODY_PREVIEW" \
+                --arg url "$ISSUE_URL" \
+                --arg number "$ISSUE_NUMBER" \
+            '{text: ("🆕 새 이슈 #" + $number + ": " + $title + " (작성: " + $author + ")\n\n" + $body + "\n\n🔗 " + $url)}' | \
+            curl -sf -X POST -H "Content-Type: application/json" -d @- "$SLACK_ISSUES_WEBHOOK_URL"
