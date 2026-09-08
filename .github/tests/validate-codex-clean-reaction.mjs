@@ -3,15 +3,29 @@ import { readFileSync } from "node:fs";
 
 const fixtureUrl = new URL("./fixtures/pr-164-clean-reaction.json", import.meta.url);
 const fixture = JSON.parse(readFileSync(fixtureUrl, "utf8"));
+const workflowUrl = new URL(
+  "../workflows/codex-clean-reaction-automerge.yml",
+  import.meta.url,
+);
+const workflow = readFileSync(workflowUrl, "utf8");
 const botLogin = "chatgpt-codex-connector[bot]";
 const requiredChecks = ["build", "guest-e2e", "calendar-crud-e2e"];
 
-function hasFreshCleanReaction(reactions, committedAt) {
-  const committed = Date.parse(committedAt);
-  return reactions.some((reaction) =>
+function hasCurrentHeadCleanReaction(reviewPages, reactionPages, headSha) {
+  const reviews = reviewPages.flat().filter((review) =>
+    review.user?.login === botLogin &&
+    review.commit_id === headSha &&
+    Number.isFinite(Date.parse(review.submitted_at))
+  );
+  if (reviews.length === 0) return false;
+
+  const latestReviewAt = Math.max(
+    ...reviews.map((review) => Date.parse(review.submitted_at)),
+  );
+  return reactionPages.flat().some((reaction) =>
     reaction.user?.login === botLogin &&
     reaction.content === "+1" &&
-    Date.parse(reaction.created_at) > committed
+    Date.parse(reaction.created_at) > latestReviewAt
   );
 }
 
@@ -27,28 +41,80 @@ function requiredChecksPassed(checkRuns, headSha) {
   });
 }
 
-assert.equal(fixture.source, "GET /repos/yoobilee/worky/issues/164/reactions");
 assert.equal(
-  hasFreshCleanReaction(fixture.reactions, fixture.head_commit.committed_at),
-  true,
-  "PR #164's observed Codex +1 must be newer than its head commit",
+  fixture.sources.reaction,
+  "GET /repos/yoobilee/worky/issues/164/reactions",
 );
 assert.equal(
-  hasFreshCleanReaction(fixture.reactions, "2026-09-08T05:08:00Z"),
+  fixture.sources.review,
+  "GET /repos/yoobilee/worky/pulls/165/reviews",
+);
+assert.equal(
+  fixture.observed_api.pr_164_reaction.user.login,
+  botLogin,
+  "PR #164 reaction must confirm the Codex bot login",
+);
+assert.equal(
+  fixture.observed_api.pr_165_review.user.login,
+  botLogin,
+  "PR #165 review must confirm the same Codex bot login",
+);
+assert.match(fixture.observed_api.pr_165_review.commit_id, /^[0-9a-f]{40}$/);
+assert.equal(
+  Number.isFinite(Date.parse(fixture.observed_api.pr_165_review.submitted_at)),
+  true,
+  "PR #165 review must include submitted_at",
+);
+
+const fresh = fixture.scenarios.fresh_current_head;
+assert.equal(
+  hasCurrentHeadCleanReaction(
+    fresh.reviews_pages,
+    fresh.reactions_pages,
+    fresh.head_sha,
+  ),
+  true,
+  "a reaction after an exact-head review must pass across paginated responses",
+);
+const reactionAtReviewTime = structuredClone(fresh.reactions_pages);
+reactionAtReviewTime[1][0].created_at = fresh.reviews_pages[1][0].submitted_at;
+assert.equal(
+  hasCurrentHeadCleanReaction(
+    fresh.reviews_pages,
+    reactionAtReviewTime,
+    fresh.head_sha,
+  ),
   false,
-  "a reaction from before a replacement head must be rejected",
+  "a clean reaction must be strictly later than the current-head review",
+);
+
+const replacement = fixture.scenarios.older_timestamp_replacement_head;
+const replacementReactionAt = replacement.reactions_pages[0][0].created_at;
+assert.equal(
+  Date.parse(replacementReactionAt) > Date.parse(replacement.head_committed_at),
+  true,
+  "the old commit-date rule would incorrectly accept this stale reaction",
 );
 assert.equal(
-  requiredChecksPassed(fixture.check_runs, fixture.head_commit.sha),
+  hasCurrentHeadCleanReaction(
+    replacement.reviews_pages,
+    replacement.reactions_pages,
+    replacement.head_sha,
+  ),
+  false,
+  "an older-timestamp replacement head without its own Codex review must be rejected",
+);
+assert.equal(
+  requiredChecksPassed(fixture.check_runs, fresh.head_sha),
   true,
-  "all required PR #164 check-run shapes must pass",
+  "all required check-run shapes must pass for the current head",
 );
 
 const pendingChecks = structuredClone(fixture.check_runs);
 pendingChecks.find((check) => check.name === "guest-e2e").status = "in_progress";
 pendingChecks.find((check) => check.name === "guest-e2e").conclusion = null;
 assert.equal(
-  requiredChecksPassed(pendingChecks, fixture.head_commit.sha),
+  requiredChecksPassed(pendingChecks, fresh.head_sha),
   false,
   "a pending required check must block merge",
 );
@@ -58,4 +124,21 @@ assert.equal(
   "checks from a different head must be rejected",
 );
 
-console.log("PASS: PR #164 reaction and check-run fixture");
+assert.match(
+  workflow,
+  /REVIEWS=\$\(gh api --paginate[\s\S]*?pulls\/\$PR_NUMBER\/reviews\?per_page=100/,
+  "the reviews API must be fully paginated",
+);
+assert.match(
+  workflow,
+  /REACTIONS=\$\(gh api --paginate[\s\S]*?issues\/\$PR_NUMBER\/reactions\?per_page=100/,
+  "the reactions API must be fully paginated",
+);
+assert.doesNotMatch(
+  workflow,
+  /HEAD_COMMITTED_AT|HEAD_COMMITTED_EPOCH|"repos\/\$REPO\/commits\/\$HEAD_SHA"/,
+  "commit creation time must not authorize a clean reaction",
+);
+assert.match(workflow, /--match-head-commit "\$HEAD_SHA"/);
+
+console.log("PASS: exact-head Codex review, later reaction, pagination, and checks");

@@ -29,6 +29,7 @@ jobs:
       REPO: ${{ github.repository }}
       EVENT_NAME: ${{ github.event_name }}
       EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+      CODEX_BOT_LOGIN: chatgpt-codex-connector[bot]
     steps:
       # pull_request_target is privileged: do not add checkout, fetch PR files,
       # execute PR scripts, or interpolate PR-controlled text into this shell.
@@ -104,30 +105,49 @@ jobs:
               exit 1
             fi
 
-            COMMIT_JSON=$(gh api \
+            # PR #165 confirmed that Codex reviews expose commit_id and
+            # submitted_at. A clean reaction is valid only after a review
+            # bound to this exact head. --paginate follows every API page;
+            # assignments preserve gh failures under set -e.
+            REVIEWS=$(gh api --paginate \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "repos/$REPO/commits/$HEAD_SHA")
-            HEAD_COMMITTED_AT=$(jq -er '.commit.committer.date' <<<"$COMMIT_JSON")
-            HEAD_COMMITTED_EPOCH=$(date --date="$HEAD_COMMITTED_AT" +%s)
+              "repos/$REPO/pulls/$PR_NUMBER/reviews?per_page=100" \
+              --jq '.[] | [.user.login, .commit_id, .submitted_at] | @tsv')
+            CURRENT_HEAD_REVIEW_AT=$(
+              printf '%s\n' "$REVIEWS" \
+                | awk -F '\t' -v bot="$CODEX_BOT_LOGIN" -v sha="$HEAD_SHA" \
+                    '$1 == bot && $2 == sha { print $3 }' \
+                | LC_ALL=C sort \
+                | tail -n 1
+            )
+            if [ -z "$CURRENT_HEAD_REVIEW_AT" ]; then
+              echo "PR #$PR_NUMBER has no Codex review for the current head; skipping."
+              continue
+            fi
+            CURRENT_HEAD_REVIEW_EPOCH=$(date --date="$CURRENT_HEAD_REVIEW_AT" +%s)
 
-            # Observed on PR #164: the issue reactions endpoint returns an
-            # array whose clean marker has user.login, content="+1", and
-            # created_at. Pagination and pipefail ensure API failures cannot
-            # become an empty-success result.
-            REACTION_AT=$(gh api --paginate \
+            # PR #164 confirmed that the issue reactions endpoint identifies
+            # the same bot by user.login and its clean marker by content="+1".
+            REACTIONS=$(gh api --paginate \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               "repos/$REPO/issues/$PR_NUMBER/reactions?per_page=100" \
-              --jq '.[] | select(.user.login == "chatgpt-codex-connector[bot]" and .content == "+1") | .created_at' \
-              | sort | tail -n 1)
+              --jq '.[] | [.user.login, .content, .created_at] | @tsv')
+            REACTION_AT=$(
+              printf '%s\n' "$REACTIONS" \
+                | awk -F '\t' -v bot="$CODEX_BOT_LOGIN" \
+                    '$1 == bot && $2 == "+1" { print $3 }' \
+                | LC_ALL=C sort \
+                | tail -n 1
+            )
             if [ -z "$REACTION_AT" ]; then
               echo "PR #$PR_NUMBER has no Codex clean reaction; skipping."
               continue
             fi
             REACTION_EPOCH=$(date --date="$REACTION_AT" +%s)
-            if [ "$REACTION_EPOCH" -le "$HEAD_COMMITTED_EPOCH" ]; then
-              echo "PR #$PR_NUMBER Codex reaction predates the current head; skipping."
+            if [ "$REACTION_EPOCH" -le "$CURRENT_HEAD_REVIEW_EPOCH" ]; then
+              echo "PR #$PR_NUMBER Codex reaction does not follow its current-head review; skipping."
               continue
             fi
 
