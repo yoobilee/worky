@@ -8,8 +8,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: e2e-check-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: e2e-check
+  cancel-in-progress: false
 
 jobs:
   guest-e2e:

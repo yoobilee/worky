@@ -316,11 +316,11 @@ PR이 열리면 Build Check와 E2E Check가 실행됩니다. [OpenAI Codex](http
 | 타입 검사 | `npx tsc --noEmit` | TypeScript 오류 없이 빌드 가능한지 확인 |
 | 프로덕션 빌드 | `npm run build` | Next.js 배포 빌드 검증 |
 | 게스트 E2E | `npm run test:e2e` | 게스트 체험 흐름을 Playwright로 검증 |
-| 로그인 CRUD E2E | `npx playwright test --config=playwright.crud.config.ts` | 테스트 계정으로 일정 및 거래처의 생성·조회·수정·삭제 흐름을 검증 |
+| 로그인 CRUD E2E | `npx playwright test --config=playwright.crud.config.ts` | 테스트 계정으로 일정·거래처 CRUD 및 할 일 등록·완료·새로고침 후 완료 상태 유지를 검증 |
 | DB 보안 회귀 | `npm run test:db:security` | RLS, 권한, 정책 등 Supabase 보안 규칙 검증 |
-| 로컬 보안 E2E | `npm run test:e2e:local-security` | 로컬 Supabase 환경에서 전체 마이그레이션과 게스트·로그인 일정·거래처 흐름 검증 |
+| 로컬 보안 E2E | `npm run test:e2e:local-security` | 로컬 Supabase 환경에서 전체 마이그레이션과 게스트·로그인 일정·거래처·할 일 흐름 검증 |
 
-PR의 Build Check는 단위 테스트와 `npm run build`를 실행합니다. E2E Check는 게스트 흐름과 로그인한 테스트 계정의 일정·거래처 CRUD 흐름을 각각 실행합니다. 로그인 CRUD E2E는 사용자 access token을 REST 요청에 함께 전달하며, 테스트가 만든 데이터는 각 시나리오 종료 시 정리합니다. 일반 Playwright 설정은 테스트 계정 비밀값이 필요한 `*-crud.spec.ts`를 제외합니다.
+PR의 Build Check는 단위 테스트와 `npm run build`를 실행합니다. E2E Check는 게스트 흐름과 로그인한 테스트 계정의 일정·거래처 CRUD 및 할 일 완료 유지 흐름을 각각 실행합니다. 로그인 CRUD E2E는 사용자 access token을 REST 요청에 함께 전달하며, 테스트가 만든 데이터는 각 시나리오 종료 시 정리합니다. 할 일 테스트는 기존 항목이 자동 이월되지 않도록 브라우저 날짜를 기존 데이터보다 이전의 격리된 날짜로 고정하고, 테스트가 만든 항목만 배열에서 제거합니다(앱과 동일하게 빈 날짜 행은 유지). 일반 Playwright 설정은 테스트 계정 비밀값이 필요한 `*-crud.spec.ts`를 제외합니다.
 
 <br/>
 
