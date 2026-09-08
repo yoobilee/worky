@@ -130,6 +130,7 @@ type MemoFixture = AuthenticatedTestUser & {
   originalMeetingMemo: string | null;
   originalPersonalMemo: string | null;
   createdText: string;
+  failedText: string;
   updatedText: string;
 };
 
@@ -181,6 +182,7 @@ const test = base.extend<{ memo: MemoFixture }>({
       originalMeetingMemo: original?.meeting_memo ?? null,
       originalPersonalMemo: original?.personal_memo ?? null,
       createdText: `E2E work memo created ${crypto.randomUUID()}`,
+      failedText: `E2E work memo failed ${crypto.randomUUID()}`,
       updatedText: `E2E work memo updated ${crypto.randomUUID()}`,
     };
     const writes: Promise<APIResponse>[] = [];
@@ -211,6 +213,7 @@ const test = base.extend<{ memo: MemoFixture }>({
           expect(payload.user_id).toBe(authenticated.user.id);
           expect([
             fixture.createdText,
+            fixture.failedText,
             fixture.updatedText,
             "",
           ]).toContain(payload.work_memo);
@@ -295,7 +298,7 @@ async function expectStoredWorkMemo(fixture: MemoFixture, expected: string) {
   expect(row?.personal_memo).toBe(fixture.originalExists ? fixture.originalPersonalMemo : "");
 }
 
-test("테스트 계정이 업무 메모를 저장·수정·초기화하고 새로고침 결과를 확인한다", async ({ page, memo }) => {
+async function openWorkMemo(page: Page, memo: MemoFixture) {
   const initialRead = page.waitForResponse((response) => isMemoResponse(response, memo, "GET"));
   await Promise.all([
     page.goto("/todo"),
@@ -307,6 +310,11 @@ test("테스트 계정이 업무 메모를 저장·수정·초기화하고 새�
   await workTab.click();
   const textarea = page.getByPlaceholder(/^(자유롭게 메모를 입력하세요\.\.\.|Write freely\.\.\.)$/);
   await expect(textarea).toHaveValue(memo.originalWorkMemo ?? "");
+  return textarea;
+}
+
+test("테스트 계정이 업무 메모를 저장·수정·초기화하고 새로고침 결과를 확인한다", async ({ page, memo }) => {
+  const textarea = await openWorkMemo(page, memo);
 
   const createResponse = page.waitForResponse(
     (response) => isMemoResponse(response, memo, "POST", memo.createdText),
@@ -356,4 +364,50 @@ test("테스트 계정이 업무 메모를 저장·수정·초기화하고 새�
   ]);
   await expect(textarea).toHaveValue("");
   await expectStoredWorkMemo(memo, "");
+});
+
+test("업무 메모 저장 실패 시 완료 표시 없이 오류를 보여주고 다음 입력을 저장한다", async ({ page, memo }) => {
+  const textarea = await openWorkMemo(page, memo);
+  await page.route("**/rest/v1/memos?**", async (route) => {
+    const request = route.request();
+    const payload = request.method() === "POST"
+      ? request.postDataJSON() as Partial<MemoRow>
+      : null;
+    if (payload?.work_memo === memo.failedText) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "forced memo save failure" }),
+      });
+      return;
+    }
+    await route.fallback();
+  });
+
+  const failedResponsePromise = page.waitForResponse(
+    (response) => isMemoResponse(response, memo, "POST", memo.failedText),
+  );
+  await textarea.fill(memo.failedText);
+  await expect(page.getByText(/^(저장 중\.\.\.|Saving\.\.\.)$/)).toBeVisible();
+  const failedResponse = await failedResponsePromise;
+  expect(failedResponse.status()).toBe(503);
+  expect(await failedResponse.finished()).toBeNull();
+  await expect(page.getByText(/^(메모 저장에 실패했습니다\.|Failed to save memo\.)$/)).toBeVisible();
+  await expect(page.getByText(/^(방금 저장됨 ✓|Saved ✓)$/)).toHaveCount(0);
+  await expect(page.getByText(/^(저장 중\.\.\.|Saving\.\.\.)$/)).toHaveCount(0);
+  await expect(textarea).toHaveValue(memo.failedText);
+
+  const storedAfterFailure = await readMemo(memo);
+  expect(storedAfterFailure?.work_memo ?? "").toBe(memo.originalWorkMemo ?? "");
+  expect(storedAfterFailure?.meeting_memo ?? "").toBe(memo.originalMeetingMemo ?? "");
+  expect(storedAfterFailure?.personal_memo ?? "").toBe(memo.originalPersonalMemo ?? "");
+
+  const retryResponse = page.waitForResponse(
+    (response) => isMemoResponse(response, memo, "POST", memo.updatedText),
+  );
+  await textarea.fill(memo.updatedText);
+  await expectSuccessfulResponse(retryResponse, "Retried work memo save");
+  await expect(page.getByText(/^(방금 저장됨 ✓|Saved ✓)$/)).toBeVisible();
+  await expect(textarea).toHaveValue(memo.updatedText);
+  await expectStoredWorkMemo(memo, memo.updatedText);
 });
