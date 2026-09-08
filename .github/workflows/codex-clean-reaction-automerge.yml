@@ -1,0 +1,252 @@
+name: Codex Clean Reaction Auto Merge
+
+on: # zizmor: ignore[dangerous-triggers] Required event; no PR checkout, actions, artifacts, cache, or PR-controlled shell input.
+  pull_request_target:
+    branches: [master]
+    types: [opened, reopened, synchronize, ready_for_review]
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: codex-clean-reaction-${{ github.event.pull_request.number || 'schedule' }}
+  cancel-in-progress: false
+
+jobs:
+  merge-clean-prs:
+    name: Evaluate Codex clean reactions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # Squash merge and delete the same-repository head branch.
+      pull-requests: write # Merge the pull request.
+      issues: read # Read reactions on the pull request issue.
+      checks: read # Read check runs for the exact head SHA.
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      EVENT_NAME: ${{ github.event_name }}
+      EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+      CODEX_BOT_LOGIN: chatgpt-codex-connector[bot]
+    steps:
+      # pull_request_target is privileged: do not add checkout, fetch PR files,
+      # execute PR scripts, or interpolate PR-controlled text into this shell.
+      - name: Merge eligible PRs with a fresh Codex clean reaction
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "pull_request_target" ]; then
+            if ! [[ "$EVENT_PR_NUMBER" =~ ^[0-9]+$ ]]; then
+              echo "Invalid pull request number from event."
+              exit 1
+            fi
+            PR_NUMBERS="$EVENT_PR_NUMBER"
+          else
+            # --paginate failures propagate through the assignment under set -e.
+            # Every candidate is fully revalidated below before any merge.
+            PR_NUMBERS=$(gh api --paginate \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "repos/$REPO/pulls?state=open&base=master&per_page=100" \
+              --jq '.[].number')
+          fi
+
+          if [ -z "$PR_NUMBERS" ]; then
+            echo "No open pull requests to evaluate."
+            exit 0
+          fi
+
+          while IFS= read -r PR_NUMBER; do
+            if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+              echo "API returned an invalid pull request number."
+              exit 1
+            fi
+
+            echo "Evaluating PR #$PR_NUMBER"
+            PR_JSON=$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "repos/$REPO/pulls/$PR_NUMBER")
+
+            jq -e '
+              type == "object" and
+              (.state | type == "string") and
+              (.draft | type == "boolean") and
+              (.head.sha | type == "string") and
+              (.head.repo.full_name | type == "string") and
+              (.base.repo.full_name | type == "string") and
+              (.base.ref | type == "string")
+            ' <<<"$PR_JSON" >/dev/null
+
+            PR_STATE=$(jq -r '.state' <<<"$PR_JSON")
+            PR_DRAFT=$(jq -r '.draft' <<<"$PR_JSON")
+            HEAD_SHA=$(jq -r '.head.sha' <<<"$PR_JSON")
+            HEAD_REPO=$(jq -r '.head.repo.full_name' <<<"$PR_JSON")
+            BASE_REPO=$(jq -r '.base.repo.full_name' <<<"$PR_JSON")
+            BASE_REF=$(jq -r '.base.ref' <<<"$PR_JSON")
+
+            if [ "$PR_STATE" != "open" ] || [ "$PR_DRAFT" != "false" ]; then
+              echo "PR #$PR_NUMBER is closed or draft; skipping."
+              continue
+            fi
+            if [ "$HEAD_REPO" != "$REPO" ] || [ "$BASE_REPO" != "$REPO" ]; then
+              echo "PR #$PR_NUMBER is a fork or targets another repository; skipping."
+              continue
+            fi
+            if [ "$BASE_REF" != "master" ]; then
+              echo "PR #$PR_NUMBER does not target master; skipping."
+              continue
+            fi
+            if ! [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "PR #$PR_NUMBER has an invalid head SHA."
+              exit 1
+            fi
+
+            # Match claude-review-response.yml's human gate for workflow
+            # changes. Slurp preserves every paginated response so the full
+            # changed-file set can be validated before any merge condition.
+            if ! FILES_PAGES=$(gh api --paginate --slurp \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "repos/$REPO/pulls/$PR_NUMBER/files?per_page=100"); then
+              echo "Failed to read changed files for PR #$PR_NUMBER; blocking auto-merge."
+              exit 1
+            fi
+            if ! jq -e '
+              if type != "array" then false
+              elif any(.[]; type != "array") then false
+              else
+                [.[][]] as $files
+                | ($files | length > 0) and
+                  ($files | all(.[];
+                    type == "object" and (.filename | type == "string")
+                  ))
+              end
+            ' <<<"$FILES_PAGES" >/dev/null; then
+              echo "Invalid changed-files response for PR #$PR_NUMBER; blocking auto-merge."
+              exit 1
+            fi
+            if ! TOUCHES_WORKFLOWS=$(jq -r '
+              any(.[][]; .filename | startswith(".github/workflows/"))
+            ' <<<"$FILES_PAGES"); then
+              echo "Failed to parse changed files for PR #$PR_NUMBER; blocking auto-merge."
+              exit 1
+            fi
+            case "$TOUCHES_WORKFLOWS" in
+              true)
+                echo "PR #$PR_NUMBER changes a GitHub Actions workflow; human review and manual merge are required."
+                continue
+                ;;
+              false) ;;
+              *)
+                echo "Unexpected changed-files result for PR #$PR_NUMBER; blocking auto-merge."
+                exit 1
+                ;;
+            esac
+
+            # PR #165 confirmed that Codex reviews expose commit_id and
+            # submitted_at. A clean reaction is valid only after a review
+            # bound to this exact head. --paginate follows every API page;
+            # assignments preserve gh failures under set -e.
+            REVIEWS=$(gh api --paginate \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "repos/$REPO/pulls/$PR_NUMBER/reviews?per_page=100" \
+              --jq '.[] | [.user.login, .commit_id, .submitted_at] | @tsv')
+            CURRENT_HEAD_REVIEW_AT=$(
+              printf '%s\n' "$REVIEWS" \
+                | awk -F '\t' -v bot="$CODEX_BOT_LOGIN" -v sha="$HEAD_SHA" \
+                    '$1 == bot && $2 == sha { print $3 }' \
+                | LC_ALL=C sort \
+                | tail -n 1
+            )
+            if [ -z "$CURRENT_HEAD_REVIEW_AT" ]; then
+              echo "PR #$PR_NUMBER has no Codex review for the current head; skipping."
+              continue
+            fi
+            CURRENT_HEAD_REVIEW_EPOCH=$(date --date="$CURRENT_HEAD_REVIEW_AT" +%s)
+
+            # PR #164 confirmed that the issue reactions endpoint identifies
+            # the same bot by user.login and its clean marker by content="+1".
+            REACTIONS=$(gh api --paginate \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "repos/$REPO/issues/$PR_NUMBER/reactions?per_page=100" \
+              --jq '.[] | [.user.login, .content, .created_at] | @tsv')
+            REACTION_AT=$(
+              printf '%s\n' "$REACTIONS" \
+                | awk -F '\t' -v bot="$CODEX_BOT_LOGIN" \
+                    '$1 == bot && $2 == "+1" { print $3 }' \
+                | LC_ALL=C sort \
+                | tail -n 1
+            )
+            if [ -z "$REACTION_AT" ]; then
+              echo "PR #$PR_NUMBER has no Codex clean reaction; skipping."
+              continue
+            fi
+            REACTION_EPOCH=$(date --date="$REACTION_AT" +%s)
+            if [ "$REACTION_EPOCH" -le "$CURRENT_HEAD_REVIEW_EPOCH" ]; then
+              echo "PR #$PR_NUMBER Codex reaction does not follow its current-head review; skipping."
+              continue
+            fi
+
+            CHECKS_JSON=$(gh api --method GET \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "repos/$REPO/commits/$HEAD_SHA/check-runs" \
+              -f filter=latest \
+              -f per_page=100)
+            jq -e '.check_runs | type == "array"' <<<"$CHECKS_JSON" >/dev/null
+
+            CHECKS_READY=true
+            for CHECK_NAME in build guest-e2e calendar-crud-e2e; do
+              if ! jq -e --arg name "$CHECK_NAME" --arg sha "$HEAD_SHA" '
+                [
+                  .check_runs[]
+                  | select(
+                      .name == $name and
+                      .head_sha == $sha and
+                      .app.slug == "github-actions"
+                    )
+                ]
+                | sort_by(.started_at // .completed_at // "")
+                | last
+                | .status == "completed" and .conclusion == "success"
+              ' <<<"$CHECKS_JSON" >/dev/null; then
+                echo "PR #$PR_NUMBER check $CHECK_NAME is missing, pending, or unsuccessful; skipping."
+                CHECKS_READY=false
+                break
+              fi
+            done
+            if [ "$CHECKS_READY" != "true" ]; then
+              continue
+            fi
+
+            # Close the time-of-check/time-of-use gap before merge. The CLI's
+            # match-head guard independently enforces the same SHA server-side.
+            FINAL_PR_JSON=$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "repos/$REPO/pulls/$PR_NUMBER")
+            jq -e --arg sha "$HEAD_SHA" --arg repo "$REPO" '
+              .state == "open" and
+              .draft == false and
+              .head.sha == $sha and
+              .head.repo.full_name == $repo and
+              .base.repo.full_name == $repo and
+              .base.ref == "master"
+            ' <<<"$FINAL_PR_JSON" >/dev/null || {
+              echo "PR #$PR_NUMBER changed before merge; skipping."
+              continue
+            }
+
+            gh pr merge "$PR_NUMBER" \
+              --repo "$REPO" \
+              --squash \
+              --delete-branch \
+              --match-head-commit "$HEAD_SHA"
+            echo "Merged PR #$PR_NUMBER at $HEAD_SHA."
+          done <<<"$PR_NUMBERS"

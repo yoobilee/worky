@@ -1,0 +1,130 @@
+{
+  "sources": {
+    "reaction": "GET /repos/yoobilee/worky/issues/164/reactions",
+    "review": "GET /repos/yoobilee/worky/pulls/165/reviews"
+  },
+  "observed_api": {
+    "pr_164_reaction": {
+      "id": 493687363,
+      "user": {
+        "login": "chatgpt-codex-connector[bot]",
+        "type": "User"
+      },
+      "content": "+1",
+      "created_at": "2026-09-08T05:07:32Z"
+    },
+    "pr_165_review": {
+      "id": 5137900321,
+      "user": {
+        "login": "chatgpt-codex-connector[bot]",
+        "type": "Bot"
+      },
+      "commit_id": "c7571b76ff8066b49976a4465f65d8df33d100c9",
+      "submitted_at": "2026-09-08T05:56:05Z",
+      "state": "COMMENTED"
+    }
+  },
+  "scenarios": {
+    "fresh_current_head": {
+      "head_sha": "c7571b76ff8066b49976a4465f65d8df33d100c9",
+      "reviews_pages": [
+        [],
+        [
+          {
+            "user": { "login": "chatgpt-codex-connector[bot]" },
+            "commit_id": "c7571b76ff8066b49976a4465f65d8df33d100c9",
+            "submitted_at": "2026-09-08T05:56:05Z"
+          }
+        ]
+      ],
+      "reactions_pages": [
+        [],
+        [
+          {
+            "user": { "login": "chatgpt-codex-connector[bot]" },
+            "content": "+1",
+            "created_at": "2026-09-08T05:57:00Z"
+          }
+        ]
+      ]
+    },
+    "older_timestamp_replacement_head": {
+      "head_sha": "1111111111111111111111111111111111111111",
+      "head_committed_at": "2026-09-08T05:00:00Z",
+      "reviews_pages": [
+        [
+          {
+            "user": { "login": "chatgpt-codex-connector[bot]" },
+            "commit_id": "c7571b76ff8066b49976a4465f65d8df33d100c9",
+            "submitted_at": "2026-09-08T05:56:05Z"
+          }
+        ]
+      ],
+      "reactions_pages": [
+        [
+          {
+            "user": { "login": "chatgpt-codex-connector[bot]" },
+            "content": "+1",
+            "created_at": "2026-09-08T05:57:00Z"
+          }
+        ]
+      ]
+    }
+  },
+  "changed_files_scenarios": {
+    "workflow_change": {
+      "api_ok": true,
+      "pages": [
+        [
+          { "filename": "src/app/page.tsx" }
+        ],
+        [
+          { "filename": ".github/workflows/build.yml" }
+        ]
+      ]
+    },
+    "regular_change": {
+      "api_ok": true,
+      "pages": [
+        [],
+        [
+          { "filename": "src/components/TodoMemo.tsx" },
+          { "filename": "README.md" }
+        ]
+      ]
+    },
+    "lookup_failure": {
+      "api_ok": false,
+      "pages": null
+    },
+    "parse_failure": {
+      "api_ok": true,
+      "pages": [
+        { "message": "unexpected response shape" }
+      ]
+    }
+  },
+  "check_runs": [
+    {
+      "name": "build",
+      "head_sha": "c7571b76ff8066b49976a4465f65d8df33d100c9",
+      "status": "completed",
+      "conclusion": "success",
+      "app": { "slug": "github-actions" }
+    },
+    {
+      "name": "guest-e2e",
+      "head_sha": "c7571b76ff8066b49976a4465f65d8df33d100c9",
+      "status": "completed",
+      "conclusion": "success",
+      "app": { "slug": "github-actions" }
+    },
+    {
+      "name": "calendar-crud-e2e",
+      "head_sha": "c7571b76ff8066b49976a4465f65d8df33d100c9",
+      "status": "completed",
+      "conclusion": "success",
+      "app": { "slug": "github-actions" }
+    }
+  ]
+}
