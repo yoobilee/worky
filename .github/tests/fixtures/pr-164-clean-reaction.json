@@ -71,6 +71,39 @@
       ]
     }
   },
+  "changed_files_scenarios": {
+    "workflow_change": {
+      "api_ok": true,
+      "pages": [
+        [
+          { "filename": "src/app/page.tsx" }
+        ],
+        [
+          { "filename": ".github/workflows/build.yml" }
+        ]
+      ]
+    },
+    "regular_change": {
+      "api_ok": true,
+      "pages": [
+        [],
+        [
+          { "filename": "src/components/TodoMemo.tsx" },
+          { "filename": "README.md" }
+        ]
+      ]
+    },
+    "lookup_failure": {
+      "api_ok": false,
+      "pages": null
+    },
+    "parse_failure": {
+      "api_ok": true,
+      "pages": [
+        { "message": "unexpected response shape" }
+      ]
+    }
+  },
   "check_runs": [
     {
       "name": "build",

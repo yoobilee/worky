@@ -41,6 +41,25 @@ function requiredChecksPassed(checkRuns, headSha) {
   });
 }
 
+function changedFilesAllowAutoMerge({ api_ok: apiOk, pages }) {
+  if (!apiOk || !Array.isArray(pages)) return false;
+  if (!pages.every((page) => Array.isArray(page))) return false;
+
+  const files = pages.flat();
+  if (
+    files.length === 0 ||
+    !files.every((file) =>
+      file !== null &&
+      typeof file === "object" &&
+      typeof file.filename === "string"
+    )
+  ) return false;
+
+  return !files.some((file) =>
+    file.filename.startsWith(".github/workflows/")
+  );
+}
+
 assert.equal(
   fixture.sources.reaction,
   "GET /repos/yoobilee/worky/issues/164/reactions",
@@ -124,6 +143,27 @@ assert.equal(
   "checks from a different head must be rejected",
 );
 
+assert.equal(
+  changedFilesAllowAutoMerge(fixture.changed_files_scenarios.workflow_change),
+  false,
+  "a workflow change on a later API page must require manual merge",
+);
+assert.equal(
+  changedFilesAllowAutoMerge(fixture.changed_files_scenarios.regular_change),
+  true,
+  "ordinary changed files must remain eligible for auto-merge",
+);
+assert.equal(
+  changedFilesAllowAutoMerge(fixture.changed_files_scenarios.lookup_failure),
+  false,
+  "a changed-files API failure must fail closed",
+);
+assert.equal(
+  changedFilesAllowAutoMerge(fixture.changed_files_scenarios.parse_failure),
+  false,
+  "an invalid changed-files response must fail closed",
+);
+
 assert.match(
   workflow,
   /REVIEWS=\$\(gh api --paginate[\s\S]*?pulls\/\$PR_NUMBER\/reviews\?per_page=100/,
@@ -134,6 +174,16 @@ assert.match(
   /REACTIONS=\$\(gh api --paginate[\s\S]*?issues\/\$PR_NUMBER\/reactions\?per_page=100/,
   "the reactions API must be fully paginated",
 );
+assert.match(
+  workflow,
+  /FILES_PAGES=\$\(gh api --paginate --slurp[\s\S]*?pulls\/\$PR_NUMBER\/files\?per_page=100/,
+  "the changed-files API must be fully paginated and slurped for validation",
+);
+assert.match(
+  workflow,
+  /startswith\("\.github\/workflows\/"\)/,
+  "workflow changes must be detected before auto-merge",
+);
 assert.doesNotMatch(
   workflow,
   /HEAD_COMMITTED_AT|HEAD_COMMITTED_EPOCH|"repos\/\$REPO\/commits\/\$HEAD_SHA"/,
@@ -141,4 +191,4 @@ assert.doesNotMatch(
 );
 assert.match(workflow, /--match-head-commit "\$HEAD_SHA"/);
 
-console.log("PASS: exact-head Codex review, later reaction, pagination, and checks");
+console.log("PASS: clean reaction gates, changed-file fail-closed gate, and checks");
