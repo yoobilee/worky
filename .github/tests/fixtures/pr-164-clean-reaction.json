@@ -1,0 +1,41 @@
+{
+  "source": "GET /repos/yoobilee/worky/issues/164/reactions",
+  "head_commit": {
+    "sha": "4bf51bafd8f02009453d4f0d16d571cc16778872",
+    "committed_at": "2026-09-08T05:04:12Z"
+  },
+  "reactions": [
+    {
+      "id": 493687363,
+      "user": {
+        "login": "chatgpt-codex-connector[bot]",
+        "type": "User"
+      },
+      "content": "+1",
+      "created_at": "2026-09-08T05:07:32Z"
+    }
+  ],
+  "check_runs": [
+    {
+      "name": "build",
+      "head_sha": "4bf51bafd8f02009453d4f0d16d571cc16778872",
+      "status": "completed",
+      "conclusion": "success",
+      "app": { "slug": "github-actions" }
+    },
+    {
+      "name": "guest-e2e",
+      "head_sha": "4bf51bafd8f02009453d4f0d16d571cc16778872",
+      "status": "completed",
+      "conclusion": "success",
+      "app": { "slug": "github-actions" }
+    },
+    {
+      "name": "calendar-crud-e2e",
+      "head_sha": "4bf51bafd8f02009453d4f0d16d571cc16778872",
+      "status": "completed",
+      "conclusion": "success",
+      "app": { "slug": "github-actions" }
+    }
+  ]
+}
