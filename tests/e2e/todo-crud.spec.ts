@@ -218,7 +218,11 @@ const test = base.extend<{ todo: TodoFixture }>({
           expect(payload.user_id).toBe(user.id);
           expect(payload.date).toBe(dateKey);
           expect(Array.isArray(payload.todos)).toBeTruthy();
-          expect((payload.todos as TodoItem[]).every((item) => item.text === fixture.text)).toBeTruthy();
+          // Tolerate foreign carryover items from other E2E runs sharing this
+          // account (TodoMemo's carryover sweeps in any past incomplete item on
+          // hydration); only require that our own item, if present, is unchanged.
+          expect((payload.todos as TodoItem[]).filter((item) => item.text === fixture.text).length)
+            .toBeLessThanOrEqual(1);
         }
         // Same refreshed-token-aware REST authentication as calendar/clients CRUD.
         const requestHeaders = request.headers();
@@ -275,7 +279,9 @@ function isTodoResponse(response: Response, fixture: TodoFixture, method: string
   const payload = request.postDataJSON() as TodoRow;
   return payload.user_id === fixture.user.id && payload.date === fixture.date &&
     (completed === undefined
-      ? (payload.todos as TodoItem[]).length === 0
+      // A foreign carryover item may already be present at initial hydration;
+      // only require that our own item hasn't been added yet.
+      ? !(payload.todos as TodoItem[]).some((item) => item.text === fixture.text)
       : (payload.todos as TodoItem[]).some((item) => item.text === fixture.text && item.completed === completed));
 }
 
