@@ -26,7 +26,6 @@ function requiredEnvironment() {
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "E2E_TEST_EMAIL",
     "E2E_TEST_PASSWORD",
-    "SUPABASE_SERVICE_ROLE_KEY",
   ] as const;
   const missing = names.filter((name) => !process.env[name]);
   if (missing.length > 0) {
@@ -43,7 +42,6 @@ function requiredEnvironment() {
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     email,
     password: process.env.E2E_TEST_PASSWORD!,
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
   };
 }
 
@@ -131,10 +129,6 @@ type TodoFixture = AuthenticatedTestUser & {
   date: string;
   rowId: string;
   text: string;
-  // Cleanup deletes the test-owned row outright, which the `authenticated` role
-  // is intentionally not granted (least-privilege migration) since the app never
-  // deletes todos rows itself. Use the service role only for this teardown step.
-  adminSupabase: TodosClient;
 };
 
 async function readRow({ supabase, user, rowId }: TodoFixture) {
@@ -147,14 +141,26 @@ async function readRow({ supabase, user, rowId }: TodoFixture) {
 async function cleanupTodo(fixture: TodoFixture) {
   const row = await readRow(fixture);
   if (!row) return;
-  // The row's id is a fresh UUID minted only for this test run (never shared with
-  // other tests), so teardown must delete it outright instead of leaving an empty
-  // row behind — otherwise rows accumulate in the shared remote E2E account and
-  // push future runs' "earliest unused date" further into the past each time.
-  const { data, error } = await fixture.adminSupabase.from("todos").delete()
-    .eq("user_id", fixture.user.id).eq("id", fixture.rowId).select("id");
-  if (error) throw error;
-  expect(data, "Todo cleanup must affect exactly the test-owned row").toHaveLength(1);
+  const remaining = (row.todos as TodoItem[]).filter((item) => item.text !== fixture.text);
+  // Like TodoMemo's item deletion, remove only our item first. Match the current
+  // JSON too, so concurrent edits cannot be overwritten.
+  const { data: updated, error: updateError } = await fixture.supabase.from("todos").update({ todos: remaining })
+    .eq("user_id", fixture.user.id).eq("id", fixture.rowId)
+    .eq("todos", JSON.stringify(row.todos)).select("id");
+  if (updateError) throw updateError;
+  expect(updated, "Todo cleanup must affect exactly the test-owned row").toHaveLength(1);
+  // authenticated has no table-level DELETE grant on todos (least-privilege
+  // migration, since the app never row-deletes todos itself). This
+  // security-definer RPC only deletes a caller-owned row once its todos array is
+  // empty, which the UPDATE above just guaranteed, so it can't be used to delete
+  // someone else's or a still-populated row. Deleting the row outright (instead
+  // of leaving an empty row behind) avoids rows piling up in the shared remote
+  // E2E account, which previously pushed each run's "earliest unused date"
+  // further into the past every time.
+  const { data: deleted, error: deleteError } = await fixture.supabase
+    .rpc("delete_empty_todo", { target_id: fixture.rowId });
+  if (deleteError) throw deleteError;
+  expect(deleted, "delete_empty_todo must delete the now-empty test-owned row").toBe(true);
   const afterCleanup = await readRow(fixture);
   expect(afterCleanup).toBeNull();
 }
@@ -178,12 +184,6 @@ const test = base.extend<{ todo: TodoFixture }>({
         accessToken: async () => authenticated.accessToken,
         realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
       }),
-      // Service role bypasses RLS/grants for the delete-based teardown below; it
-      // is never used for the in-test writes, which stay on the authenticated user.
-      adminSupabase: createClient<Database>(
-        authenticated.supabaseUrl,
-        requiredEnvironment().serviceRoleKey,
-      ),
       date: dateKey,
       rowId: crypto.randomUUID(),
       text: `E2E todo ${crypto.randomUUID()}`,

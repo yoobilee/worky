@@ -552,7 +552,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_empty_todo: {
+        Args: { target_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

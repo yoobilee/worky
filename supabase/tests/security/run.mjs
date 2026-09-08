@@ -44,11 +44,13 @@ function assertSQL(expression, label, prefix = '') {
 const actorA = randomUUID(), actorB = randomUUID();
 const memberA = randomUUID(), memberB = randomUUID();
 const deskA = randomUUID(), deskB = randomUUID();
+const todoEmptyA = randomUUID(), todoNonEmptyA = randomUUID(), todoEmptyB = randomUUID();
 const preservedReader = randomUUID(), preservedAnnouncement = randomUUID();
 const asA = `SET LOCAL ROLE authenticated; SET LOCAL "request.jwt.claim.sub" = '${actorA}';`;
 const restore = read('../../migrations/20260906000000_restore_missing_public_tables.sql');
 const reconcile = read('../../migrations/20260906007500_restore_remaining_public_schema.sql');
 const harden = read('../../migrations/20260906010000_public_api_least_privileges.sql');
+const deleteEmptyTodo = read('../../migrations/20260908000000_delete_empty_todo_function.sql');
 const schemaQuery = read('./schema-snapshot.sql');
 const expectedSchema = JSON.parse(read('./production-schema.json'));
 
@@ -227,6 +229,20 @@ try {
   expectFailure(`BEGIN; ${asA} INSERT INTO public.user_notifications(user_id,title,content) VALUES ('${actorB}','fixture','fixture');`, '42501', 'cross-owner notification INSERT denied');
   run(`BEGIN; ${asA} INSERT INTO public.calendar_events(user_id,title,date) VALUES ('${actorA}','fixture','2030-01-01'); UPDATE public.calendar_events SET title='updated' WHERE user_id='${actorA}'; DELETE FROM public.calendar_events WHERE user_id='${actorA}'; ROLLBACK;`, 'calendar SQL CRUD');
   pass('calendar SQL CRUD and updated_at trigger execute');
+  run(`BEGIN; ${deleteEmptyTodo} COMMIT;`, 'apply delete_empty_todo function');
+  run(`BEGIN; ${deleteEmptyTodo} COMMIT;`, 'repeat delete_empty_todo function');
+  pass('delete_empty_todo function applies and reruns');
+  assertSQL("has_function_privilege('authenticated','public.delete_empty_todo(uuid)','EXECUTE') AND NOT has_function_privilege('anon','public.delete_empty_todo(uuid)','EXECUTE')", 'delete_empty_todo EXECUTE limited to authenticated');
+  run(`INSERT INTO public.todos(id,user_id,date,todos) VALUES
+    ('${todoEmptyA}','${actorA}','2030-02-01','[]'::jsonb),
+    ('${todoNonEmptyA}','${actorA}','2030-02-02','[{"id":"x","text":"t","completed":false,"createdAt":1}]'::jsonb),
+    ('${todoEmptyB}','${actorB}','2030-02-03','[]'::jsonb);`, 'delete_empty_todo fixture');
+  expectFailure(`BEGIN; SET LOCAL ROLE anon; SELECT public.delete_empty_todo('${todoEmptyA}');`, '42501', 'anon cannot execute delete_empty_todo');
+  assertSQL(`(SELECT count(*) FROM public.todos WHERE id='${todoEmptyB}')=1`, 'cross-owner delete_empty_todo denied (no effect)', `${asA} SELECT public.delete_empty_todo('${todoEmptyB}');`);
+  assertSQL(`(SELECT count(*) FROM public.todos WHERE id='${todoNonEmptyA}')=1`, 'non-empty own row delete_empty_todo denied (no effect)', `${asA} SELECT public.delete_empty_todo('${todoNonEmptyA}');`);
+  assertSQL(`(SELECT public.delete_empty_todo('${todoEmptyA}'))`, 'own empty row delete_empty_todo returns true', asA);
+  assertSQL(`(SELECT count(*) FROM public.todos WHERE id='${todoEmptyA}')=0`, 'own empty row delete_empty_todo removes row', `${asA} SELECT public.delete_empty_todo('${todoEmptyA}');`);
+  expectFailure(`BEGIN; ${asA} DELETE FROM public.todos WHERE id='${todoEmptyB}';`, '42501', 'direct todos DELETE still denied for authenticated');
   expectFailure(`BEGIN; ${asA} DELETE FROM public.user_notifications;`, '42501', 'notification DELETE denied');
   expectFailure('BEGIN; SET LOCAL ROLE anon; SELECT count(*) FROM public.members;', '42501', 'anon table read denied');
   assertSQL('(SELECT count(*) FROM public.user_settings)=0', 'anon keep-alive SELECT allowed without rows', 'SET LOCAL ROLE anon;');
