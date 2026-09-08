@@ -18,7 +18,8 @@ export async function getMemos(userId: string): Promise<MemoData> {
 
 export async function upsertMemos(userId: string, patch: MemoData): Promise<void> {
   const supabase = createClient();
-  await supabase
+  const { error } = await supabase
     .from("memos")
     .upsert({ user_id: userId, ...patch }, { onConflict: "user_id" });
+  if (error) throw error;
 }

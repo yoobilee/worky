@@ -146,6 +146,7 @@ export default function TodoMemo() {
   const inputRef        = useRef<HTMLInputElement>(null);
   const debounceRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const memoSaveAttemptRef = useRef(0);
   const pickerRef       = useRef<HTMLDivElement>(null);
   const selectedDateRef = useRef<string>(selectedDate);
   const containerRef    = useRef<HTMLDivElement>(null);
@@ -277,18 +278,30 @@ export default function TodoMemo() {
 
   // 메모 변경 (debounce 500ms → Supabase 저장)
   const handleMemoChange = (value: string) => {
+    const saveAttempt = ++memoSaveAttemptRef.current;
     setMemos((prev) => ({ ...prev, [memoTab]: value }));
     setSaveStatus("saving");
     if (debounceRef.current)   clearTimeout(debounceRef.current);
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-    debounceRef.current = setTimeout(() => {
-      if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: value }).catch(() => { toast.error(t("todo_memo_save_fail")); });
-      setSaveStatus("saved");
-      savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+    debounceRef.current = setTimeout(async () => {
+      if (!userId) {
+        if (memoSaveAttemptRef.current === saveAttempt) setSaveStatus("idle");
+        return;
+      }
+      try {
+        await upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: value });
+        if (memoSaveAttemptRef.current !== saveAttempt) return;
+        setSaveStatus("saved");
+        savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+      } catch {
+        if (memoSaveAttemptRef.current === saveAttempt) setSaveStatus("idle");
+        toast.error(t("todo_memo_save_fail"));
+      }
     }, 500);
   };
 
   const handleTabChange = (tab: MemoTab) => {
+    memoSaveAttemptRef.current += 1;
     setMemoTab(tab);
     setSaveStatus("idle");
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -296,6 +309,7 @@ export default function TodoMemo() {
 
   const clearMemo = () => setConfirmAction("memo");
   const doClearMemo = () => {
+    memoSaveAttemptRef.current += 1;
     setMemos((prev) => ({ ...prev, [memoTab]: "" }));
     if (userId) upsertMemos(userId, { [MEMO_DB_KEYS[memoTab]]: "" }).catch(() => { toast.error(t("todo_memo_clear_fail")); });
     setSaveStatus("idle");
