@@ -141,10 +141,13 @@ async function readRow({ supabase, user, rowId }: TodoFixture) {
 async function cleanupTodo(fixture: TodoFixture) {
   const row = await readRow(fixture);
   if (!row) return;
-  const remaining = (row.todos as TodoItem[]).filter((item) => item.text !== fixture.text);
-  // Like TodoMemo's item deletion, remove only our item first. Match the current
-  // JSON too, so concurrent edits cannot be overwritten.
-  const { data: updated, error: updateError } = await fixture.supabase.from("todos").update({ todos: remaining })
+  // Empty the whole array rather than filtering out only our own item: B1
+  // (see #153) intentionally tolerates other runs' carried-over items sharing
+  // this row, so filtering by fixture.text alone can leave the array
+  // non-empty and delete_empty_todo (jsonb_array_length = 0) would then
+  // refuse to delete the row, leaking it into the shared E2E account.
+  // Match the current JSON too, so concurrent edits cannot be overwritten.
+  const { data: updated, error: updateError } = await fixture.supabase.from("todos").update({ todos: [] })
     .eq("user_id", fixture.user.id).eq("id", fixture.rowId)
     .eq("todos", JSON.stringify(row.todos)).select("id");
   if (updateError) throw updateError;
