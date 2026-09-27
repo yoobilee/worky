@@ -9,12 +9,11 @@ import { tFormat } from "@/lib/i18n/translations";
 interface WorkBriefProps {
   weekTotal: number;
   leaveRemaining: number | null;
-  features: { href: string; label: string }[];
   tip: string;
   tipCategory?: string;
 }
 
-export default function WorkBrief({ weekTotal, leaveRemaining, features, tip, tipCategory }: WorkBriefProps) {
+export default function WorkBrief({ weekTotal, leaveRemaining, tip, tipCategory }: WorkBriefProps) {
   const { t } = useLocale();
   const id = useId();
   const [expanded, setExpanded] = useState(false);
@@ -33,10 +32,9 @@ export default function WorkBrief({ weekTotal, leaveRemaining, features, tip, ti
   const leave = leaveRemaining !== null && Number.isFinite(leaveRemaining)
     ? tFormat(t("wk_brief_leave"), { n: leaveRemaining }) : null;
   const hasTip = Boolean(tip.trim());
-  const count = Number(Boolean(activity || leave)) + Number(features.length > 0) + Number(hasTip);
+  const count = Number(Boolean(activity || leave)) + Number(hasTip);
   if (!count) return null;
-  const summary = [activity, leave].filter(Boolean).join(" · ")
-    || (features.length ? `${t("wk_brief_frequent")} · ${features[0].label}` : tip);
+  const summary = [activity, leave].filter(Boolean).join(" · ") || tip;
 
   return <section className="wk-brief" data-state={expanded ? "open" : "closed"} aria-labelledby={`${id}-title`}>
     <button type="button" className="wk-brief-toggle" aria-expanded={expanded}
@@ -51,10 +49,6 @@ export default function WorkBrief({ weekTotal, leaveRemaining, features, tip, ti
         {activity && <div><dt>{t("weekly_activity")}</dt><dd>{tFormat(t("home_total_n"), { n: weekTotal })}</dd></div>}
         {leave && <div><dt>{t("home_metric_leave_left")}</dt><dd><Link href="/settings">{tFormat(t("wk_brief_days"), { n: leaveRemaining! })}</Link></dd></div>}
       </dl>}
-      {features.length > 0 && <div className="wk-brief-group">
-        <h3>{t("wk_brief_frequent")}</h3>
-        <ul className="wk-brief-links">{features.map(feature => <li key={feature.href}><Link href={feature.href}>{feature.label}</Link></li>)}</ul>
-      </div>}
       {hasTip && <div className="wk-brief-group wk-brief-tip">
         <h3>{t("daily_tip")}{tipCategory && <span> · {tipCategory}</span>}</h3>
         <p>{tip}</p>

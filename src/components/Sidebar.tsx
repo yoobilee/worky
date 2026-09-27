@@ -25,7 +25,7 @@ export default function Sidebar({ onClose, aiStatus, mobile = false }: SidebarPr
   const router = useRouter();
   const { theme, toggle } = useTheme();
   const { t } = useLocale();
-  const { menuSettings, menuOrder, recentRoutes } = useWorkspace();
+  const { menuSettings, menuOrder } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -76,12 +76,6 @@ export default function Sidebar({ onClose, aiStatus, mobile = false }: SidebarPr
         {group.routes.map(renderLink)}
       </div>)}
     </nav>
-      {recentRoutes.length > 0 && <section className="wk-nav-group" aria-label={t("wk_recent_hint")}>
-        <p className="wk-nav-label">{t("wk_recent_hint")}</p>
-        {recentRoutes.slice(0, 3).map(route => <Link key={route} href={route} onClick={onClose} className="wk-nav-link" title={t(MENU_LOCALE_MAP[route])}>
-          <WorkspaceIcon route={route} /><span className="wk-rail-label">{t(MENU_LOCALE_MAP[route])}</span>
-        </Link>)}
-      </section>}
     </div>
     <div className="wk-rail-footer">
       <div className="wk-rail-status" data-state={aiStatus} role="status" title={status}>

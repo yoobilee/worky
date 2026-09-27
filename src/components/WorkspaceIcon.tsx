@@ -16,5 +16,5 @@ const icons: Record<string, typeof IconHome> = {
 
 export default function WorkspaceIcon({ route }: { route: string }) {
   const Icon = icons[route] ?? IconNotes;
-  return <Icon size={18} stroke={1.7} aria-hidden="true" />;
+  return <Icon size={20} stroke={2} aria-hidden="true" />;
 }

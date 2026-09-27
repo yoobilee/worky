@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
-  IconTable, IconMail, IconFileDescription, IconCalendarEvent, IconListCheck,
-  IconArrowRight, IconMessageDots, IconNotes, IconSun, IconCloud, IconCloudRain,
-  IconCloudSnow, IconCloudStorm, IconMist, IconLanguage, IconChartBar, IconMessageCheck,
+  IconArrowRight, IconSun, IconCloud, IconCloudRain,
+  IconCloudSnow, IconCloudStorm, IconMist,
   IconCircle, IconAdjustments, IconClock,
 } from "@tabler/icons-react";
 import { isRouteEnabled, MENU_LOCALE_MAP } from "@/lib/menuSettings";
@@ -13,7 +12,7 @@ import { workspaceRoutes } from "@/lib/workspaceNavigation";
 import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
 import { type CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
-import { getStats, getTopFeatures } from "@/lib/db/usage_stats";
+import { getStats } from "@/lib/db/usage_stats";
 import { getEvents } from "@/lib/db/calendar";
 import { getTodos } from "@/lib/db/todos";
 import { getSettings, type CustomGreeting } from "@/lib/db/settings";
@@ -22,7 +21,6 @@ import { runDailyNotificationChecks, addBusinessDays, calcDday } from "@/lib/not
 import { getClients } from "@/lib/db/clients";
 import OnboardingModal from "@/components/OnboardingModal";
 import ExternalShortcuts from "@/components/ExternalShortcuts";
-import WorkyFlow from "@/components/WorkyFlow";
 import WorkBrief from "@/components/WorkBrief";
 import WorkspaceIcon from "@/components/WorkspaceIcon";
 import { useWorkspace } from "@/components/WorkspaceProvider";
@@ -52,19 +50,6 @@ const TIPS: Tip[] = [
   { text: "모르는 용어나 프로세스는 그 자리에서 바로 메모하고 업무 후 정리하세요.", category: "학습" },
   { text: "동료의 업무 성과를 공개적으로 칭찬하는 습관은 팀 협업을 강화합니다.", category: "팀워크" },
 ];
-
-/* 자주 쓰는 기능 칩에 쓰이는 FeatureKey → 목적지 매핑 (홈 화면 링크가 없는 report 등은 제외) */
-const FEATURE_CHIP_META: Partial<Record<FeatureKey, { href: string; Icon: typeof IconTable; labelKey: TranslationKey }>> = {
-  data:      { href: "/data",      Icon: IconTable,          labelKey: "menu_data" },
-  email:     { href: "/email",     Icon: IconMail,           labelKey: "sidebar_email" },
-  template:  { href: "/template",  Icon: IconNotes,          labelKey: "menu_template" },
-  translate: { href: "/translate", Icon: IconLanguage,       labelKey: "menu_translate" },
-  summary:   { href: "/summary",   Icon: IconFileDescription, labelKey: "menu_summary" },
-  schedule:  { href: "/schedule",  Icon: IconCalendarEvent,  labelKey: "sidebar_schedule" },
-  insight:   { href: "/insight",   Icon: IconChartBar,       labelKey: "menu_insight" },
-  qa:        { href: "/qa",        Icon: IconMessageDots,    labelKey: "sidebar_qa" },
-  feedback:  { href: "/feedback",  Icon: IconMessageCheck,   labelKey: "menu_feedback" },
-};
 
 type AiSuggestion =
   | { type: "client"; name: string; dday: number }
@@ -198,7 +183,6 @@ export default function HomePage() {
   const [dataLoaded,     setDataLoaded]     = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingUid,  setOnboardingUid]  = useState<string | null>(null);
-  const [topFeatures,    setTopFeatures]    = useState<Array<{ feature: FeatureKey; count: number }>>([]);
   const [nearestTodayEvent, setNearestTodayEvent] = useState<{ title: string; time: string; dt: Date } | null>(null);
   const [aiSuggestion,   setAiSuggestion]   = useState<AiSuggestion | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -248,15 +232,13 @@ export default function HomePage() {
     supabase.auth.getUser().then(async ({ data }) => {
       const uid = data.user?.id;
       if (!uid) { setLoadError(true); return; }
-      const [dbStats, dbEvents, todayTodos, dbSettings, dbClients, topFeaturesData] = await Promise.all([
+      const [dbStats, dbEvents, todayTodos, dbSettings, dbClients] = await Promise.all([
         getStats(uid),
         getEvents(uid),
         getTodos(uid, todayStr),
         getSettings(uid),
         getClients(uid),
-        getTopFeatures(uid, 10),
       ]);
-      setTopFeatures(topFeaturesData);
       customGreetingRef.current = dbSettings?.custom_greeting ?? null;
       setGreeting(getGreetingText(new Date(), customGreetingRef.current));
       const empType = (dbSettings?.employment_type ?? 'new') as EmploymentType;
@@ -364,7 +346,6 @@ export default function HomePage() {
 
   const remaining = todos.filter(todo => !todo.completed);
   const activeRoutes = workspaceRoutes(menuSettings, menuOrder).filter(route => route !== "/");
-  const visibleRoutes = showMore ? activeRoutes : activeRoutes.slice(0, 9);
   const suggestion = aiSuggestion?.type === "client" && !isRouteEnabled(menuSettings, "/clients") ? null : aiSuggestion;
   const focusTitle = suggestion?.type === "client"
     ? tFormat(t(suggestion.dday === 0 ? "ai_suggestion_client_expiry_today" : "ai_suggestion_client_expiry"), { name: suggestion.name, n: String(suggestion.dday) })
@@ -374,7 +355,6 @@ export default function HomePage() {
   const focusHref = suggestion?.type === "client" ? "/clients" : suggestion?.type === "event" ? "/calendar" : remaining.length ? "/todo" : nearestTodayEvent ? "/calendar" : "/todo";
   const hasFocus = Boolean(suggestion || remaining.length || nearestTodayEvent);
   const WeatherIcon = weather?.Icon;
-  const validTop = topFeatures.filter(({ feature }) => FEATURE_CHIP_META[feature] && isRouteEnabled(menuSettings, FEATURE_CHIP_META[feature]!.href)).slice(0, 5);
   const weekTotal = Object.values(weekStats).reduce((sum, n) => sum + (n ?? 0), 0);
 
   return <div className="wk-home">
@@ -391,7 +371,7 @@ export default function HomePage() {
 
     <section className="wk-focus" aria-labelledby="worky-focus">
       <div className="wk-focus-copy">
-        <div className="wk-focus-label"><WorkyFlow /><span>{t("wk_focus")}</span></div>
+        <div className="wk-focus-label"><span>{t("wk_focus")}</span></div>
         {loadError ? <h3 id="worky-focus" role="alert" className="wk-error">{t("wk_load_error")}</h3> : !dataLoaded ? <h3 id="worky-focus" role="status">{t("wk_loading")}</h3> : <>
           <h3 id="worky-focus">{focusTitle}</h3>
           <p>{t(hasFocus ? "wk_focus_hint" : "wk_start_hint")}</p>
@@ -417,22 +397,21 @@ export default function HomePage() {
       </section>
     </div>}
 
-    {recentRoutes.length > 0 && <section className="wk-section" aria-labelledby="worky-recent">
-      <div className="wk-section-heading"><div><h3 id="worky-recent">{t("wk_recent")}</h3><p>{t("wk_recent_hint")}</p></div></div>
-      <div className="wk-recent">{recentRoutes.map(route => <Link href={route} key={route}><WorkspaceIcon route={route} />{t(MENU_LOCALE_MAP[route])}<IconArrowRight size={14} aria-hidden="true" /></Link>)}</div>
-    </section>}
-
-    <section className="wk-section" aria-labelledby="worky-tools">
-      <div className="wk-section-heading"><div><h3 id="worky-tools">{t("wk_tools")}</h3><p>{t("wk_tools_hint")}</p></div><Link className="wk-text-link" href="/settings"><IconAdjustments size={16} aria-hidden="true" />{t("wk_customize")}</Link></div>
-      <div id="worky-tool-list" className="wk-tools">{visibleRoutes.map(route => <Link className="wk-tool" href={route} key={route}><WorkspaceIcon route={route} /><span>{t(MENU_LOCALE_MAP[route])}</span></Link>)}</div>
-      {activeRoutes.length > 9 && <button type="button" className="wk-text-link mt-2" aria-expanded={showMore} aria-controls="worky-tool-list" onClick={() => setShowMore(!showMore)}>{t(showMore ? "wk_less_tools" : "wk_more_tools")}<IconArrowRight size={14} aria-hidden="true" /></button>}
+    <section className="wk-quick wk-section" aria-labelledby="worky-tools">
+      <div className="wk-quick-main">
+        <h3 id="worky-tools">{t(recentRoutes.length ? "wk_recent" : "wk_tools")}</h3>
+        {recentRoutes.length > 0 && <div className="wk-recent">{recentRoutes.map(route => <Link href={route} key={route}><span className="wk-tool-icon"><WorkspaceIcon route={route} /></span>{t(MENU_LOCALE_MAP[route])}<IconArrowRight className="wk-link-arrow" size={14} aria-hidden="true" /></Link>)}</div>}
+        {recentRoutes.length === 0 && <p className="wk-quick-hint">{t("wk_tools_hint")}</p>}
+      </div>
+      <button type="button" className="wk-text-link wk-tools-toggle" aria-expanded={showMore} aria-controls="worky-tool-list" onClick={() => setShowMore(value => !value)}>{t(showMore ? "wk_less_tools" : "wk_more_tools")}<IconArrowRight size={16} aria-hidden="true" /></button>
     </section>
+    <div id="worky-tool-list" className="wk-tool-drawer" data-state={showMore ? "open" : "closed"} aria-hidden={!showMore} inert={!showMore}>
+      <div className="wk-tool-drawer-inner"><nav className="wk-tools" aria-label={t("wk_tools")}>
+        {activeRoutes.map(route => <Link className="wk-tool" href={route} key={route}><span className="wk-tool-icon"><WorkspaceIcon route={route} /></span><span>{t(MENU_LOCALE_MAP[route])}</span><IconArrowRight className="wk-link-arrow" size={14} aria-hidden="true" /></Link>)}
+      </nav><Link className="wk-text-link wk-customize" href="/settings"><IconAdjustments size={16} aria-hidden="true" />{t("wk_customize")}</Link></div>
+    </div>
 
     <WorkBrief weekTotal={weekTotal} leaveRemaining={leaveData ? Math.max(0, leaveData.total - leaveData.used) : null}
-      features={validTop.filter(({ count }) => count > 0).map(({ feature }) => {
-        const meta = FEATURE_CHIP_META[feature]!;
-        return { href: meta.href, label: t(meta.labelKey) };
-      })}
       tip={locale === "ko" ? tip : t("home_tip_fallback")} tipCategory={locale === "ko" ? tipCategory : undefined} />
     <ExternalShortcuts />
   </div>;

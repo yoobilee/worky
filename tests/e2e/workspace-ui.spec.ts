@@ -124,7 +124,7 @@ for (const brief of ["full", "partial", "tip-only"] as const) {
         expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
         const columns = await content.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length);
-        expect(columns).toBe(brief === "tip-only" || width < 640 ? 1 : width < 1280 ? 2 : 3);
+        expect(columns).toBe(brief === "tip-only" || width < 640 ? 1 : 2);
         const a11y = await new AxeBuilder({ page }).include(".wk-brief").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
         expect(a11y.violations).toEqual([]);
         if (width === 390 && brief === "tip-only") expect((await content.boundingBox())!.height).toBeLessThan(150);
@@ -262,7 +262,14 @@ test("홈과 작업 레일의 개인화, 테마, 반응형, 키보드와 대비"
   const custom = page.locator(".wk-nav-group").nth(1).locator("a");
   await expect(custom.nth(0)).toHaveAttribute("href", "/data");
   await expect(custom.nth(1)).toHaveAttribute("href", "/summary");
+  await page.locator(".wk-tools-toggle").click();
   await expect(page.locator('.wk-tools a').nth(5)).toHaveAttribute("href", "/data");
+  await expect(page.locator(".wk-tools-toggle")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(".wk-tool-drawer")).toHaveAttribute("aria-hidden", "false");
+  await page.locator(".wk-tools-toggle").click();
+  await expect(page.locator(".wk-tool-drawer")).toHaveAttribute("inert", "");
+  await expect(page.locator(".wk-tools a").first()).not.toBeVisible();
+  await page.locator(".wk-tools-toggle").click();
   await expect(page.locator("#worky-focus")).toHaveText("신규 서비스 제안서 검토 의견 정리하기");
 
   for (const theme of ["light", "dark"] as const) {
@@ -274,7 +281,7 @@ test("홈과 작업 레일의 개인화, 테마, 반응형, 키보드와 대비"
       expect(await page.locator("main").evaluate(element => element.scrollWidth <= element.clientWidth)).toBeTruthy();
       await page.screenshot({ path: `test-results/ui/${name}-${theme}.png`, fullPage: true });
       if (name === "mobile") {
-        await page.locator(".wk-tools").scrollIntoViewIfNeeded();
+        await page.locator(".wk-quick").scrollIntoViewIfNeeded();
         await page.screenshot({ path: `test-results/ui/mobile-tools-${theme}.png` });
         await page.locator("main").evaluate(element => element.scrollTo(0, 0));
       }
@@ -359,9 +366,11 @@ test("메뉴 표시와 드래그 순서 변경이 같은 화면과 새로고침�
   await template.dragTo(summary);
   await expect.poll(() => (settings.menu_order as string[])[1]).toBe("/template");
   await page.locator('.wk-rail-nav a[href="/"]').click();
+  await page.locator(".wk-tools-toggle").click();
   await expect(page.locator('.wk-tools a').nth(5)).toHaveAttribute("href", "/template");
   await expect(page.locator('.wk-tools a[href="/data"]')).toHaveCount(0);
   await page.reload();
+  await page.locator(".wk-tools-toggle").click();
   await expect(page.locator('.wk-tools a').nth(5)).toHaveAttribute("href", "/template");
 });
 

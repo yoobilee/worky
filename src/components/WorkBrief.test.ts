@@ -10,7 +10,7 @@ vi.mock("@/lib/i18n/LocaleContext", () => ({
 }));
 vi.mock("@/lib/i18n/translations", () => import("../lib/i18n/translations"));
 
-const empty = { weekTotal: 0, leaveRemaining: null, features: [], tip: "" };
+const empty = { weekTotal: 0, leaveRemaining: null, tip: "" };
 
 describe("WorkBrief rendering", () => {
   it("omits the entire section when no information exists", () => {
@@ -29,19 +29,18 @@ describe("WorkBrief rendering", () => {
     expect(html).toContain('hidden=""');
   });
   it("keeps zero days and summarizes real metrics in priority order", () => {
-    const html = renderToStaticMarkup(createElement(WorkBrief, { ...empty, weekTotal: 12, leaveRemaining: 0, tip: "오늘의 팁", features: [{ href: "/data", label: "데이터 정리" }] }));
+    const html = renderToStaticMarkup(createElement(WorkBrief, { ...empty, weekTotal: 12, leaveRemaining: 0, tip: "오늘의 팁" }));
     expect(html).toContain("이번 주 활동 12회 · 남은 연차 0일");
-    expect(html).toContain('data-columns="3"');
+    expect(html).toContain('data-columns="2"');
     expect(html).toContain('href="/settings"');
-    expect(html).toContain('href="/data"');
+    expect(html).not.toContain('href="/data"');
   });
   it("omits unavailable numbers and whitespace-only tips", () => {
     expect(renderToStaticMarkup(createElement(WorkBrief, { ...empty, weekTotal: NaN, leaveRemaining: NaN, tip: "  " }))).toBe("");
   });
-  it("uses available features when neither metric exists", () => {
-    const html = renderToStaticMarkup(createElement(WorkBrief, { ...empty, features: [{ href: "/summary", label: "문서 요약" }] }));
-    expect(html).toContain("자주 사용한 기능 · 문서 요약");
-    expect(html).toContain('data-columns="1"');
+  it("does not repeat feature navigation in the brief", () => {
+    const html = renderToStaticMarkup(createElement(WorkBrief, { ...empty, tip: "오늘의 팁" }));
+    expect(html).not.toContain("자주 사용한 기능");
   });
   it("renders the English title and summaries", () => {
     state.locale = "en";
