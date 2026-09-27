@@ -268,7 +268,7 @@ test("홈과 작업 레일의 개인화, 테마, 반응형, 키보드와 대비"
   await expect(page.locator(".wk-tool-drawer")).toHaveAttribute("aria-hidden", "false");
   await page.locator(".wk-tools-toggle").click();
   await expect(page.locator(".wk-tool-drawer")).toHaveAttribute("inert", "");
-  await expect(page.locator(".wk-tools a").first()).not.toBeVisible();
+  await expect(page.locator(".wk-tool-drawer")).toHaveCSS("opacity", "0");
   await page.locator(".wk-tools-toggle").click();
   await expect(page.locator("#worky-focus")).toHaveText("신규 서비스 제안서 검토 의견 정리하기");
 
