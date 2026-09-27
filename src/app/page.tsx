@@ -1,24 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
-  IconTable, IconMail, IconFileDescription, IconCalendarEvent,
-  IconListCheck, IconBulb, IconWifi, IconWifiOff, IconArrowRight,
-  IconMessageDots, IconNotes, IconPlus,
-  IconSun, IconCloud, IconCloudRain, IconCloudSnow, IconCloudStorm, IconMist, IconMapPin,
-  IconTemperature, IconClock, IconLanguage, IconChartBar, IconBook, IconCalendar,
-  IconBuilding, IconAddressBook, IconSparkles, IconX, IconMessageCheck,
-  IconBrandOpenai, IconBrandGoogle, IconBrandGmail, IconBrandGoogleDrive, IconBrandNotion, IconSearch,
-  IconBrandGithub, IconBrandYoutube, IconBrandInstagram, IconBrandX, IconBrandFigma,
-  IconBrandLinkedin, IconBrandSlack, IconBrandDiscord, IconMessageCircle, IconBrandFacebook,
-  IconBrandTiktok, IconBrandTrello, IconBrandDropbox,
+  IconTable, IconMail, IconFileDescription, IconCalendarEvent, IconListCheck,
+  IconArrowRight, IconMessageDots, IconNotes, IconSun, IconCloud, IconCloudRain,
+  IconCloudSnow, IconCloudStorm, IconMist, IconLanguage, IconChartBar, IconMessageCheck,
+  IconCircle, IconAdjustments, IconClock,
 } from "@tabler/icons-react";
-import {
-  loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
-  MENU_LOCALE_MAP,
-} from "@/lib/menuSettings";
+import { isRouteEnabled, MENU_LOCALE_MAP } from "@/lib/menuSettings";
+import { workspaceRoutes } from "@/lib/workspaceNavigation";
 import { getThisWeekStats, type FeatureKey } from "@/lib/usageStats";
 import { type CalendarEvent } from "@/lib/calendarStorage";
 import { createClient } from "@/lib/supabase/client";
@@ -30,9 +21,12 @@ import { calcAnnualLeave, type LeaveStandard, type EmploymentType, type LeaveRes
 import { runDailyNotificationChecks, addBusinessDays, calcDday } from "@/lib/notifications";
 import { getClients } from "@/lib/db/clients";
 import OnboardingModal from "@/components/OnboardingModal";
+import ExternalShortcuts from "@/components/ExternalShortcuts";
+import WorkyFlow from "@/components/WorkyFlow";
+import WorkspaceIcon from "@/components/WorkspaceIcon";
+import { useWorkspace } from "@/components/WorkspaceProvider";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import { tFormat } from "@/lib/i18n/translations";
-import type { TranslationKey } from "@/lib/i18n/translations";
+import { tFormat, type TranslationKey } from "@/lib/i18n/translations";
 
 /* ───────── 상수 ───────── */
 
@@ -56,22 +50,6 @@ const TIPS: Tip[] = [
   { text: "문서 저장 시 파일명에 날짜를 포함하면 나중에 찾기 훨씬 쉽습니다.", category: "문서작성" },
   { text: "모르는 용어나 프로세스는 그 자리에서 바로 메모하고 업무 후 정리하세요.", category: "학습" },
   { text: "동료의 업무 성과를 공개적으로 칭찬하는 습관은 팀 협업을 강화합니다.", category: "팀워크" },
-];
-
-const QUICK_LINKS = [
-  { href: "/data",      label: "데이터 정리",    Icon: IconTable,          desc: "텍스트 → 표" },
-  { href: "/todo",      label: "할 일 / 메모",   Icon: IconListCheck,      desc: "할 일 관리" },
-  { href: "/template",  label: "템플릿 생성",    Icon: IconNotes,          desc: "문서 자동 작성" },
-  { href: "/qa",        label: "Q&A",            Icon: IconMessageDots,    desc: "AI 업무 상담" },
-  { href: "/email",     label: "이메일 작성",    Icon: IconMail,           desc: "답장 초안 생성" },
-  { href: "/summary",   label: "문서 요약",      Icon: IconFileDescription, desc: "AI 핵심 요약" },
-  { href: "/schedule",  label: "일정 추출",      Icon: IconCalendarEvent,  desc: "날짜·장소 추출" },
-  { href: "/translate", label: "번역·다듬기",    Icon: IconLanguage,       desc: "번역 / 톤 조정" },
-  { href: "/insight",   label: "데이터 분석", Icon: IconChartBar,       desc: "수치 분석" },
-  { href: "/glossary",  label: "용어집",         Icon: IconBook,           desc: "사내 용어 관리" },
-  { href: "/calendar",  label: "일정 관리",      Icon: IconCalendar,       desc: "월별 일정 관리" },
-  { href: "/clients",   label: "거래처 관리",    Icon: IconBuilding,       desc: "거래처 보고 관리" },
-  { href: "/members",   label: "구성원 관리",    Icon: IconAddressBook,    desc: "팀원 정보 관리" },
 ];
 
 /* 자주 쓰는 기능 칩에 쓰이는 FeatureKey → 목적지 매핑 (홈 화면 링크가 없는 report 등은 제외) */
@@ -207,24 +185,21 @@ export default function HomePage() {
   const [todos, setTodos]       = useState<Todo[]>([]);
   const [tip, setTip]           = useState("");
   const [tipCategory, setTipCategory] = useState("");
-  const [aiStatus, setAiStatus] = useState<"checking" | "connected" | "error">("checking");
   const [weather, setWeather]   = useState<WeatherInfo | null>(null);
   const [locationName, setLocationName] = useState("");
   const [geoStatus, setGeoStatus] = useState<"waiting" | "ok" | "denied">("waiting");
   const [weekStats, setWeekStats]         = useState<Partial<Record<FeatureKey, number>>>({});
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
-  const [menuSettings,   setMenuSettings]   = useState<MenuSettings>({});
-  const [showMore,       setShowMore]       = useState(false);
+  const { menuSettings, menuOrder, recentRoutes } = useWorkspace();
+  const [showMore, setShowMore] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [leaveData,      setLeaveData]      = useState<(LeaveResult & { used: number }) | null>(null);
   const [dataLoaded,     setDataLoaded]     = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingUid,  setOnboardingUid]  = useState<string | null>(null);
   const [topFeatures,    setTopFeatures]    = useState<Array<{ feature: FeatureKey; count: number }>>([]);
-  const [todayEventCount, setTodayEventCount] = useState(0);
   const [nearestTodayEvent, setNearestTodayEvent] = useState<{ title: string; time: string; dt: Date } | null>(null);
-  const [hadEventsToday, setHadEventsToday] = useState(false);
   const [aiSuggestion,   setAiSuggestion]   = useState<AiSuggestion | null>(null);
-  const moreRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const customGreetingRef = useRef<CustomGreeting | null>(null);
 
@@ -234,12 +209,11 @@ export default function HomePage() {
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, "0");
       const mm = String(now.getMinutes()).padStart(2, "0");
-      const ss = String(now.getSeconds()).padStart(2, "0");
-      setTime(`${hh}:${mm}:${ss}`);
+      setTime(`${hh}:${mm}`);
       setGreeting(getGreetingText(now, customGreetingRef.current));
     };
     tick();
-    intervalRef.current = setInterval(tick, 1000);
+    intervalRef.current = setInterval(tick, 30000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
@@ -256,6 +230,10 @@ export default function HomePage() {
         : `${now.getFullYear()}년 ${month}월 ${date}일 ${dayKo}`
     );
 
+  }, [locale]);
+
+  useEffect(() => {
+    const date = new Date().getDate();
     // 날짜 기반 팁 (하루 동안 고정)
     const todayTip = TIPS[date % TIPS.length];
     setTip(todayTip.text);
@@ -268,7 +246,7 @@ export default function HomePage() {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data }) => {
       const uid = data.user?.id;
-      if (!uid) return;
+      if (!uid) { setLoadError(true); return; }
       const [dbStats, dbEvents, todayTodos, dbSettings, dbClients, topFeaturesData] = await Promise.all([
         getStats(uid),
         getEvents(uid),
@@ -301,8 +279,6 @@ export default function HomePage() {
 
       // 오늘 일정 요약 + 가장 가까운 임박 일정 계산
       const todaysEvents = dbEvents.filter(e => e.date === todayStr);
-      setTodayEventCount(todaysEvents.length);
-      setHadEventsToday(todaysEvents.length > 0);
       const now = new Date();
       const upcomingTodayWithTime = todaysEvents
         .map(e => ({ title: e.title, time: e.time ?? "", dt: parseEventDateTime(e.date, e.time) }))
@@ -345,38 +321,8 @@ export default function HomePage() {
         setShowOnboarding(true);
       }
 
-    });
+    }).catch(() => setLoadError(true));
 
-    // 메뉴 설정
-    setMenuSettings(loadMenuSettings());
-    const onMenuChange = () => setMenuSettings(loadMenuSettings());
-    window.addEventListener(MENU_SETTINGS_EVENT, onMenuChange);
-    return () => window.removeEventListener(MENU_SETTINGS_EVENT, onMenuChange);
-  }, []);
-
-  // 더보기 드롭다운 외부 클릭 닫기
-  useEffect(() => {
-    if (!showMore) return;
-    const handler = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node))
-        setShowMore(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showMore]);
-
-  // AI 연결 확인
-  useEffect(() => {
-    fetch("/api/groq", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: [{ role: "user", content: "안녕" }],
-        systemPrompt: "한 단어로만 대답하세요.",
-      }),
-    })
-      .then((res) => setAiStatus(res.ok ? "connected" : "error"))
-      .catch(() => setAiStatus("error"));
   }, []);
 
   // 날씨 + 위치명 (geolocation + Open-Meteo + Nominatim)
@@ -415,793 +361,81 @@ export default function HomePage() {
   const total     = todos.length;
   const completed = todos.filter((t) => t.completed).length;
 
-  return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-2 flex-1 min-h-0 h-full w-full">
+  const remaining = todos.filter(todo => !todo.completed);
+  const activeRoutes = workspaceRoutes(menuSettings, menuOrder).filter(route => route !== "/");
+  const visibleRoutes = showMore ? activeRoutes : activeRoutes.slice(0, 9);
+  const suggestion = aiSuggestion?.type === "client" && !isRouteEnabled(menuSettings, "/clients") ? null : aiSuggestion;
+  const focusTitle = suggestion?.type === "client"
+    ? tFormat(t(suggestion.dday === 0 ? "ai_suggestion_client_expiry_today" : "ai_suggestion_client_expiry"), { name: suggestion.name, n: String(suggestion.dday) })
+    : suggestion?.type === "event"
+      ? tFormat(t("ai_suggestion_event_soon"), { title: suggestion.title })
+      : remaining[0]?.text ?? nearestTodayEvent?.title ?? t("wk_start");
+  const focusHref = suggestion?.type === "client" ? "/clients" : suggestion?.type === "event" ? "/calendar" : remaining.length ? "/todo" : nearestTodayEvent ? "/calendar" : "/todo";
+  const hasFocus = Boolean(suggestion || remaining.length || nearestTodayEvent);
+  const WeatherIcon = weather?.Icon;
+  const validTop = topFeatures.filter(({ feature }) => FEATURE_CHIP_META[feature] && isRouteEnabled(menuSettings, FEATURE_CHIP_META[feature]!.href)).slice(0, 5);
+  const weekTotal = Object.values(weekStats).reduce((sum, n) => sum + (n ?? 0), 0);
 
-      {showOnboarding && onboardingUid && (
-        <OnboardingModal
-          userId={onboardingUid}
-          onClose={() => setShowOnboarding(false)}
-        />
-      )}
-
-      {/* ── 오늘 요약 헤더 ── */}
-      {(() => {
-        const remainingToday = total - completed;
-        const summaryText = total === 0
-          ? t("home_todos_empty")
-          : remainingToday === 0
-            ? t("home_todos_all_done")
-            : tFormat(t("home_todos_left"), { n: String(remainingToday) });
-
-        const eventBlurb = nearestTodayEvent
-          ? (() => {
-              const diffMin = Math.max(0, Math.round((nearestTodayEvent.dt.getTime() - Date.now()) / 60000));
-              return diffMin >= 60
-                ? tFormat(t("home_event_hours_left"), { time: nearestTodayEvent.time, n: String(Math.round(diffMin / 60)) })
-                : tFormat(t("home_event_minutes_left"), { time: nearestTodayEvent.time, n: String(diffMin) });
-            })()
-          : !hadEventsToday
-            ? t("home_no_events_today")
-            : null;
-
-        const WeatherIcon = weather?.Icon ?? null;
-        return (
-          <div className="px-3 py-2 shrink-0">
-            <div className="flex items-center justify-between gap-4">
-              {/* 왼쪽: 날짜·인사·오늘 요약 */}
-              <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                <div className="flex items-center gap-2 min-w-0">
-                  <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 tracking-wide shrink-0">{dateStr}</p>
-                  <span className="text-xs text-slate-400 dark:text-zinc-500 truncate">{greeting}</span>
-                </div>
-                {!dataLoaded ? (
-                  <div className="flex flex-col gap-1.5 mt-1">
-                    <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-6 w-48" />
-                    <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-32" />
-                  </div>
-                ) : (
-                  <>
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug truncate">
-                      {summaryText}
-                    </h2>
-                    {eventBlurb && (
-                      <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{eventBlurb}</p>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* 오른쪽: 날씨 + 구분선 + 시계 */}
-              <div className="flex items-center gap-3 shrink-0">
-                {/* 날씨 */}
-                <div className="flex flex-col items-center gap-1 min-w-[60px] min-h-[64px] justify-center">
-                  {(geoStatus === "waiting" || (geoStatus === "ok" && !weather)) && (
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full w-10 h-10" />
-                      <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-10" />
-                    </div>
-                  )}
-                  {geoStatus === "denied" && (
-                    <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                      <IconMapPin className="w-3 h-3" /> {t("weather_none")}
-                    </span>
-                  )}
-                  {geoStatus === "ok" && weather && WeatherIcon && (
-                    <>
-                      <WeatherIcon className="w-10 h-10 text-[#4D44CC] dark:text-[#8B85FF]" />
-                      <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200 leading-none">{t(weather.labelKey)}</span>
-                      <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-0.5">
-                        <IconTemperature className="w-3 h-3" />{weather.temp}°C
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* 구분선 */}
-                <div className="w-px h-10 bg-slate-200 dark:bg-zinc-700 shrink-0" />
-
-                {/* 실시간 시계 */}
-                <div className="flex flex-col items-center gap-1 min-w-[56px]">
-                  <IconClock className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                  <span className="text-lg font-semibold text-slate-800 dark:text-slate-100 tracking-wide tabular-nums leading-none">
-                    {time}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── AI 제안 카드 ── */}
-      {dataLoaded && aiSuggestion && (
-        <div
-          className="px-4 py-3 rounded-2xl flex items-center justify-between gap-3 shrink-0"
-          style={{ background: "#6C63FF1A" }}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <IconSparkles className="w-4 h-4 shrink-0" style={{ color: "#6C63FF" }} />
-            <p className="text-sm font-semibold truncate" style={{ color: "#6C63FF" }}>
-              {aiSuggestion.type === "client" && (
-                aiSuggestion.dday === 0
-                  ? tFormat(t("ai_suggestion_client_expiry_today"), { name: aiSuggestion.name })
-                  : tFormat(t("ai_suggestion_client_expiry"), { name: aiSuggestion.name, n: String(aiSuggestion.dday) })
-              )}
-              {aiSuggestion.type === "event" && tFormat(t("ai_suggestion_event_soon"), { title: aiSuggestion.title })}
-              {aiSuggestion.type === "todos" && t("ai_suggestion_busy_todos")}
-            </p>
-          </div>
-          <Link
-            href={aiSuggestion.type === "client" ? "/clients" : aiSuggestion.type === "event" ? "/calendar" : "/todo"}
-            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-transform hover:scale-105"
-            style={{ background: "#6C63FF" }}
-          >
-            {aiSuggestion.type === "client" && t("ai_suggestion_goto_clients")}
-            {aiSuggestion.type === "event" && t("ai_suggestion_goto_calendar")}
-            {aiSuggestion.type === "todos" && t("ai_suggestion_goto_todos")}
-          </Link>
-        </div>
-      )}
-
-      {/* ── 핵심 지표 3개 ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
-        <Link
-          href="/todo"
-          className="card-hover min-w-0 rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
-        >
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5 min-w-0">
-            <IconListCheck className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate min-w-0">{t("home_metric_todos_left")}</span>
-          </span>
-          {!dataLoaded ? (
-            <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />
-          ) : (
-            <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{total - completed}</span>
-          )}
-        </Link>
-
-        <Link
-          href="/calendar"
-          className="card-hover min-w-0 rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
-        >
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5 min-w-0">
-            <IconCalendar className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate min-w-0">{t("home_metric_events_today")}</span>
-          </span>
-          {!dataLoaded ? (
-            <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />
-          ) : (
-            <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{todayEventCount}</span>
-          )}
-        </Link>
-
-        <Link
-          href="/settings"
-          className="card-hover min-w-0 rounded-2xl p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col gap-1 hover:border-[#6C63FF]/50 transition-colors"
-        >
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-1.5 min-w-0">
-            <span className="truncate min-w-0">{t("home_metric_leave_left")}</span>
-          </span>
-          {!dataLoaded ? (
-            <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-7 w-10" />
-          ) : leaveData ? (
-            <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-              {Math.max(0, leaveData.total - leaveData.used)}
-            </span>
-          ) : (
-            <span className="text-2xl font-bold text-slate-300 dark:text-zinc-700">–</span>
-          )}
-        </Link>
+  return <div className="wk-home">
+    {showOnboarding && onboardingUid && <OnboardingModal userId={onboardingUid} onClose={() => setShowOnboarding(false)} />}
+    <section className="wk-home-intro" aria-labelledby="worky-greeting">
+      <div className="wk-eyebrow"><span>{t("wk_today")}</span><span aria-hidden="true">/</span><span>{dateStr}</span></div>
+      <h2 id="worky-greeting">{greeting || t("wk_start")}</h2>
+      <div className="wk-home-meta">
+        {dataLoaded && <span>{total === 0 ? t("home_todos_empty") : remaining.length === 0 ? t("home_todos_all_done") : tFormat(t("home_todos_left"), { n: remaining.length })}</span>}
+        <span className="flex items-center gap-2"><IconClock size={14} aria-hidden="true" />{time}</span>
+        {geoStatus === "ok" && weather && WeatherIcon && <span className="flex items-center gap-2"><WeatherIcon className="w-4 h-4" />{locationName} {weather.temp}°C · {t(weather.labelKey)}</span>}
       </div>
+    </section>
 
-      {/* ── 자주 쓰는 기능 ── */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3 shadow-sm shrink-0 overflow-hidden min-h-0">
-        <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">{t("quick_access")}</p>
-        {(() => {
-          const validTop = topFeatures
-            .filter(({ feature }) => FEATURE_CHIP_META[feature])
-            .slice(0, 5);
-
-          if (dataLoaded && validTop.length > 0) {
-            return (
-              <div className="flex flex-wrap gap-2">
-                {validTop.map(({ feature }) => {
-                  const meta = FEATURE_CHIP_META[feature]!;
-                  const Icon = meta.Icon;
-                  return (
-                    <Link
-                      key={feature}
-                      href={meta.href}
-                      className="card-hover flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all"
-                    >
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
-                        <Icon className="w-3.5 h-3.5" />
-                      </span>
-                      <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 whitespace-nowrap">
-                        {t(meta.labelKey)}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            );
-          }
-
-          const active = QUICK_LINKS.filter(({ href }) => isRouteEnabled(menuSettings, href));
-          const hasMore = active.length > 11;
-          const displayed = hasMore ? active.slice(0, 11) : active;
-          const rest      = hasMore ? active.slice(11) : [];
-          return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {displayed.map(({ href, label, Icon, desc }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all group"
-                >
-                  <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
-                    <Icon className="w-4 h-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
-                  </div>
-                </Link>
-              ))}
-
-              {hasMore && (
-                <div className="relative" ref={moreRef}>
-                  <button
-                    onClick={() => setShowMore((v) => !v)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50 hover:bg-[#6C63FF]/5 transition-all"
-                  >
-                    <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-slate-100 dark:bg-zinc-800">
-                      <IconArrowRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
-                    </span>
-                    <div className="min-w-0 text-left">
-                      <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">{t("home_more")}</p>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("home_count_n"), { n: String(rest.length) })}</p>
-                    </div>
-                  </button>
-
-                  {showMore && (
-                    <div className="absolute right-0 bottom-full mb-1 z-50 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden min-w-[200px]">
-                      {rest.map(({ href, label, Icon, desc }) => (
-                        <Link
-                          key={href}
-                          href={href}
-                          onClick={() => setShowMore(false)}
-                          className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-0"
-                        >
-                          <span className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[#6C63FF]/10 text-[#4D44CC] dark:text-[#8B85FF]">
-                            <Icon className="w-3.5 h-3.5" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
-                            <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">{desc}</p>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+    <section className="wk-focus" aria-labelledby="worky-focus">
+      <div className="wk-focus-copy">
+        <div className="wk-focus-label"><WorkyFlow /><span>{t("wk_focus")}</span></div>
+        {loadError ? <h3 id="worky-focus" role="alert" className="wk-error">{t("wk_load_error")}</h3> : !dataLoaded ? <h3 id="worky-focus" role="status">{t("wk_loading")}</h3> : <>
+          <h3 id="worky-focus">{focusTitle}</h3>
+          <p>{t(hasFocus ? "wk_focus_hint" : "wk_start_hint")}</p>
+        </>}
       </div>
+      {dataLoaded && <Link className="wk-action" href={focusHref}>{t(hasFocus ? "wk_open_task" : "wk_add_task")}<IconArrowRight size={16} aria-hidden="true" /></Link>}
+    </section>
 
-      {/* ── 하단 그리드 ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 items-stretch sm:flex-1 sm:min-h-0">
+    {dataLoaded && <div className="wk-work-grid wk-section">
+      <section className="wk-work-panel" aria-labelledby="worky-schedule">
+        <div className="wk-section-heading"><h3 id="worky-schedule">{t("wk_schedule")}</h3><Link className="wk-text-link" href="/calendar">{t("view_all")}<IconArrowRight size={14} aria-hidden="true" /></Link></div>
+        {upcomingEvents.length > 0 ? <ol className="wk-work-list">{upcomingEvents.map(event => <li key={event.id} className="wk-work-row">
+          <span className="wk-work-time">{event.time || t("wk_all_day")}</span>
+          <Link href="/calendar"><span>{event.title}</span><p>{event.date}{event.location ? " · " + event.location : ""}</p></Link>
+        </li>)}</ol> : <div className="wk-empty"><p>{t("wk_no_events")}</p><Link href="/calendar" className="wk-text-link">{t("add_event")}<IconArrowRight size={14} aria-hidden="true" /></Link></div>}
+      </section>
+      <section className="wk-work-panel" aria-labelledby="worky-tasks">
+        <div className="wk-section-heading"><h3 id="worky-tasks">{t("wk_tasks")}</h3><Link className="wk-text-link" href="/todo">{t("view_all")}<IconArrowRight size={14} aria-hidden="true" /></Link></div>
+        {total > 0 && <div className="wk-progress"><progress max={total} value={completed} aria-label={t("todo_progress")} /><span>{tFormat(t("wk_task_summary"), { total, done: completed })}</span></div>}
+        {remaining.length > 0 ? <ul className="wk-work-list">{remaining.slice(0, 3).map(todo => <li key={todo.id} className="wk-work-row">
+          <IconCircle size={16} className="wk-task-icon" aria-hidden="true" /><Link href="/todo">{todo.text}</Link>
+        </li>)}</ul> : <div className="wk-empty"><p>{t(total > 0 ? "wk_all_done" : "wk_no_tasks")}</p><Link href="/todo" className="wk-text-link">{t("wk_add_task")}<IconArrowRight size={14} aria-hidden="true" /></Link></div>}
+      </section>
+    </div>}
 
-        {/* 이번 주 활동 */}
-        {(() => {
-          const FEATURES: { key: FeatureKey; labelKey: TranslationKey }[] = [
-            { key: "data",      labelKey: "menu_data"      },
-            { key: "email",     labelKey: "sidebar_email"  },
-            { key: "template",  labelKey: "menu_template"  },
-            { key: "translate", labelKey: "menu_translate" },
-            { key: "summary",   labelKey: "menu_summary"   },
-            { key: "schedule",  labelKey: "sidebar_schedule" },
-            { key: "insight",   labelKey: "menu_insight"   },
-            { key: "qa",        labelKey: "sidebar_qa"     },
-            { key: "feedback",  labelKey: "menu_feedback"  },
-          ];
-          const counts = FEATURES.map((f) => weekStats[f.key] ?? 0);
-          const maxCount = Math.max(...counts, 1);
-          const totalUsed = counts.reduce((a, b) => a + b, 0);
+    {recentRoutes.length > 0 && <section className="wk-section" aria-labelledby="worky-recent">
+      <div className="wk-section-heading"><div><h3 id="worky-recent">{t("wk_recent")}</h3><p>{t("wk_recent_hint")}</p></div></div>
+      <div className="wk-recent">{recentRoutes.map(route => <Link href={route} key={route}><WorkspaceIcon route={route} />{t(MENU_LOCALE_MAP[route])}<IconArrowRight size={14} aria-hidden="true" /></Link>)}</div>
+    </section>}
 
-          return (
-            <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 sm:min-h-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <IconChartBar className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                  <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("weekly_activity")}</span>
-                </div>
-                {totalUsed > 0 && (
-                  <span className="text-xs text-slate-500 dark:text-zinc-400">{tFormat(t("home_total_n"), { n: String(totalUsed) })}</span>
-                )}
-              </div>
+    <section className="wk-section" aria-labelledby="worky-tools">
+      <div className="wk-section-heading"><div><h3 id="worky-tools">{t("wk_tools")}</h3><p>{t("wk_tools_hint")}</p></div><Link className="wk-text-link" href="/settings"><IconAdjustments size={16} aria-hidden="true" />{t("wk_customize")}</Link></div>
+      <div id="worky-tool-list" className="wk-tools">{visibleRoutes.map(route => <Link className="wk-tool" href={route} key={route}><WorkspaceIcon route={route} /><span>{t(MENU_LOCALE_MAP[route])}</span></Link>)}</div>
+      {activeRoutes.length > 9 && <button type="button" className="wk-text-link mt-2" aria-expanded={showMore} aria-controls="worky-tool-list" onClick={() => setShowMore(!showMore)}>{t(showMore ? "wk_less_tools" : "wk_more_tools")}<IconArrowRight size={14} aria-hidden="true" /></button>}
+    </section>
 
-              {!dataLoaded ? (
-                <div className="space-y-2 py-1">
-                  {[72, 55, 88, 40].map((w, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-[88px] shrink-0" />
-                      <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2 flex-1" style={{ maxWidth: `${w}%` }} />
-                    </div>
-                  ))}
-                </div>
-              ) : totalUsed === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-                  <p className="text-sm text-slate-500 dark:text-zinc-400">{t("home_no_activity")}</p>
-                </div>
-              ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
-                  <div className="space-y-2">
-                    {FEATURES.map(({ key, labelKey }, i) => {
-                      const count  = counts[i];
-                      const isMax  = count === maxCount && count > 0;
-                      const pct    = Math.round((count / maxCount) * 100);
-                      return (
-                        <div key={key} className="flex items-center gap-2">
-                          <span className={`text-xs w-[88px] shrink-0 truncate ${isMax ? "font-semibold text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`}>
-                            {t(labelKey)}
-                          </span>
-                          <div className="flex-1 h-2 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${pct}%`,
-                                background: count > 0 ? (isMax ? "linear-gradient(90deg,#6C63FF,#8B85FF)" : "#6C63FF80") : "transparent",
-                              }}
-                            />
-                          </div>
-                          <span className={`text-xs w-6 text-right shrink-0 ${count > 0 ? "text-slate-600 dark:text-zinc-300" : "text-slate-300 dark:text-zinc-700"}`}>
-                            {count > 0 ? count : ""}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* 다가오는 일정 — 3티어 */}
-        <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-3 flex flex-col gap-2 sm:min-h-0 sm:overflow-hidden">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <IconCalendar className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-              <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("upcoming_events")}</span>
-            </div>
-            <Link href="/calendar"
-              className="flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-400 hover:text-[#4D44CC] dark:text-[#8B85FF] transition-colors">
-              {t("view_all")} <IconArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          {!dataLoaded ? (
-            <div className="space-y-2">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 space-y-1.5">
-                  <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2.5 w-3/4" />
-                  <div className="animate-pulse bg-slate-200 dark:bg-zinc-700 rounded-full h-2 w-1/3" />
-                </div>
-              ))}
-            </div>
-          ) : upcomingEvents.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-              <p className="text-sm text-slate-500 dark:text-zinc-400">{t("no_events")}</p>
-              <Link href="/calendar"
-                className="mt-2 text-xs text-[#4D44CC] dark:text-[#8B85FF] hover:underline">
-                {t("add_event")}
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {upcomingEvents.map(ev => (
-                <div key={ev.id} className="flex items-start gap-2.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{ev.title}</p>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                      <span>{ev.date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, d) => `${Number(m)}/${Number(d)}`)}</span>
-                      {ev.time && <><span className="opacity-40">·</span><span>{ev.time}</span></>}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 오늘의 팁 — 3티어 */}
-        <div className="bg-white dark:bg-zinc-800/50 rounded-2xl p-4 flex flex-col sm:overflow-hidden">
-          <div className="flex items-center gap-2 mb-3">
-            <IconBulb className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-            <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{t("daily_tip")}</span>
-          </div>
-          <p className="text-sm leading-6 text-slate-700 dark:text-zinc-300 flex-1 line-clamp-3">
-            {tip || t("home_tip_fallback")}
-          </p>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-zinc-700">
-            {tipCategory && (
-              <span
-                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{ background: "#6C63FF22", color: "#6C63FF" }}
-              >
-                {tipCategory}
-              </span>
-            )}
-            <p className="text-xs text-slate-500 dark:text-zinc-400 ml-auto">{t("home_tip_daily")}</p>
-          </div>
-        </div>
-
+    <details className="wk-context">
+      <summary>{t("wk_context")}</summary>
+      <div className="wk-context-content">
+        {leaveData && <Link href="/settings">{t("home_metric_leave_left")} · {Math.max(0, leaveData.total - leaveData.used)}</Link>}
+        {weekTotal > 0 && <p>{t("weekly_activity")} · {tFormat(t("home_total_n"), { n: weekTotal })}</p>}
+        {validTop.length > 0 && <div className="wk-context-links">{validTop.map(({ feature }) => { const meta = FEATURE_CHIP_META[feature]!; return <Link key={feature} href={meta.href}>{t(meta.labelKey)}</Link>; })}</div>}
+        <p>{t("daily_tip")} · {locale === "ko" ? tip : t("home_tip_fallback")}{locale === "ko" && tipCategory ? " — " + tipCategory : ""}</p>
       </div>
-
-      {/* ── AI 스피드 다이얼 ── */}
-      <SpeedDial />
-
-    </div>
-  );
-}
-
-interface CustomLink { url: string; name: string }
-
-type IconComp = React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-
-const DEFAULT_SPEED_LINKS: Array<{ name: string; href: string; Icon: IconComp | null; letter: string | null }> = [
-  { name: "Claude",       href: "https://claude.ai",         Icon: null,                 letter: "C" },
-  { name: "ChatGPT",      href: "https://chatgpt.com",        Icon: IconBrandOpenai,      letter: null },
-  { name: "Gemini",       href: "https://gemini.google.com",  Icon: IconBrandGoogle,      letter: null },
-  { name: "구글",         href: "https://google.com",         Icon: IconSearch,           letter: null },
-  { name: "노션",         href: "https://notion.so",          Icon: IconBrandNotion,      letter: null },
-  { name: "Gmail",        href: "https://mail.google.com",    Icon: IconBrandGmail,       letter: null },
-  { name: "네이버",       href: "https://naver.com",          Icon: null,                 letter: "N" },
-  { name: "Google Drive", href: "https://drive.google.com",   Icon: IconBrandGoogleDrive, letter: null },
-];
-
-const BRAND_ICON_MAP: Record<string, IconComp> = {
-  "github.com":      IconBrandGithub,
-  "youtube.com":     IconBrandYoutube,
-  "instagram.com":   IconBrandInstagram,
-  "twitter.com":     IconBrandX,
-  "x.com":           IconBrandX,
-  "figma.com":       IconBrandFigma,
-  "linkedin.com":    IconBrandLinkedin,
-  "slack.com":       IconBrandSlack,
-  "discord.com":     IconBrandDiscord,
-  "notion.so":       IconBrandNotion,
-  "kakao.com":       IconMessageCircle,
-  "kakaowork.com":   IconMessageCircle,
-  "facebook.com":    IconBrandFacebook,
-  "tiktok.com":      IconBrandTiktok,
-  "trello.com":      IconBrandTrello,
-  "dropbox.com":     IconBrandDropbox,
-};
-
-function getBrandIcon(domain: string): IconComp | null {
-  const host = domain.replace(/^www\./, "");
-  for (const [key, Icon] of Object.entries(BRAND_ICON_MAP)) {
-    if (host === key || host.endsWith(`.${key}`)) return Icon;
-  }
-  return null;
-}
-
-function FaviconImg({ domain, name, size }: { domain: string; name: string; size: number }) {
-  const [err, setErr] = useState(false);
-  const isLocal =
-    !domain ||
-    domain.startsWith("file://") ||
-    domain === "localhost" ||
-    domain.startsWith("localhost:") ||
-    domain === "127.0.0.1" ||
-    domain.startsWith("127.0.0.1:");
-
-  const BrandIcon = !isLocal ? getBrandIcon(domain) : null;
-  if (BrandIcon) {
-    return (
-      <div
-        style={{
-          width: size,
-          height: size,
-          background: "linear-gradient(135deg, #6C63FF, #8B85FF)",
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <BrandIcon style={{ width: size * 0.45, height: size * 0.45, color: "white" }} />
-      </div>
-    );
-  }
-
-  if (err || isLocal) {
-    return (
-      <div
-        className="w-full h-full rounded-full flex items-center justify-center text-white font-bold leading-none shrink-0"
-        style={{
-          background: "#6C63FF",
-          fontSize: Math.round(size * 0.38),
-          letterSpacing: "-0.02em",
-          fontFamily: "var(--font-nunito), 'Varela Round', 'Noto Sans KR', sans-serif",
-          fontWeight: 800,
-        }}
-      >
-        {name.charAt(0).toUpperCase()}
-      </div>
-    );
-  }
-  return (
-    <img
-      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
-      alt={name}
-      width={size}
-      height={size}
-      className="rounded-full"
-      onError={() => setErr(true)}
-      onLoad={(e) => {
-        const img = e.currentTarget;
-        if (img.naturalWidth <= 16 && img.naturalHeight <= 16) setErr(true);
-      }}
-    />
-  );
-}
-
-function SpeedDial() {
-  const { t } = useLocale();
-  const [open, setOpen]               = useState(false);
-  const [customLinks, setCustomLinks] = useState<CustomLink[]>([]);
-  const [showModal, setShowModal]     = useState(false);
-  const [newUrl, setNewUrl]           = useState("");
-  const [newName, setNewName]         = useState("");
-  const [userId, setUserId]           = useState<string | null>(null);
-  const [atTop, setAtTop]             = useState(true);
-  const [atBottom, setAtBottom]       = useState(false);
-  const [isDark, setIsDark]           = useState(false);
-  const ref       = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data }) => {
-      const uid = data.user?.id;
-      if (!uid) return;
-      setUserId(uid);
-      try {
-        const { data: settings } = await supabase
-          .from("user_settings")
-          .select("speed_dial_custom")
-          .eq("user_id", uid)
-          .maybeSingle();
-        if (settings?.speed_dial_custom?.length) {
-          setCustomLinks(settings.speed_dial_custom as CustomLink[]);
-        }
-      } catch {}
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  // 다크모드 감지
-  useEffect(() => {
-    const check = () => setIsDark(document.documentElement.classList.contains("dark"));
-    check();
-    const obs = new MutationObserver(check);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
-
-  // 패널 열릴 때 초기 스크롤 상태 계산
-  useEffect(() => {
-    if (!open) { setAtTop(true); setAtBottom(false); return; }
-    requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      setAtTop(el.scrollTop <= 0);
-      setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
-    });
-  }, [open, customLinks]);
-
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setAtTop(el.scrollTop <= 0);
-    setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
-  };
-
-  const getDomain = (url: string) => {
-    try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
-    catch { return url; }
-  };
-
-  const saveCustomLinks = async (updated: CustomLink[]) => {
-    if (!userId) return;
-    try {
-      const supabase = createClient();
-      await supabase
-        .from("user_settings")
-        .upsert({ user_id: userId, speed_dial_custom: updated }, { onConflict: "user_id" });
-    } catch {}
-  };
-
-  const addLink = async () => {
-    const trimUrl  = newUrl.trim();
-    const trimName = newName.trim();
-    if (!trimUrl || !trimName) return;
-    const finalUrl = trimUrl.startsWith("http") ? trimUrl : "https://" + trimUrl;
-    const updated  = [...customLinks, { url: finalUrl, name: trimName }];
-    setCustomLinks(updated);
-    setShowModal(false);
-    setNewUrl("");
-    setNewName("");
-    await saveCustomLinks(updated);
-  };
-
-  const removeLink = async (idx: number) => {
-    const updated = customLinks.filter((_, i) => i !== idx);
-    setCustomLinks(updated);
-    await saveCustomLinks(updated);
-  };
-
-  const previewDomain = (() => {
-    const t = newUrl.trim();
-    return t ? getDomain(t) : "";
-  })();
-
-  return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2 overflow-visible" ref={ref}>
-
-      {/* 바로가기 목록 */}
-      {open && (
-        <div className="relative overflow-visible">
-          <div
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className="flex flex-col items-end gap-1.5 overflow-y-auto overflow-x-visible [&::-webkit-scrollbar]:hidden pt-2 pb-0.5 pr-1.5 -mr-1.5"
-            style={{ maxHeight: "260px", scrollbarWidth: "none" }}
-          >
-          {DEFAULT_SPEED_LINKS.map(({ name, href, Icon, letter }, index) => (
-            <div
-              key={href}
-              className="flex items-center gap-2 animate-result-in"
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
-              <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-200 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
-                {name}
-              </span>
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                {Icon ? <Icon className="w-[18px] h-[18px]" /> : <span className="text-sm font-bold leading-none">{letter}</span>}
-              </a>
-            </div>
-          ))}
-          {customLinks.map((link, i) => (
-            <div
-              key={link.url + i}
-              className="group flex items-center gap-2 animate-result-in"
-              style={{ animationDelay: `${(DEFAULT_SPEED_LINKS.length + i) * 30}ms` }}
-            >
-              <button
-                onClick={() => removeLink(i)}
-                className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] shadow opacity-0 group-hover:opacity-100 transition-opacity leading-none shrink-0"
-              >
-                ×
-              </button>
-              <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-200 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
-                {link.name}
-              </span>
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform duration-150 shrink-0"
-                style={{ background: "transparent" }}
-              >
-                <FaviconImg domain={getDomain(link.url)} name={link.name} size={40} />
-              </a>
-            </div>
-          ))}
-          </div>
-        </div>
-      )}
-
-      {/* 추가 버튼 (스크롤 영역 밖) */}
-      {open && (
-        <div className="flex items-center gap-2">
-          <span className="bg-white dark:bg-zinc-900 text-xs font-medium text-slate-500 dark:text-zinc-400 px-2.5 py-1 rounded-full shadow border border-slate-200 dark:border-zinc-700 whitespace-nowrap">
-            {t("speeddial_add_label")}
-          </span>
-          <button
-            onClick={() => setShowModal(true)}
-            className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-zinc-600 hover:border-[#6C63FF] hover:bg-[#6C63FF]/5 bg-white/80 dark:bg-zinc-900/80 transition-all shadow-sm shrink-0"
-          >
-            <IconPlus className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
-          </button>
-        </div>
-      )}
-
-      {/* 커스텀 추가 모달 */}
-      {showModal && typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => { setShowModal(false); setNewUrl(""); setNewName(""); }}
-        >
-          <div
-            className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 w-full max-w-sm mx-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">{t("speeddial_modal_title")}</h3>
-            <div className="space-y-3">
-              <input
-                type="url"
-                placeholder="https://example.com"
-                value={newUrl}
-                onChange={e => setNewUrl(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-700 dark:text-zinc-200 placeholder:text-slate-500 focus:outline-none focus:border-[#6C63FF] transition-colors"
-              />
-              <input
-                type="text"
-                placeholder="내 회사 인트라넷"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") addLink(); }}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-700 dark:text-zinc-200 placeholder:text-slate-500 focus:outline-none focus:border-[#6C63FF] transition-colors"
-              />
-            </div>
-            {previewDomain && (
-              <div className="mt-3 flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
-                <div className="shrink-0" style={{ width: 28, height: 28 }}>
-                  <FaviconImg domain={previewDomain} name={newName || newUrl} size={28} />
-                </div>
-                <span className="text-xs text-slate-500 dark:text-zinc-400">{t("speeddial_icon_preview")}</span>
-              </div>
-            )}
-            <div className="flex gap-2 mt-5">
-              <button
-                onClick={() => { setShowModal(false); setNewUrl(""); setNewName(""); }}
-                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-sm text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
-              >
-                {t("cancel")}
-              </button>
-              <button
-                onClick={addLink}
-                disabled={!newUrl.trim() || !newName.trim()}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                {t("speeddial_add_label")}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* 메인 토글 버튼 */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        aria-label={t("speeddial_ai_shortcut")}
-        className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 active:scale-95 transition-all duration-150"
-        style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-      >
-        {open ? <IconX className="w-5 h-5" /> : <IconSparkles className="w-5 h-5" />}
-      </button>
-    </div>
-  );
+    </details>
+    <ExternalShortcuts />
+  </div>;
 }

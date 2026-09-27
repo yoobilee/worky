@@ -3,443 +3,105 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconChartBar, IconSettings, IconCalendar, IconBuilding, IconAddressBook, IconEdit, IconFileText, IconMessageCheck, IconLogout, IconBug } from "@tabler/icons-react";
-import { loadMenuOrder, MENU_ORDER_EVENT } from "@/lib/menuSettings";
+import { IconSun, IconMoon, IconLayoutSidebarLeftCollapse, IconSettings, IconLogout, IconX } from "@tabler/icons-react";
 import { useTheme } from "./ThemeProvider";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import {
-  loadMenuSettings, isRouteEnabled, MENU_SETTINGS_EVENT, type MenuSettings,
-  MENU_LOCALE_MAP,
-} from "@/lib/menuSettings";
+import { MENU_LOCALE_MAP, ALWAYS_VISIBLE_ITEMS } from "@/lib/menuSettings";
+import { workspaceRoutes } from "@/lib/workspaceNavigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { useWorkspace } from "./WorkspaceProvider";
+import WorkspaceIcon from "./WorkspaceIcon";
+import WorkyFlow from "./WorkyFlow";
 
 interface SidebarProps {
-  isOpen: boolean;
   onClose: () => void;
   aiStatus: "checking" | "connected" | "error";
+  mobile?: boolean;
 }
 
-const navItems = [
-  {
-    href: "/",
-    label: "Home",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10" />
-      </svg>
-    ),
-  },
-  {
-    href: "/todo",
-    label: "할 일 / 메모",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-      </svg>
-    ),
-  },
-  {
-    href: "/qa",
-    label: "Q&A",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/email",
-    label: "이메일 작성",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/content",
-    label: "메시지 작성",
-    icon: <IconEdit className="w-4 h-4" />,
-  },
-  {
-    href: "/document",
-    label: "공문서 작성",
-    icon: <IconFileText className="w-4 h-4" />,
-  },
-  {
-    href: "/template",
-    label: "템플릿 생성",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/translate",
-    label: "번역·다듬기",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-      </svg>
-    ),
-  },
-  {
-    href: "/summary",
-    label: "문서 요약",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M4 6h16M4 12h16M4 18h10" />
-      </svg>
-    ),
-  },
-  {
-    href: "/data",
-    label: "데이터 정리",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M3 10h18M3 14h18M10 3v18M14 3v18" />
-      </svg>
-    ),
-  },
-  {
-    href: "/schedule",
-    label: "일정 추출",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/calendar",
-    label: "일정 관리",
-    icon: <IconCalendar className="w-4 h-4" />,
-  },
-  {
-    href: "/clients",
-    label: "거래처 관리",
-    icon: <IconBuilding className="w-4 h-4" />,
-  },
-  {
-    href: "/members",
-    label: "구성원 관리",
-    icon: <IconAddressBook className="w-4 h-4" />,
-  },
-  {
-    href: "/insight",
-    label: "데이터 분석",
-    icon: <IconChartBar className="w-4 h-4" />,
-  },
-  {
-    href: "/glossary",
-    label: "용어집",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-      </svg>
-    ),
-  },
-  {
-    href: "/feedback",
-    label: "피드백 정리",
-    icon: <IconMessageCheck className="w-4 h-4" />,
-  },
-  {
-    href: "/issues",
-    label: "이슈 정리",
-    icon: <IconBug className="w-4 h-4" />,
-  },
-];
-
-const COLLAPSED_KEY = "worky-sidebar-collapsed";
-
-export default function Sidebar({ isOpen, onClose, aiStatus }: SidebarProps) {
+export default function Sidebar({ onClose, aiStatus, mobile = false }: SidebarProps) {
   const pathname = usePathname();
-  const router   = useRouter();
-  const { theme, toggle: toggleTheme } = useTheme();
+  const router = useRouter();
+  const { theme, toggle } = useTheme();
   const { t } = useLocale();
-
-  const statusConfig = {
-    checking:  { dot: "bg-amber-400 animate-pulse", label: t("ai_checking") },
-    connected: { dot: "bg-emerald-400",             label: t("ai_connected") },
-    error:     { dot: "bg-red-400",                 label: t("ai_error")     },
-  };
-  const st = statusConfig[aiStatus];
-
-  const [collapsed,     setCollapsed]     = useState(false);
-  const [mounted,       setMounted]       = useState(false);
-  const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
-  const [menuOrder,     setMenuOrder]     = useState<string[]>([]);
-  const [user,          setUser]          = useState<User | null>(null);
-  const [loggingOut,    setLoggingOut]    = useState(false);
+  const { menuSettings, menuOrder, recentRoutes } = useWorkspace();
+  const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(COLLAPSED_KEY);
-    if (saved === "true") setCollapsed(true);
-    setMenuSettings(loadMenuSettings());
-    setMenuOrder(loadMenuOrder());
-    setMounted(true);
-
+    setCollapsed(localStorage.getItem("worky-sidebar-collapsed") === "true");
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    const onSettings = () => setMenuSettings(loadMenuSettings());
-    const onOrder    = () => setMenuOrder(loadMenuOrder());
-    window.addEventListener(MENU_SETTINGS_EVENT, onSettings);
-    window.addEventListener(MENU_ORDER_EVENT,    onOrder);
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener(MENU_SETTINGS_EVENT, onSettings);
-      window.removeEventListener(MENU_ORDER_EVENT,    onOrder);
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
+  const isCollapsed = !mobile && collapsed;
+  const routes = workspaceRoutes(menuSettings, menuOrder);
+  const fixed = ALWAYS_VISIBLE_ITEMS.map(item => item.href) as string[];
+  const groups = [
+    { label: t("wk_core"), routes: routes.filter(route => route !== "/" && fixed.includes(route)) },
+    { label: t("wk_tools"), routes: routes.filter(route => !fixed.includes(route)) },
+  ];
+  const status = t(aiStatus === "connected" ? "ai_connected" : aiStatus === "error" ? "ai_error" : "ai_checking");
+  const renderLink = (route: string) => <Link key={route} href={route} onClick={onClose}
+    aria-label={t(MENU_LOCALE_MAP[route])} title={isCollapsed ? t(MENU_LOCALE_MAP[route]) : undefined}
+    aria-current={pathname === route ? "page" : undefined} className="wk-nav-link">
+    <WorkspaceIcon route={route} />
+    <span className="wk-rail-label">{t(MENU_LOCALE_MAP[route])}</span>
+    {pathname === route && <WorkyFlow compact />}
+  </Link>;
 
-  const toggleCollapse = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem(COLLAPSED_KEY, String(next));
-  };
-
-  const isCollapsed = mounted && collapsed;
-
-  // 텍스트 표시 전략:
-  //   접힐 때 → 즉시 사라짐 (w-0 overflow-hidden, transition 없음)
-  //   펼칠 때 → 너비 transition(300ms) 완료 후 fade in (delay-[260ms] duration-150)
-  const labelCls = isCollapsed
-    ? "w-0 overflow-hidden opacity-0 whitespace-nowrap pointer-events-none"
-    : "opacity-100 whitespace-nowrap transition-opacity duration-150 delay-[260ms]";
-
-  return (
-    <aside
-      className={[
-        "fixed inset-y-0 left-0 z-30 flex flex-col shrink-0 overflow-hidden",
-        "bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800",
-        "transition-[width] duration-300 ease-in-out",
-        "lg:static lg:translate-x-0",
-        isCollapsed ? "w-14" : "w-56",
-        isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
-      ].join(" ")}
-    >
-
-      {/* ── 헤더 ── */}
-      {isCollapsed ? (
-        /* 접힌 상태: 토글 버튼만 중앙 정렬 */
-        <div className="flex justify-center items-center h-14 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-          <button
-            onClick={toggleCollapse}
-            aria-label="사이드바 펼치기"
-            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors hidden lg:flex"
-          >
-            <IconLayoutSidebarLeftCollapse className="w-4 h-4 rotate-180" />
-          </button>
-        </div>
-      ) : (
-        /* 펼친 상태: 로고 + 텍스트 + 토글 */
-        <div className="flex items-center h-14 px-3 gap-2 border-b border-slate-200 dark:border-zinc-800 shrink-0">
-          <Link href="/" onClick={onClose} className="flex items-center gap-2 flex-1 overflow-hidden min-w-0">
-            <img src="/favicon-48.png" alt="Worky" width={28} height={28} className="shrink-0" />
-            <div className="overflow-hidden">
-              <p
-                className="font-bold text-sm leading-none whitespace-nowrap opacity-100 transition-opacity duration-150 delay-[260ms]"
-                style={{ color: "var(--primary)" }}
-              >
-                Worky
-              </p>
-              <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 whitespace-nowrap opacity-100 transition-opacity duration-150 delay-[260ms]">
-                AI 업무 보조
-              </p>
-            </div>
-          </Link>
-          <button
-            onClick={toggleCollapse}
-            aria-label="사이드바 접기"
-            className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors shrink-0 hidden lg:flex"
-          >
-            <IconLayoutSidebarLeftCollapse className="w-4 h-4 transition-transform duration-300" />
-          </button>
-        </div>
-      )}
-
-      {/* ── 네비게이션 ── */}
-      <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {(() => {
-          // 고정 항목 → 선택 항목(저장된 순서, 활성화된 것만)
-          const navMap = Object.fromEntries(navItems.map((n) => [n.href, n]));
-          const FIXED_HREFS = ["/", "/todo", "/qa", "/email", "/schedule", "/calendar"];
-          const orderedItems = [
-            ...FIXED_HREFS.map((h) => navMap[h]).filter(Boolean),
-            ...(menuOrder.length ? menuOrder : FIXED_HREFS)
-              .filter((h) => !FIXED_HREFS.includes(h) && isRouteEnabled(menuSettings, h))
-              .map((h) => navMap[h]).filter(Boolean),
-          ];
-          return orderedItems.map((item) => {
-          const active = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              title={isCollapsed ? item.label : undefined}
-              className={[
-                "flex items-center px-2.5 py-2.5 rounded-xl text-sm font-medium transition-colors",
-                isCollapsed ? "justify-center" : "gap-3",
-                active
-                  ? "text-white shadow-sm"
-                  : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-zinc-100",
-              ].join(" ")}
-              style={active ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-            >
-              <span className={`shrink-0 ${active ? "opacity-90" : "opacity-60"}`}>
-                {item.icon}
-              </span>
-              <span className={`inline-block ${labelCls}`}>
-                {MENU_LOCALE_MAP[item.href] ? t(MENU_LOCALE_MAP[item.href]) : item.label}
-              </span>
-            </Link>
-          );
-          });
-        })()}
-      </nav>
-
-      {/* ── 하단 푸터 ── */}
-      <div className="shrink-0 border-t border-slate-200 dark:border-zinc-800 px-2 py-2 space-y-1">
-
-        {/* 설정 */}
-        <Link
-          href="/settings"
-          onClick={onClose}
-          title={isCollapsed ? t("sidebar_settings") : undefined}
-          className={[
-            "w-full flex items-center px-2.5 py-2 rounded-xl text-sm",
-            "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
-            "hover:text-slate-700 dark:hover:text-zinc-200 transition-colors",
-            isCollapsed ? "justify-center" : "gap-3",
-            pathname === "/settings" ? "bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200" : "",
-          ].join(" ")}
-        >
-          <span className="shrink-0"><IconSettings className="w-4 h-4" /></span>
-          <span className={`inline-block ${labelCls}`}>{t("sidebar_settings")}</span>
-        </Link>
-
-        {/* 다크모드 토글 */}
-        <button
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? t("theme_light") : t("theme_dark")}
-          title={isCollapsed ? (theme === "dark" ? t("theme_light") : t("theme_dark")) : undefined}
-          className={[
-            "w-full flex items-center px-2.5 py-2 rounded-xl text-sm",
-            "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800",
-            "hover:text-slate-700 dark:hover:text-zinc-200 transition-colors",
-            isCollapsed ? "justify-center" : "gap-3",
-          ].join(" ")}
-        >
-          <span className="shrink-0">
-            {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
-          </span>
-          <span className={`inline-block ${labelCls}`}>
-            {theme === "dark" ? t("theme_light") : t("theme_dark")}
-          </span>
-        </button>
-
-        {/* AI 연결 상태 */}
-        <div
-          title={isCollapsed ? st.label : undefined}
-          className={[
-            "flex items-center rounded-xl",
-            isCollapsed
-              ? "justify-center px-2 py-2"
-              : "gap-2.5 px-3 py-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700",
-          ].join(" ")}
-        >
-          <span className="relative flex shrink-0">
-            <span className={`w-2 h-2 rounded-full ${st.dot}`} />
-            {aiStatus === "connected" && (
-              <span className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-60" />
-            )}
-          </span>
-          <div className={`min-w-0 inline-block ${labelCls}`}>
-            <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 whitespace-nowrap">
-              {st.label}
-            </p>
-            {aiStatus === "connected" && (
-              <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 whitespace-nowrap">
-                gpt-oss-120b
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* 사용자 프로필 + 로그아웃 */}
-        {user && (
-          <div
-            title={isCollapsed ? (user.user_metadata?.full_name ?? user.email ?? "사용자") : undefined}
-            className={[
-              "flex items-center rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/80",
-              isCollapsed ? "justify-center px-2 py-2" : "gap-2.5 px-3 py-2.5",
-            ].join(" ")}
-          >
-            {/* 아바타 */}
-            {user.user_metadata?.avatar_url ? (
-              <img
-                src={user.user_metadata.avatar_url}
-                alt="프로필"
-                className="w-6 h-6 rounded-full shrink-0 object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div
-                className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                {(user.user_metadata?.full_name ?? user.email ?? "U")[0].toUpperCase()}
-              </div>
-            )}
-
-            {/* 이름/이메일 + 로그아웃 */}
-            <div className={`flex-1 min-w-0 inline-block ${labelCls}`}>
-              <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate whitespace-nowrap">
-                {user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자"}
-              </p>
-              <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate whitespace-nowrap">
-                {user.email}
-              </p>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              aria-label="로그아웃"
-              title="로그아웃"
-              className={`shrink-0 p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-40 ${labelCls}`}
-            >
-              <IconLogout className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-
+  return <aside className={`wk-rail${isCollapsed ? " wk-rail--collapsed" : ""}`} aria-label={t("wk_workspace")}>
+    <div className="wk-rail-brand">
+      <Link href="/" onClick={onClose} className="wk-brand-link" aria-label="Worky">
+        <img src="/favicon-48.png" width={30} height={30} alt="" />
+        <span className="wk-brand-word">Worky</span>
+      </Link>
+      <button type="button" className="wk-icon-button wk-desktop-collapse"
+        aria-label={t(isCollapsed ? "wk_menu_expand" : "wk_menu_collapse")}
+        aria-expanded={!isCollapsed} onClick={() => {
+          setCollapsed(!collapsed);
+          localStorage.setItem("worky-sidebar-collapsed", String(!collapsed));
+        }}><IconLayoutSidebarLeftCollapse size={18} style={isCollapsed ? { transform: "rotate(180deg)" } : undefined} /></button>
+      {mobile && <button type="button" className="wk-icon-button wk-mobile-close" onClick={onClose} aria-label={t("wk_menu_close")}><IconX size={20} /></button>}
+    </div>
+    <div className="wk-rail-scroll">
+    <nav className="wk-rail-nav" aria-label={t("wk_workspace")}>
+      {renderLink("/")}
+      {groups.map(group => group.routes.length > 0 && <div className="wk-nav-group" key={group.label}>
+        <p className="wk-nav-label">{group.label}</p>
+        {group.routes.map(renderLink)}
+      </div>)}
+    </nav>
+      {recentRoutes.length > 0 && <section className="wk-nav-group" aria-label={t("wk_recent_hint")}>
+        <p className="wk-nav-label">{t("wk_recent_hint")}</p>
+        {recentRoutes.slice(0, 3).map(route => <Link key={route} href={route} onClick={onClose} className="wk-nav-link" title={t(MENU_LOCALE_MAP[route])}>
+          <WorkspaceIcon route={route} /><span className="wk-rail-label">{t(MENU_LOCALE_MAP[route])}</span>
+        </Link>)}
+      </section>}
+    </div>
+    <div className="wk-rail-footer">
+      <div className="wk-rail-status" data-state={aiStatus} role="status" title={status}>
+        <span className="wk-status-dot" aria-hidden="true" /><span className={isCollapsed ? "sr-only" : "wk-rail-label"}>{status}</span>
       </div>
-    </aside>
-  );
+      <Link href="/settings" onClick={onClose} className="wk-nav-link" aria-label={t("sidebar_settings")} title={t("sidebar_settings")} aria-current={pathname === "/settings" ? "page" : undefined}>
+        <IconSettings size={18} /><span className="wk-rail-label">{t("sidebar_settings")}</span>{pathname === "/settings" && <WorkyFlow compact />}
+      </Link>
+      <button type="button" onClick={toggle} className="wk-nav-link w-full" aria-label={t(theme === "dark" ? "theme_light" : "theme_dark")} title={t(theme === "dark" ? "theme_light" : "theme_dark")}>
+        {theme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}<span className="wk-rail-label">{t(theme === "dark" ? "theme_light" : "theme_dark")}</span>
+      </button>
+      {user && <div className="wk-account">
+        <span className="wk-avatar" aria-hidden="true">{(user.user_metadata?.full_name ?? user.email ?? "W")[0].toUpperCase()}</span>
+        <span className="wk-account-name" title={user.email}>{user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? t("wk_account")}</span>
+        <button type="button" className="wk-icon-button" disabled={loggingOut} aria-label={t("wk_logout")} title={t("wk_logout")} onClick={async () => {
+          setLoggingOut(true);
+          await createClient().auth.signOut();
+          router.push("/login");
+        }}><IconLogout size={18} /></button>
+      </div>}
+    </div>
+  </aside>;
 }
