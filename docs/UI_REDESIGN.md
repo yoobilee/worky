@@ -104,6 +104,8 @@
 
 ## PR #167 후속 다듬기: 업무 브리핑과 전환
 
+> 아래는 2026-09-27의 구현·검증 기록이다. 브리핑과 팁은 이후 요청에 따라 제거했으며 현재 동작은 아래의 ‘2026-09-28 홈 균형 보정’ 절을 따른다. 당시 전후 이미지는 이력으로 보존한다.
+
 기준 구현은 `008e7f4`이며 같은 `feature/worky-calm-future-phase1` 브랜치와 Draft PR을 유지한다. 인증·DB·API·설정 저장 방식·다른 기능 페이지·의존성은 이 후속 작업에서 변경하지 않았다.
 
 ### 홈 화면 A안 적용 (2026-09-27)
@@ -171,6 +173,53 @@
 ### 검증 경계
 
 홈에는 날짜별 팁이 항상 있으므로 실제 홈의 사용자 데이터 없음 상태는 ‘팁만’으로 검증하고, 팁까지 없는 완전한 빈 상태는 컴포넌트 단위 테스트로 검증한다. 화면 검증은 Chromium에서 수행한다. Safari/Firefox 실기기 확인은 별도이며 `@starting-style` 미지원 브라우저는 브리핑 진입 효과 없이 내용이 즉시 나타나는 점진적 대체 동작을 가진다. 테스트의 AI/날씨/홈 데이터 응답은 대역이고 인증은 기존 게스트 인증을 사용한다.
+
+## 2026-09-28 홈 균형 보정
+
+기준: `a12a591`. 같은 브랜치와 Draft PR #167에서 요청한 홈 표시만 수정한다. 새 시안을 만들거나 다른 기능 화면을 개편하지 않는다. 첨부 이미지는 이번 메시지에서 확인할 수 없어 기준 커밋을 직접 실행한 화면을 비교했다. 사용 가능한 연결 브라우저가 없어 기존 Playwright/Chromium으로 확인했다. 설치된 Next 15.3.9에는 지시된 로컬 문서 디렉터리가 없어 [공식 Next 15 CSS 가이드](https://nextjs.org/docs/15/app/getting-started/css)를 참고했고, 최종 CSS는 프로덕션 빌드에서 검증한다.
+
+### 현재 동작과 변경 파일
+
+- `HomeAccountStatus.tsx`: `WorkBrief.tsx`를 대체한다. 접기·펼치기, 반복되는 팁, 제목, 별도 구획선을 없애고 주간 활동과 남은 연차만 한 줄로 표시한다. 정보가 모두 없으면 DOM 자체를 만들지 않는다. 연차 0일은 유효하며 연차 링크는 `/settings`를 유지한다. 좁은 화면이나 긴 영문 값은 자르지 않고 필요하면 자연스럽게 줄바꿈한다.
+- `page.tsx`: 홈 전용 일반 팁 배열/상태만 제거했다. 기존 조회·연차 계산은 그대로이며 계정 데이터 로딩 완료 후 상태 줄을 렌더링한다. 인사말 설정, 기본/시간/요일 모드, 메뉴 필터·정렬, 링크 목적지, 알림과 온보딩 로직은 변경하지 않았다.
+- `workspace.css`: 홈의 글자 링크에서만 hover 밑줄을 제거한다. 정밀 포인터에서는 기존 토큰의 색상 변화와 화살표 2px 이동(120ms)을 사용한다. tools 펼침 화살표의 방향 표시는 유지한다. reduced-motion에서는 이동 없이 80ms 색상 변화만 남기며 터치에는 hover 이동을 적용하지 않는다. 기존 포커스 링은 유지한다. `transition: all`과 페이지 등장 효과는 추가하지 않았다.
+- 인사말은 기존 데스크톱 최대 40px/모바일 28px에서 최대 28px/모바일 22px, 굵기 650, 줄 높이 1.5로 조정했다. 단어 단위 줄바꿈과 긴 단어의 넘침 처리를 유지하고 명시적 개행도 보존한다. ellipsis, line-clamp, 고정 높이, 문구 수정은 없다. 상하 여백을 줄여 실제 업무가 더 일찍 보이도록 했다.
+- `translations.ts`: 한국어 `home`/`sidebar_home`은 ‘홈’, 영어는 ‘Home’을 유지한다. 상태 줄의 접근 가능한 이름을 ko/en으로 추가했다. #6D63FF와 기존 Tabler 아이콘 체계는 변경하지 않았다.
+- `HomeAccountStatus.test.ts`, `workspace-ui.spec.ts`: 제거하도록 요청된 브리핑 접기/팁 기대값을 새 명세로 교체했다. 데이터 없음·활동만·전체·연차 0일, 잘못된 숫자, 영문, 설정 링크의 키보드 진입, 링크 반응/터치/reduced-motion, 긴 맞춤 인사말/개행을 검사한다. 메뉴·설정 저장 및 업무 기능의 기존 회귀 검사는 유지한다.
+
+인증·DB·API·저장 방식·의존성 변경 없음. 병합, Ready 전환, 리뷰 요청은 하지 않는다.
+
+### 화면 기록
+
+같은 고정 인사말과 업무 데이터로 비교한다. 기본 화면은 주간 활동/연차가 없는 계정 조건이다. before는 기준 커밋의 개발 서버, after는 최종 프로덕션 빌드이며 개발 도구 표시는 제품 UI가 아니다. 각 이미지의 `-footer` 버전은 하단까지 스크롤한 화면, `-status` 버전은 실제 상태 값이 있는 조건이다.
+
+| 너비 | 수정 전 | 수정 후 | 상태 정보 있음 |
+| --- | --- | --- | --- |
+| 1440px | [밝음](images/home-balance/before/1440-light.png) · [어두움](images/home-balance/before/1440-dark.png) | [밝음](images/home-balance/after/1440-light.png) · [어두움](images/home-balance/after/1440-dark.png) | [밝음](images/home-balance/after/1440-light-status.png) · [어두움](images/home-balance/after/1440-dark-status.png) |
+| 390px | [밝음](images/home-balance/before/390-light.png) · [어두움](images/home-balance/before/390-dark.png) | [밝음](images/home-balance/after/390-light.png) · [어두움](images/home-balance/after/390-dark.png) | [밝음](images/home-balance/after/390-light-status.png) · [어두움](images/home-balance/after/390-dark-status.png) |
+| 320px | [밝음](images/home-balance/before/320-light.png) · [어두움](images/home-balance/before/320-dark.png) | [밝음](images/home-balance/after/320-light.png) · [어두움](images/home-balance/after/320-dark.png) | [밝음](images/home-balance/after/320-light-status.png) · [어두움](images/home-balance/after/320-dark-status.png) |
+
+문서용 재촬영: `WORKY_HOME_CAPTURE_PHASE=after`로 UI 테스트 실행. 일반 실행은 `test-results`에 저장한다. 과거 `WORKY_UI_CAPTURE_PHASE` 촬영 테스트는 제거된 UI에 대한 이력이므로 더 이상 실행하지 않는다.
+
+### 최종 검증 결과 (2026-09-28)
+
+| 검사 | 결과 |
+| --- | --- |
+| `npm run typecheck` | 통과 |
+| `npm run lint` | 오류 0, 기존 경고 8 유지 |
+| `npm run build` | 통과, 34개 경로 생성 |
+| `npm run test:unit` | 4개 파일, 16개 통과 (계정 상태 6개 포함) |
+| `npx playwright test --workers=1 --reporter=line` | 최종 프로덕션 빌드에서 17개 통과, 1.1분 |
+| `npx playwright test --config playwright.crud.config.ts --workers=1 --output playwright-report/crud` | 전용 테스트 계정 CRUD 7개 통과, 21.6초 |
+| 화면·상태 | 1440/390/320px × 밝음/어두움 촬영·확인, 계정 상태 조합은 1100px도 검사 |
+| 접근성·회귀 | axe WCAG A/AA 위반 0, 키보드 초점·링크 이동, reduced-motion, 터치 hover 잔류 없음, 메뉴 반복 개폐·Escape·포커스 복원, 인사말 모드·메뉴 on/off·순서·프리셋 유지 |
+| UI 오류 | 검사한 화면의 가로 넘침·콘솔 오류·주요 네트워크 오류 없음 |
+
+첫 프로덕션 E2E에서 두 문제를 구분해 수정했다. 한국어 상단 표기의 기존 `Home` 기대값은 요청된 ‘홈’ 변경에 맞춰 `guest-smoke.spec.ts`의 level 1 제목 검사로 갱신했다. 별도로 CSS 최적화 후 개별 `translate` 초기화가 누락돼 reduced-motion에서 화살표가 이동하는 실제 회귀를 발견했다. 이동을 `transform`으로 통일한 뒤 다시 빌드하고 동일한 움직임 감소 검사를 통과했다. 기능 제거·검사 완화·시간 제한 증가는 하지 않았다.
+
+추가 CRUD 첫 실행은 첫 일정 조회가 HTTP 401로 실패했고 나머지 6개는 통과했다. 실패는 테스트 데이터 생성 전이었다. 인증 코드·테스트·권한을 변경하지 않고 전체 7개를 재실행해 모두 통과했다. 최초 401의 원인은 확정하지 않았으며 외부 인증의 지속적 안정성을 보장하는 결과로 해석하지 않는다.
+
+브라우저 검증은 Chromium 기준이며 Safari/Firefox와 실제 모바일 기기는 미검증이다. UI 테스트는 실제 게스트 인증을 사용하되 홈 계정 데이터·AI·날씨 응답은 격리된 대역을 사용한다. 실제 저장 회귀는 별도 전용 계정 CRUD로 확인했다. 인증·DB·API·설정 저장 코드와 다른 기능 페이지는 수정하지 않았다.
 
 ## 남은 범위와 다음 단계
 

@@ -21,7 +21,7 @@ import { runDailyNotificationChecks, addBusinessDays, calcDday } from "@/lib/not
 import { getClients } from "@/lib/db/clients";
 import OnboardingModal from "@/components/OnboardingModal";
 import ExternalShortcuts from "@/components/ExternalShortcuts";
-import WorkBrief from "@/components/WorkBrief";
+import HomeAccountStatus from "@/components/HomeAccountStatus";
 import WorkspaceIcon from "@/components/WorkspaceIcon";
 import { useWorkspace } from "@/components/WorkspaceProvider";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -33,23 +33,6 @@ interface Todo { id: string; text: string; completed: boolean }
 
 const DAY_KO = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
 const DAY_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-interface Tip { text: string; category: string }
-
-const TIPS: Tip[] = [
-  { text: "첫 보고서는 '결론 → 이유 → 근거' 순서로 작성하면 가독성이 높아집니다.", category: "문서작성" },
-  { text: "업무 요청을 받으면 기한·우선순위·담당자를 반드시 확인하고 시작하세요.", category: "업무관리" },
-  { text: "회의가 끝나면 24시간 안에 액션 아이템을 정리해 공유하면 신뢰를 얻을 수 있습니다.", category: "커뮤니케이션" },
-  { text: "이메일은 보내기 전 수신자·참조·제목·첨부파일을 한 번 더 확인하는 습관을 들이세요.", category: "커뮤니케이션" },
-  { text: "업무 중 막히는 부분은 30분 이상 혼자 고민하기 전에 선배에게 질문하세요.", category: "학습" },
-  { text: "To-Do는 구체적인 액션 단위로 쪼개야 실행이 쉽습니다. '기획안 작성' 대신 '목차 초안 만들기'처럼요.", category: "시간관리" },
-  { text: "상사에게 중간 보고를 자주 하면 방향이 틀렸을 때 수정 비용이 줄어듭니다.", category: "업무관리" },
-  { text: "일주일 단위로 이번 주 배운 것 3가지를 기록하면 성장이 눈에 보입니다.", category: "학습" },
-  { text: "슬랙·메일 알림은 집중 시간대에는 끄고, 정해진 시간에 일괄 확인하는 것이 효율적입니다.", category: "시간관리" },
-  { text: "문서 저장 시 파일명에 날짜를 포함하면 나중에 찾기 훨씬 쉽습니다.", category: "문서작성" },
-  { text: "모르는 용어나 프로세스는 그 자리에서 바로 메모하고 업무 후 정리하세요.", category: "학습" },
-  { text: "동료의 업무 성과를 공개적으로 칭찬하는 습관은 팀 협업을 강화합니다.", category: "팀워크" },
-];
 
 type AiSuggestion =
   | { type: "client"; name: string; dday: number }
@@ -169,8 +152,6 @@ export default function HomePage() {
   const [greeting, setGreeting] = useState("");
   const [dateStr, setDateStr]   = useState("");
   const [todos, setTodos]       = useState<Todo[]>([]);
-  const [tip, setTip]           = useState("");
-  const [tipCategory, setTipCategory] = useState("");
   const [weather, setWeather]   = useState<WeatherInfo | null>(null);
   const [locationName, setLocationName] = useState("");
   const [geoStatus, setGeoStatus] = useState<"waiting" | "ok" | "denied">("waiting");
@@ -202,7 +183,7 @@ export default function HomePage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
-  // 날짜 + 팁 + localStorage
+  // 언어별 날짜 표시
   useEffect(() => {
     const now   = new Date();
     const month = now.getMonth() + 1;
@@ -218,12 +199,6 @@ export default function HomePage() {
   }, [locale]);
 
   useEffect(() => {
-    const date = new Date().getDate();
-    // 날짜 기반 팁 (하루 동안 고정)
-    const todayTip = TIPS[date % TIPS.length];
-    setTip(todayTip.text);
-    setTipCategory(todayTip.category);
-
     setWeekStats(getThisWeekStats());
     const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -382,18 +357,18 @@ export default function HomePage() {
 
     {dataLoaded && <div className="wk-work-grid wk-section">
       <section className="wk-work-panel" aria-labelledby="worky-schedule">
-        <div className="wk-section-heading"><h3 id="worky-schedule">{t("wk_schedule")}</h3><Link className="wk-text-link" href="/calendar">{t("view_all")}<IconArrowRight size={14} aria-hidden="true" /></Link></div>
+        <div className="wk-section-heading"><h3 id="worky-schedule">{t("wk_schedule")}</h3><Link className="wk-text-link" href="/calendar">{t("view_all")}<IconArrowRight className="wk-link-arrow" size={14} aria-hidden="true" /></Link></div>
         {upcomingEvents.length > 0 ? <ol className="wk-work-list">{upcomingEvents.map(event => <li key={event.id} className="wk-work-row">
           <span className="wk-work-time">{event.time || t("wk_all_day")}</span>
           <Link href="/calendar"><span>{event.title}</span><p>{event.date}{event.location ? " · " + event.location : ""}</p></Link>
-        </li>)}</ol> : <div className="wk-empty"><p>{t("wk_no_events")}</p><Link href="/calendar" className="wk-text-link">{t("add_event")}<IconArrowRight size={14} aria-hidden="true" /></Link></div>}
+        </li>)}</ol> : <div className="wk-empty"><p>{t("wk_no_events")}</p><Link href="/calendar" className="wk-text-link">{t("add_event")}<IconArrowRight className="wk-link-arrow" size={14} aria-hidden="true" /></Link></div>}
       </section>
       <section className="wk-work-panel" aria-labelledby="worky-tasks">
-        <div className="wk-section-heading"><h3 id="worky-tasks">{t("wk_tasks")}</h3><Link className="wk-text-link" href="/todo">{t("view_all")}<IconArrowRight size={14} aria-hidden="true" /></Link></div>
+        <div className="wk-section-heading"><h3 id="worky-tasks">{t("wk_tasks")}</h3><Link className="wk-text-link" href="/todo">{t("view_all")}<IconArrowRight className="wk-link-arrow" size={14} aria-hidden="true" /></Link></div>
         {total > 0 && <div className="wk-progress"><progress max={total} value={completed} aria-label={t("todo_progress")} /><span>{tFormat(t("wk_task_summary"), { total, done: completed })}</span></div>}
         {remaining.length > 0 ? <ul className="wk-work-list">{remaining.slice(0, 3).map(todo => <li key={todo.id} className="wk-work-row">
           <IconCircle size={16} className="wk-task-icon" aria-hidden="true" /><Link href="/todo">{todo.text}</Link>
-        </li>)}</ul> : <div className="wk-empty"><p>{t(total > 0 ? "wk_all_done" : "wk_no_tasks")}</p><Link href="/todo" className="wk-text-link">{t("wk_add_task")}<IconArrowRight size={14} aria-hidden="true" /></Link></div>}
+        </li>)}</ul> : <div className="wk-empty"><p>{t(total > 0 ? "wk_all_done" : "wk_no_tasks")}</p><Link href="/todo" className="wk-text-link">{t("wk_add_task")}<IconArrowRight className="wk-link-arrow" size={14} aria-hidden="true" /></Link></div>}
       </section>
     </div>}
 
@@ -403,7 +378,7 @@ export default function HomePage() {
         {recentRoutes.length > 0 && <div className="wk-recent">{recentRoutes.map(route => <Link href={route} key={route}><span className="wk-tool-icon"><WorkspaceIcon route={route} /></span>{t(MENU_LOCALE_MAP[route])}<IconArrowRight className="wk-link-arrow" size={14} aria-hidden="true" /></Link>)}</div>}
         {recentRoutes.length === 0 && <p className="wk-quick-hint">{t("wk_tools_hint")}</p>}
       </div>
-      <button type="button" className="wk-text-link wk-tools-toggle" aria-expanded={showMore} aria-controls="worky-tool-list" onClick={() => setShowMore(value => !value)}>{t(showMore ? "wk_less_tools" : "wk_more_tools")}<IconArrowRight size={16} aria-hidden="true" /></button>
+      <button type="button" className="wk-text-link wk-tools-toggle" aria-expanded={showMore} aria-controls="worky-tool-list" onClick={() => setShowMore(value => !value)}>{t(showMore ? "wk_less_tools" : "wk_more_tools")}<IconArrowRight className="wk-link-arrow" size={16} aria-hidden="true" /></button>
     </section>
     <div id="worky-tool-list" className="wk-tool-drawer" data-state={showMore ? "open" : "closed"} aria-hidden={!showMore} inert={!showMore}>
       <div className="wk-tool-drawer-inner"><nav className="wk-tools" aria-label={t("wk_tools")}>
@@ -411,8 +386,7 @@ export default function HomePage() {
       </nav><Link className="wk-text-link wk-customize" href="/settings"><IconAdjustments size={16} aria-hidden="true" />{t("wk_customize")}</Link></div>
     </div>
 
-    <WorkBrief weekTotal={weekTotal} leaveRemaining={leaveData ? Math.max(0, leaveData.total - leaveData.used) : null}
-      tip={locale === "ko" ? tip : t("home_tip_fallback")} tipCategory={locale === "ko" ? tipCategory : undefined} />
+    {dataLoaded && <HomeAccountStatus weekTotal={weekTotal} leaveRemaining={leaveData ? Math.max(0, leaveData.total - leaveData.used) : null} />}
     <ExternalShortcuts />
   </div>;
 }
