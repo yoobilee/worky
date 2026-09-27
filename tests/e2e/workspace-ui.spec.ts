@@ -396,6 +396,13 @@ test("빈 업무는 간결하고 실행 가능한 상태를 보여준다", async
 });
 
 test("바로가기 추가 대화상자 안의 클릭은 패널을 닫지 않고 포커스를 되돌린다", async ({ page }) => {
+  // The URL preview loads Google's favicon for example.com, which 404s on CI runners; pin only that response.
+  const favicon = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
+  let faviconRequests = 0;
+  await page.route(url => url.href === "https://www.google.com/s2/favicons?domain=example.com&sz=64", route => {
+    faviconRequests++;
+    return route.fulfill({ contentType: "image/png", body: favicon });
+  });
   const { settings, errors, networkErrors } = await workspace(page, true);
   const toggle = page.getByRole("button", { name: "외부 바로가기", exact: true });
   const panel = page.locator("#worky-external-links");
@@ -422,6 +429,7 @@ test("바로가기 추가 대화상자 안의 클릭은 패널을 닫지 않고 
   await url.fill("https://example.com");
   await name.click();
   await name.fill("업무 참고");
+  await expect.poll(() => faviconRequests).toBeGreaterThan(0);
   await dialog.getByRole("button", { name: "추가", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await expect(add).toBeFocused();
