@@ -51,7 +51,7 @@ export default function Sidebar({ onClose, aiStatus, mobile = false }: SidebarPr
     aria-current={pathname === route ? "page" : undefined} className="wk-nav-link">
     <WorkspaceIcon route={route} />
     <span className="wk-rail-label">{t(MENU_LOCALE_MAP[route])}</span>
-    {pathname === route && <WorkyFlow compact />}
+    <WorkyFlow compact />
   </Link>;
 
   return <aside className={`wk-rail${isCollapsed ? " wk-rail--collapsed" : ""}`} aria-label={t("wk_workspace")}>
@@ -88,7 +88,7 @@ export default function Sidebar({ onClose, aiStatus, mobile = false }: SidebarPr
         <span className="wk-status-dot" aria-hidden="true" /><span className={isCollapsed ? "sr-only" : "wk-rail-label"}>{status}</span>
       </div>
       <Link href="/settings" onClick={onClose} className="wk-nav-link" aria-label={t("sidebar_settings")} title={t("sidebar_settings")} aria-current={pathname === "/settings" ? "page" : undefined}>
-        <IconSettings size={18} /><span className="wk-rail-label">{t("sidebar_settings")}</span>{pathname === "/settings" && <WorkyFlow compact />}
+        <IconSettings size={18} /><span className="wk-rail-label">{t("sidebar_settings")}</span><WorkyFlow compact />
       </Link>
       <button type="button" onClick={toggle} className="wk-nav-link w-full" aria-label={t(theme === "dark" ? "theme_light" : "theme_dark")} title={t(theme === "dark" ? "theme_light" : "theme_dark")}>
         {theme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}<span className="wk-rail-label">{t(theme === "dark" ? "theme_light" : "theme_dark")}</span>

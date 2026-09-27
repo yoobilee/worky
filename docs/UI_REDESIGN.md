@@ -102,6 +102,68 @@
 
 [모바일 작업 레일](images/ui-redesign/mobile-navigation-dark.png)
 
+## PR #167 후속 다듬기: 업무 브리핑과 전환
+
+기준 구현은 `008e7f4`이며 같은 `feature/worky-calm-future-phase1` 브랜치와 Draft PR을 유지한다. 인증·DB·API·설정 저장 방식·다른 기능 페이지·의존성은 이 후속 작업에서 변경하지 않았다.
+
+### 확인한 문제와 처리
+
+- 기존 `작업 메모 / Workspace notes`는 실제 메모가 아닌 지표와 팁을 세로로 나열했고, 접으면 어떤 정보가 있는지 알 수 없었다. `업무 브리핑 / Work brief`로 이름을 바꾸고 활동·남은 연차 중 있는 값을 최대 두 개 요약한다. 지표가 없으면 자주 쓴 기능 또는 실제 팁을 요약한다.
+- 펼치면 활동·연차, 자주 사용한 기능, 오늘의 팁을 낮은 우선순위의 정보 묶음으로 배치한다. 별도 카드 배경이나 그림자는 추가하지 않는다. 640px 미만은 한 열, 중간 폭은 최대 두 열, 1280px 이상은 정보량에 따라 최대 세 열이다. 팁만 있으면 한 묶음이며, 모든 값이 없으면 영역 자체를 렌더링하지 않는다. 남은 연차 0일은 유효한 값으로 유지한다.
+- 모바일 메뉴는 즉시 제거하던 방식을 변경했다. 진입은 transform 200ms / `cubic-bezier(0.32, 0.72, 0, 1)`, 배경은 opacity 140ms, 퇴장은 140ms다. 실제 CSS 전환의 완료를 기다린 후 dialog를 닫고 트리거 포커스를 복원한다. 취소된 열기 프레임과 이전 닫힘 완료 처리는 무효화한다.
+- 브리핑 내용은 opacity와 translateY(4px)를 160ms로 전환하고 화살표도 같은 시간에 회전한다. 높이 애니메이션은 없다. 접히는 내용은 즉시 `inert` 처리하고 퇴장 중에만 잠시 유지한다.
+- 주요 버튼은 120ms / scale(0.98), 현재 메뉴 배경과 흐름선은 140ms다. 흐름선을 항상 마운트하고 활성 여부만 opacity로 전환한다. 페이지 전환 효과는 추가하지 않았다.
+- reduced-motion에서는 이동·스케일 및 화살표 회전 애니메이션을 없애고 색상·opacity만 80ms 유지한다. 새 버튼 hover는 정밀 포인터/hover 가능 장치에만 적용한다.
+
+### 변경 파일
+
+| 파일 | 후속 작업 역할 |
+| --- | --- |
+| `src/components/WorkBrief.tsx` | 순수 표시용 브리핑, 값 유무 판정, 요약, 키보드 disclosure, aria 연결 |
+| `src/app/page.tsx` | 기존 계산 결과와 메뉴 필터를 그대로 브리핑에 전달 |
+| `src/components/AppShell.tsx` | 메뉴 진입/퇴장 수명 관리, 중단·재개, Escape 및 포커스 복원 |
+| `src/components/Sidebar.tsx` | 현재 메뉴 흐름선의 opacity 전환을 위한 안정된 DOM |
+| `src/app/workspace.css` | 기존 색상 토큰을 사용하는 정보 묶음과 범위가 제한된 전환·reduced-motion |
+| `src/lib/i18n/translations.ts` | 업무 브리핑 및 요약 ko/en 문구 |
+| `src/components/WorkBrief.test.ts` | 전체 빈 값, 일부 값, 팁만, 연차 0일, 잘못된 숫자, 영문 렌더링 검사 |
+| `tests/e2e/workspace-ui.spec.ts` | 전후 캡처, 데이터 조합, 반응형·접근성·전환·반복 조작 회귀 검사 추가 |
+
+기존 인사말/시간·요일 모드, 직업군 프리셋, 메뉴 표시·정렬, 설정 저장과 홈 데이터 조회 코드는 보존했다. 기존 E2E 검사는 그대로 두고 fixture 옵션과 새 검사를 추가했다.
+
+### 후속 작업 검증 결과 (2026-09-27)
+
+| 검사 | 결과 |
+| --- | --- |
+| `npm run typecheck` | 통과 |
+| `npm run lint` | 오류 0, 기존 경고 8 유지 |
+| `npm run build` | 프로덕션 빌드 통과, 해당 빌드로 화면 검증 |
+| `npm run test:unit` | 16개 통과 (브리핑 신규 6개 포함) |
+| `npx playwright test --workers=1 --reporter=line` | UI·게스트 13개 통과, 50.7초 |
+| `npx playwright test --config playwright.crud.config.ts --workers=1 --output playwright-report/crud` | 전용 계정 CRUD 7개 통과, 20.8초 |
+| 브리핑 데이터 조합 / 반응형 / 테마 | 전체·일부·팁만 × 320/390/1100/1440px × light/dark 통과; 완전한 빈 상태·0일·영문은 단위 검사 |
+| 접근성 / 전환 | axe WCAG A/AA 위반 0, aria 연결, Enter/Space, Tab 순환, Escape, 포커스 복원, 배경 클릭, 반복 중단·재열기, 데스크톱 전환 시 닫힘 통과 |
+| reduced-motion / 터치 | transform 제거, 짧은 opacity 유지, 버튼 누름, 현재 메뉴 흐름선, 터치 이후 hover 미잔류 통과 |
+| 가로 넘침 / 오류 | 검증한 화면의 넘침, 콘솔 오류, 주요 네트워크 오류 0 |
+
+중간 실행에서 비정상적으로 긴 실행 지연, Supabase DNS `ENOTFOUND`, 게스트 인증 연결 대기 중 시간 초과가 있었다. 최종 동일 코드·동일 제한 시간·동일 assertion으로 전체 UI 13개와 CRUD 7개를 재실행해 통과했다. 테스트 삭제·skip·기대값 완화·시간 제한 증가는 하지 않았다. 이 결과는 외부 인증 서비스의 지속적인 가용성을 보장하지 않는다.
+
+### 전후 화면
+
+실제 개인 정보가 아닌 동일한 고정 데이터(주간 활동 12회, 남은 연차 4일)로 로컬 프로덕션 빌드에서 촬영했다. 홈 내부 스크롤을 브리핑이 보이는 위치에 맞췄다. `before`는 앱 수정 전 기준 구현이다.
+
+| 화면 | 수정 전 | 수정 후 |
+| --- | --- | --- |
+| 데스크톱, 펼침 | [밝음](images/ui-refinement/before/desktop-light.png) · [어두움](images/ui-refinement/before/desktop-dark.png) | [밝음](images/ui-refinement/after/desktop-light.png) · [어두움](images/ui-refinement/after/desktop-dark.png) |
+| 데스크톱, 접힘 | [밝음](images/ui-refinement/before/desktop-light-collapsed.png) · [어두움](images/ui-refinement/before/desktop-dark-collapsed.png) | [밝음](images/ui-refinement/after/desktop-light-collapsed.png) · [어두움](images/ui-refinement/after/desktop-dark-collapsed.png) |
+| 모바일 390px | [밝음](images/ui-refinement/before/mobile-light.png) · [어두움](images/ui-refinement/before/mobile-dark.png) | [밝음](images/ui-refinement/after/mobile-light.png) · [어두움](images/ui-refinement/after/mobile-dark.png) |
+| 모바일 메뉴 열림 | [밝음](images/ui-refinement/before/mobile-menu-light.png) · [어두움](images/ui-refinement/before/mobile-menu-dark.png) | [밝음](images/ui-refinement/after/mobile-menu-light.png) · [어두움](images/ui-refinement/after/mobile-menu-dark.png) |
+
+일반 E2E 캡처는 `test-results`에 저장한다. 문서용 재촬영은 `WORKY_UI_CAPTURE_PHASE=after` 환경 변수로 `브리핑 전후 화면 기록` 테스트를 실행한다. 기존 before 파일을 재기준화하지 않는다.
+
+### 검증 경계
+
+홈에는 날짜별 팁이 항상 있으므로 실제 홈의 사용자 데이터 없음 상태는 ‘팁만’으로 검증하고, 팁까지 없는 완전한 빈 상태는 컴포넌트 단위 테스트로 검증한다. 화면 검증은 Chromium에서 수행한다. Safari/Firefox 실기기 확인은 별도이며 `@starting-style` 미지원 브라우저는 브리핑 진입 효과 없이 내용이 즉시 나타나는 점진적 대체 동작을 가진다. 테스트의 AI/날씨/홈 데이터 응답은 대역이고 인증은 기존 게스트 인증을 사용한다.
+
 ## 남은 범위와 다음 단계
 
 - 기능 페이지(일정 추출의 원문/검토/저장 UI 포함), 설정 페이지 레이아웃, 인증, DB/RLS/API, 업무 계산/저장 로직을 개편하지 않았다.

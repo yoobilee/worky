@@ -23,6 +23,7 @@ import { getClients } from "@/lib/db/clients";
 import OnboardingModal from "@/components/OnboardingModal";
 import ExternalShortcuts from "@/components/ExternalShortcuts";
 import WorkyFlow from "@/components/WorkyFlow";
+import WorkBrief from "@/components/WorkBrief";
 import WorkspaceIcon from "@/components/WorkspaceIcon";
 import { useWorkspace } from "@/components/WorkspaceProvider";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -427,15 +428,12 @@ export default function HomePage() {
       {activeRoutes.length > 9 && <button type="button" className="wk-text-link mt-2" aria-expanded={showMore} aria-controls="worky-tool-list" onClick={() => setShowMore(!showMore)}>{t(showMore ? "wk_less_tools" : "wk_more_tools")}<IconArrowRight size={14} aria-hidden="true" /></button>}
     </section>
 
-    <details className="wk-context">
-      <summary>{t("wk_context")}</summary>
-      <div className="wk-context-content">
-        {leaveData && <Link href="/settings">{t("home_metric_leave_left")} · {Math.max(0, leaveData.total - leaveData.used)}</Link>}
-        {weekTotal > 0 && <p>{t("weekly_activity")} · {tFormat(t("home_total_n"), { n: weekTotal })}</p>}
-        {validTop.length > 0 && <div className="wk-context-links">{validTop.map(({ feature }) => { const meta = FEATURE_CHIP_META[feature]!; return <Link key={feature} href={meta.href}>{t(meta.labelKey)}</Link>; })}</div>}
-        <p>{t("daily_tip")} · {locale === "ko" ? tip : t("home_tip_fallback")}{locale === "ko" && tipCategory ? " — " + tipCategory : ""}</p>
-      </div>
-    </details>
+    <WorkBrief weekTotal={weekTotal} leaveRemaining={leaveData ? Math.max(0, leaveData.total - leaveData.used) : null}
+      features={validTop.filter(({ count }) => count > 0).map(({ feature }) => {
+        const meta = FEATURE_CHIP_META[feature]!;
+        return { href: meta.href, label: t(meta.labelKey) };
+      })}
+      tip={locale === "ko" ? tip : t("home_tip_fallback")} tipCategory={locale === "ko" ? tipCategory : undefined} />
     <ExternalShortcuts />
   </div>;
 }

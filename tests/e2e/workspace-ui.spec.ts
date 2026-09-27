@@ -8,7 +8,7 @@ const optional = ["/content", "/clients", "/members", "/template", "/document", 
 
 // Real guest authentication; all workspace data and writes are isolated in this browser.
 // No shared guest records are changed by this suite.
-async function workspace(page: Page, empty = false) {
+async function workspace(page: Page, empty = false, brief?: "full" | "partial" | "tip-only") {
   const today = "2026-09-27";
   await page.clock.setFixedTime(new Date("2026-09-27T09:00:00+09:00"));
   const settings: Record<string, unknown> = {
@@ -17,6 +17,7 @@ async function workspace(page: Page, empty = false) {
     menu_order: ["/data", "/summary", ...optional.filter(route => !["/data", "/summary"].includes(route))],
     custom_greeting: { enabled: true, mode: "basic", values: { default: greeting } },
     speed_dial_custom: [],
+    ...(brief === "full" ? { employment_type: "career", granted_leaves: 15, used_leaves: 11 } : {}),
   };
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -52,6 +53,7 @@ async function workspace(page: Page, empty = false) {
       { id: "ui-event-2", date: today, time: "14:00", title: "다음 스프린트 업무와 일정 조율", location: "온라인" },
     ];
     if (table === "usage_stats") data = single ? { stats: {} } : [{ stats: { data: 4, clients: 3 } }];
+    if (table === "usage_stats" && brief) data = { stats: brief === "tip-only" ? {} : { data: 8, summary: 4 } };
     if (!single && !Array.isArray(data)) data = [data];
     return route.fulfill({ json: data });
   });
@@ -61,6 +63,198 @@ async function workspace(page: Page, empty = false) {
   await expect(page.locator("#worky-tasks")).toBeVisible();
   return { settings, errors, networkErrors };
 }
+
+test("브리핑 전후 화면 기록", async ({ page }) => {
+  const { errors, networkErrors } = await workspace(page, false, "full");
+  const phase = process.env.WORKY_UI_CAPTURE_PHASE === "before" ? "before" : "after";
+  const folder = process.env.WORKY_UI_CAPTURE_PHASE ? `docs/images/ui-refinement/${phase}` : "test-results/ui-refinement/after";
+  for (const theme of ["light", "dark"] as const) {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    if (theme === "dark") await page.getByRole("button", { name: "다크 모드", exact: true }).click();
+    const disclosure = phase === "before" ? page.locator(".wk-context summary") : page.locator(".wk-brief-toggle");
+    await disclosure.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${folder}/desktop-${theme}-collapsed.png`, animations: "disabled" });
+    await disclosure.click();
+    await expect(phase === "before" ? page.locator(".wk-context[open]") : page.locator('.wk-brief[data-state="open"]')).toBeVisible();
+    await page.screenshot({ path: `${folder}/desktop-${theme}.png`, animations: "disabled" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await disclosure.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${folder}/mobile-${theme}.png`, animations: "disabled" });
+    await page.getByRole("button", { name: "메뉴 열기" }).click();
+    await expect(page.getByRole("dialog").getByRole("button", { name: "로그아웃" })).toBeVisible();
+    if (phase === "after") await expect(page.locator(".wk-drawer")).toHaveAttribute("data-state", "open");
+    await page.screenshot({ path: `${folder}/mobile-menu-${theme}.png`, animations: "disabled" });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await disclosure.click();
+  }
+  expect(errors).toEqual([]);
+  expect(networkErrors).toEqual([]);
+});
+
+for (const brief of ["full", "partial", "tip-only"] as const) {
+  test(`업무 브리핑: ${brief}, 크기·테마·키보드`, async ({ page }) => {
+    const { errors, networkErrors } = await workspace(page, false, brief);
+    const section = page.locator(".wk-brief");
+    const toggle = section.getByRole("button");
+    const content = page.locator(".wk-brief-content");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(content).toBeHidden();
+    if (brief === "full") await expect(toggle).toContainText("이번 주 활동 12회 · 남은 연차 4일");
+    if (brief === "partial") {
+      await expect(toggle).toContainText("이번 주 활동 12회");
+      await expect(toggle).not.toContainText("연차");
+    }
+    if (brief === "tip-only") {
+      await expect(toggle).toContainText("이메일은 보내기 전");
+      await expect(section.locator(".wk-brief-metrics")).toHaveCount(0);
+      await expect(section.locator(".wk-brief-links")).toHaveCount(0);
+    }
+    await toggle.focus();
+    await page.keyboard.press("Enter");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(content).toBeVisible();
+    await expect(content).toHaveAttribute("id", (await toggle.getAttribute("aria-controls"))!);
+    for (const theme of ["light", "dark"]) {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      if (theme === "dark") await page.getByRole("button", { name: "다크 모드", exact: true }).click();
+      for (const width of [320, 390, 1100, 1440]) {
+        await page.setViewportSize({ width, height: width < 640 ? 844 : 1000 });
+        await content.scrollIntoViewIfNeeded();
+        expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+        const columns = await content.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length);
+        expect(columns).toBe(brief === "tip-only" || width < 640 ? 1 : width < 1280 ? 2 : 3);
+        const a11y = await new AxeBuilder({ page }).include(".wk-brief").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+        expect(a11y.violations).toEqual([]);
+        if (width === 390 && brief === "tip-only") expect((await content.boundingBox())!.height).toBeLessThan(150);
+      }
+    }
+    await toggle.focus();
+    await page.keyboard.press("Space");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(content).toBeHidden();
+    await expect(toggle).toBeFocused();
+    expect(errors).toEqual([]);
+    expect(networkErrors).toEqual([]);
+  });
+}
+
+test("메뉴와 브리핑 전환: 중단·반복·Escape·동작 감소", async ({ page }) => {
+  const { errors, networkErrors } = await workspace(page, false, "full");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const trigger = page.getByRole("button", { name: "메뉴 열기" });
+  const dialog = page.locator("#worky-navigation");
+  const rail = dialog.locator(".wk-rail");
+  const close = dialog.getByRole("button", { name: "메뉴 닫기" });
+  await trigger.click();
+  await expect(dialog).toHaveAttribute("data-state", "open");
+  await expect(rail).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+  expect(await rail.evaluate(el => getComputedStyle(el).transitionDuration)).toBe("0.2s, 0.14s");
+  expect(await rail.evaluate(el => getComputedStyle(el).transitionTimingFunction)).toContain("cubic-bezier(0.32, 0.72, 0, 1)");
+  expect(await dialog.locator(".wk-drawer-scrim").evaluate(el => getComputedStyle(el).transitionDuration)).toBe("0.14s");
+  // Capture the first closing frame, then reopen before the pending exit can finish.
+  const closing = await close.evaluate(async el => {
+    (el as HTMLButtonElement).click();
+    await new Promise(requestAnimationFrame);
+    const drawer = el.closest("dialog")!;
+    return { open: drawer.open, hasContent: Boolean(drawer.querySelector("nav")), duration: getComputedStyle(drawer.querySelector("aside")!).transitionDuration };
+  });
+  expect(closing).toEqual({ open: true, hasContent: true, duration: "0.14s, 0.14s" });
+  await trigger.evaluate(el => (el as HTMLButtonElement).click());
+  await expect(dialog).toHaveAttribute("data-state", "open");
+  for (let i = 0; i < 6; i++) {
+    await close.evaluate(el => (el as HTMLButtonElement).click());
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.evaluate(el => (el as HTMLButtonElement).click());
+    await expect(dialog).toHaveAttribute("data-state", "open");
+  }
+  await expect(rail).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await page.locator(".wk-drawer-scrim").click({ position: { x: 370, y: 400 } });
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+
+  const toggle = page.locator(".wk-brief-toggle");
+  await toggle.click();
+  await expect(page.locator(".wk-brief-content")).toHaveCSS("opacity", "1");
+  expect(await page.locator(".wk-brief-content").evaluate(el => getComputedStyle(el).transitionDuration)).toBe("0.16s, 0.16s");
+  for (let i = 0; i < 6; i++) {
+    await toggle.evaluate(el => (el as HTMLButtonElement).click());
+    await toggle.evaluate(el => (el as HTMLButtonElement).click());
+  }
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(".wk-brief-content")).toHaveCSS("opacity", "1");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator(".wk-brief-content")).toHaveCSS("transform", "none");
+  await toggle.click();
+  await toggle.click();
+  await expect(page.locator(".wk-brief-content")).toHaveCSS("transform", "none");
+  expect(await page.locator(".wk-brief-content").evaluate(el => getComputedStyle(el).transitionDuration)).toBe("0.08s");
+  await trigger.click();
+  await expect(dialog).toHaveAttribute("data-state", "open");
+  await expect(rail).toHaveCSS("transform", "none");
+  expect(await rail.evaluate(el => getComputedStyle(el).transitionProperty)).toBe("opacity");
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await page.setViewportSize({ width: 320, height: 740 });
+  await trigger.click();
+  await expect(dialog).toHaveAttribute("data-state", "open");
+  expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+  await page.keyboard.press("Tab");
+  expect(await page.evaluate(() => Boolean(document.activeElement?.closest("dialog")))).toBeTruthy();
+  await page.setViewportSize({ width: 1100, height: 768 });
+  await expect(dialog).not.toBeVisible();
+  expect(errors).toEqual([]);
+  expect(networkErrors).toEqual([]);
+});
+
+test("주요 버튼의 누름 반응과 현재 메뉴 흐름선", async ({ page }) => {
+  await workspace(page, false, "full");
+  const action = page.locator(".wk-focus .wk-action");
+  await action.hover();
+  await page.mouse.down();
+  await expect(action).toHaveCSS("transform", "matrix(0.98, 0, 0, 0.98, 0, 0)");
+  expect(await action.evaluate(el => getComputedStyle(el).transitionDuration)).toBe("0.12s, 0.12s");
+  await page.mouse.move(0, 0);
+  await page.mouse.up();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await action.hover();
+  await page.mouse.down();
+  await expect(action).toHaveCSS("transform", "none");
+  await page.mouse.move(0, 0);
+  await page.mouse.up();
+  const active = page.locator('.wk-rail-nav a[aria-current="page"]');
+  await expect(active.locator(".wk-flow")).toHaveCSS("opacity", "1");
+  await expect(page.locator('.wk-rail-nav a[href="/calendar"] .wk-flow')).toHaveCSS("opacity", "0");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  expect(await active.evaluate(el => getComputedStyle(el).transitionDuration)).toBe("0.14s, 0.14s");
+  expect(await active.locator(".wk-flow").evaluate(el => getComputedStyle(el).transitionDuration)).toBe("0.14s");
+});
+
+test.describe("터치 입력", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+  test("탭 이후 주요 버튼 hover 효과가 남지 않는다", async ({ page }) => {
+    const { errors, networkErrors } = await workspace(page, false, "full");
+    expect(await page.evaluate(() => matchMedia("(hover: hover) and (pointer: fine)").matches)).toBeFalsy();
+    const action = page.locator(".wk-focus .wk-action");
+    // Isolate the press styling: navigation itself remains covered by the existing suite.
+    await action.evaluate(el => el.addEventListener("click", event => event.preventDefault(), { once: true }));
+    await action.tap();
+    await expect(action).toHaveCSS("filter", "none");
+    await expect(action).toHaveCSS("transform", "none");
+    await page.getByRole("button", { name: "메뉴 열기" }).tap();
+    await expect(page.locator(".wk-drawer")).toHaveAttribute("data-state", "open");
+    await page.getByRole("button", { name: "메뉴 닫기" }).tap();
+    await expect(page.locator(".wk-drawer")).not.toBeVisible();
+    expect(errors).toEqual([]);
+    expect(networkErrors).toEqual([]);
+  });
+});
 
 test("홈과 작업 레일의 개인화, 테마, 반응형, 키보드와 대비", async ({ page }) => {
   const { errors, networkErrors } = await workspace(page);

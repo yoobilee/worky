@@ -67,6 +67,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLocale();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [drawerPresent, setDrawerPresent] = useState(false);
+  const [drawerEntered, setDrawerEntered] = useState(false);
   const [aiStatus, setAiStatus] = useState<"checking" | "connected" | "error">("checking");
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -115,12 +117,35 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    if (sidebarOpen) drawerRef.current?.showModal();
-    else if (drawerRef.current?.open) {
-      drawerRef.current.close();
-      menuTriggerRef.current?.focus();
+    const dialog = drawerRef.current;
+    if (!dialog) return;
+    if (sidebarOpen) {
+      if (!drawerPresent) { setDrawerPresent(true); return; }
+      dialog.showModal();
+      // Paint the starting position first. Cleanup cancels stale opens/closes.
+      let enterFrame = 0;
+      const frame = requestAnimationFrame(() => {
+        enterFrame = requestAnimationFrame(() => setDrawerEntered(true));
+      });
+      return () => { cancelAnimationFrame(frame); cancelAnimationFrame(enterFrame); };
     }
-  }, [sidebarOpen]);
+    setDrawerEntered(false);
+    if (!drawerPresent) return;
+    let cancelled = false;
+    const frame = requestAnimationFrame(() => {
+      // Wait for the actual CSS exit (also the shorter reduced-motion fade).
+      // A fixed timer can remove the rail before its last frame on a busy device.
+      const transitions = Array.from(dialog.querySelectorAll(".wk-rail, .wk-drawer-scrim"))
+        .flatMap(element => element.getAnimations());
+      Promise.all(transitions.map(animation => animation.finished.catch(() => {}))).then(() => {
+        if (cancelled) return;
+        dialog.close();
+        setDrawerPresent(false);
+        if (menuTriggerRef.current?.getClientRects().length) menuTriggerRef.current.focus();
+      });
+    });
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
+  }, [sidebarOpen, drawerPresent]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -161,10 +186,12 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         <div className="wk-desktop-rail"><Sidebar onClose={() => setSidebarOpen(false)} aiStatus={aiStatus} /></div>
         {mounted && createPortal(
           <dialog ref={drawerRef} id="worky-navigation" className="wk-drawer"
+            data-state={sidebarOpen && drawerEntered ? "open" : "closed"}
             onKeyDown={containDialogFocus}
-            aria-label={t("wk_workspace")} onCancel={() => setSidebarOpen(false)}
+            aria-label={t("wk_workspace")} onCancel={event => { event.preventDefault(); setSidebarOpen(false); }}
             onClick={event => { if (event.target === event.currentTarget) setSidebarOpen(false); }}>
-            {sidebarOpen && <Sidebar mobile onClose={() => setSidebarOpen(false)} aiStatus={aiStatus} />}
+            <div className="wk-drawer-scrim" aria-hidden="true" onClick={() => setSidebarOpen(false)} />
+            {drawerPresent && <Sidebar mobile onClose={() => setSidebarOpen(false)} aiStatus={aiStatus} />}
           </dialog>, document.body
         )}
         <div className="wk-shell-body">
