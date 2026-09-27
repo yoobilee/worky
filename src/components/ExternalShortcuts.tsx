@@ -151,7 +151,10 @@ export default function ExternalShortcuts() {
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      // The add dialog is portaled to body, so its clicks are not inside ref.
+      if (dialogRef.current?.contains(target)) return;
+      if (ref.current && !ref.current.contains(target)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);

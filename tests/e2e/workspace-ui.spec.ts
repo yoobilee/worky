@@ -394,3 +394,48 @@ test("빈 업무는 간결하고 실행 가능한 상태를 보여준다", async
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(page.getByRole("button", { name: "추가", exact: true })).toBeFocused();
 });
+
+test("바로가기 추가 대화상자 안의 클릭은 패널을 닫지 않고 포커스를 되돌린다", async ({ page }) => {
+  const { settings, errors, networkErrors } = await workspace(page, true);
+  const toggle = page.getByRole("button", { name: "외부 바로가기", exact: true });
+  const panel = page.locator("#worky-external-links");
+  const add = panel.getByRole("button", { name: "추가", exact: true });
+  const dialog = page.getByRole("dialog", { name: "바로가기 추가" });
+  const url = dialog.getByRole("textbox", { name: "바로가기 주소" });
+  const name = dialog.getByRole("textbox", { name: "바로가기 이름" });
+  await toggle.click();
+  // Real pointer clicks dispatch mousedown on document, unlike fill()/Escape.
+  for (let i = 0; i < 4; i++) {
+    await add.click();
+    await expect(dialog).toBeVisible();
+    await url.click();
+    await name.click();
+    await dialog.locator("h3").click();
+    await expect(panel).toBeVisible();
+    await dialog.getByRole("button", { name: "취소", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(panel).toBeVisible();
+    await expect(add).toBeFocused();
+  }
+  await add.click();
+  await url.click();
+  await url.fill("https://example.com");
+  await name.click();
+  await name.fill("업무 참고");
+  await dialog.getByRole("button", { name: "추가", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(add).toBeFocused();
+  await expect(panel.getByRole("link", { name: "업무 참고", exact: true })).toHaveAttribute("href", "https://example.com");
+  await expect.poll(() => JSON.stringify(settings.speed_dial_custom)).toContain("업무 참고");
+  await add.click();
+  await url.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(add).toBeFocused();
+  // Genuine outside clicks still close the panel.
+  await page.locator("#worky-greeting").click();
+  await expect(panel).toHaveCount(0);
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(errors).toEqual([]);
+  expect(networkErrors).toEqual([]);
+});
