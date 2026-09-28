@@ -41,10 +41,11 @@ export async function getSettings(userId: string): Promise<UserSettings | null> 
 
 export async function upsertSettings(userId: string, patch: Partial<UserSettings>): Promise<void> {
   const supabase = createClient();
-  await supabase
+  const { error } = await supabase
     .from("user_settings")
     .upsert(
       { user_id: userId, ...patch } as unknown as DbSettingsUpdate,
       { onConflict: "user_id" }
     );
+  if (error) throw error;
 }

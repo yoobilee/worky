@@ -5,7 +5,7 @@ import { translations, type Locale, type TranslationKey } from "./translations";
 
 interface LocaleContextValue {
   locale: Locale;
-  setLocale: (l: Locale) => void;
+  setLocale: (l: Locale) => Promise<void>;
   t: (key: TranslationKey) => string;
 }
 
@@ -36,7 +36,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase.auth.getUser();
     const uid = data.user?.id;
     if (uid) {
-      await supabase.from("user_settings").upsert({ user_id: uid, language: l }, { onConflict: "user_id" });
+      const { error } = await supabase.from("user_settings").upsert({ user_id: uid, language: l }, { onConflict: "user_id" });
+      if (error) { setLocaleState(locale); throw error; }
     }
   };
 
