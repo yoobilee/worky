@@ -22,7 +22,8 @@ test("저장 대기·실패는 완료로 표시하지 않고 입력과 재시도
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.locator(".st-save-state")).toHaveText("저장 중");
   await expect(page.getByLabel("이름", { exact: true })).toBeDisabled();
-  expect(writes).toBe(1);
+  // React sets the pending UI state before the Supabase request reaches the route.
+  await expect.poll(() => writes).toBe(1);
   release();
   await expect(page.locator(".st-save-state")).toHaveAttribute("role", "alert");
   await expect(page.getByLabel("이름", { exact: true })).toHaveValue("다시 저장할 이름");
@@ -147,32 +148,43 @@ test("모바일 목록 복귀와 키보드 초점·움직임 감소", async ({ p
   expect(await page.locator(".st-settings").evaluate(root => [...root.querySelectorAll("*")].every(el => getComputedStyle(el).animationName === "none"))).toBe(true);
 });
 
-test("설정 전후 화면 기록", async ({ page }) => {
-  await workspace(page);
+test.describe("설정 전후 화면 기록", () => {
   const phase = process.env.WORKY_SETTINGS_CAPTURE_PHASE;
   const folder = phase ? `docs/images/settings-phase2/${phase}` : "test-results/settings-phase2";
-  for (const theme of ["light", "dark"]) {
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    if (theme === "dark") await page.getByRole("button", { name: "다크 모드", exact: true }).click();
-    for (const width of [1440, 1100, 390, 320]) {
-      await page.setViewportSize({ width, height: width < 640 ? 844 : 1000 });
-      for (const section of ["info", "menu"]) {
-        await page.goto(`/settings?section=${section}`);
-        await expect(page.getByText(section === "info" ? "이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다." : "사이드바에 표시할 메뉴를 선택하세요")).toBeVisible();
-        await page.screenshot({ path: `${folder}/${width}-${theme}-${section}.png`, animations: "disabled" });
-      }
-      if (width < 640) {
-        await page.goto("/settings");
-        await expect(page.getByRole("button", { name: "내 정보", exact: true })).toBeVisible();
-        await page.screenshot({ path: `${folder}/${width}-${theme}-list.png`, animations: "disabled" });
-      }
+
+  for (const theme of ["light", "dark"] as const) {
+    for (const { name, widths } of [{ name: "desktop", widths: [1440, 1100] }, { name: "mobile", widths: [390, 320] }]) {
+      test(`${theme} ${name} 내 정보·메뉴·모바일 목록`, async ({ page }) => {
+        await workspace(page);
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        if (theme === "dark") await page.getByRole("button", { name: "다크 모드", exact: true }).click();
+        for (const width of widths) {
+          await page.setViewportSize({ width, height: width < 640 ? 844 : 1000 });
+          for (const section of ["info", "menu"]) {
+            await page.goto(`/settings?section=${section}`);
+            await expect(page.getByText(section === "info" ? "이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다." : "사이드바에 표시할 메뉴를 선택하세요")).toBeVisible({ timeout: 15_000 });
+            await page.screenshot({ path: `${folder}/${width}-${theme}-${section}.png`, animations: "disabled" });
+          }
+          if (width < 640) {
+            await page.goto("/settings");
+            await expect(page.getByRole("button", { name: "내 정보", exact: true })).toBeVisible({ timeout: 15_000 });
+            await page.screenshot({ path: `${folder}/${width}-${theme}-list.png`, animations: "disabled" });
+          }
+        }
+      });
     }
   }
-  for (const section of sections) {
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(`/settings?section=${section}`);
-    await expect(page.getByRole("button", { name: "내 정보", exact: true })).toBeVisible();
-    await page.screenshot({ path: `${folder}/section-${section}.png`, animations: "disabled" });
+
+  for (const [name, batch] of [["personal and workspace", sections.slice(0, 5)], ["connections", sections.slice(5)] ] as const) {
+    test(`데스크톱 ${name} 상세`, async ({ page }) => {
+      await workspace(page);
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      for (const section of batch) {
+        await page.goto(`/settings?section=${section}`);
+        await expect(page.getByRole("button", { name: "내 정보", exact: true })).toBeVisible({ timeout: 15_000 });
+        await page.screenshot({ path: `${folder}/section-${section}.png`, animations: "disabled" });
+      }
+    });
   }
 });
 
