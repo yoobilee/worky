@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import HelpButton from "@/components/HelpButton";
 import { useToast } from "@/contexts/ToastContext";
 import {
@@ -33,6 +34,11 @@ const JOB_KEY     = "worky_job_preset";
 
 type GreetingMode = "basic" | "time" | "day";
 type SettingsSection = "info" | "leave" | "greeting" | "job" | "menu" | "help" | "notif" | "language" | "github";
+const SETTINGS_SECTIONS: SettingsSection[] = ["info", "leave", "greeting", "job", "menu", "help", "notif", "language", "github"];
+
+function isSettingsSection(value: string | null): value is SettingsSection {
+  return value !== null && SETTINGS_SECTIONS.some(section => section === value);
+}
 
 const GREETING_TIME_PERIODS: { id: string; label: string }[] = [
   { id: "오전", label: "오전" },
@@ -111,9 +117,21 @@ const JOB_PRESETS: JobPreset[] = [
   },
 ];
 
-export default function SettingsPage() {
+function SettingsLoading() {
+  return <div className="max-w-5xl mx-auto w-full space-y-4">
+    {Array.from({ length: 7 }).map((_, i) => (
+      <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-14" />
+    ))}
+  </div>;
+}
+
+function SettingsContent() {
   const toast = useToast();
   const { locale, setLocale, t } = useLocale();
+  const router = useRouter();
+  const requestedSection = useSearchParams().get("section");
+  const activeSection = isSettingsSection(requestedSection) ? requestedSection : "info";
+  const mobileShowDetail = isSettingsSection(requestedSection);
   const [info,          setInfo]          = useState<SenderInfo>({ org: "", name: "", title: "" });
   const [saved,         setSaved]         = useState(false);
   const [hydrated,      setHydrated]      = useState(false);
@@ -141,14 +159,16 @@ export default function SettingsPage() {
   const [grantedLeaves,    setGrantedLeaves]    = useState(15);
   const [notifPermission,  setNotifPermission]  = useState<NotificationPermission | "unsupported">("default");
   const [notifSettings,    setNotifSettings]    = useState<NotificationSettings>({ eventNotif: true, ddayNotif: true });
-  const [activeSection,    setActiveSection]    = useState<SettingsSection>("info");
-  const [mobileShowDetail, setMobileShowDetail] = useState(false);
   const [githubConnected,     setGithubConnected]     = useState(false);
   const [githubRepoStatus,    setGithubRepoStatus]    = useState<string | null>(null);
   const [githubStatusLoading, setGithubStatusLoading] = useState(true);
   const [githubPatInput,      setGithubPatInput]      = useState("");
   const [githubRepoInput,     setGithubRepoInput]     = useState("");
   const [githubSaving,        setGithubSaving]        = useState(false);
+
+  useEffect(() => {
+    if (requestedSection !== null && !isSettingsSection(requestedSection)) router.replace("/settings");
+  }, [requestedSection, router]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -374,13 +394,7 @@ export default function SettingsPage() {
   };
 
   if (!hydrated) {
-    return (
-      <div className="max-w-5xl mx-auto w-full space-y-4">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-14" />
-        ))}
-      </div>
-    );
+    return <SettingsLoading />;
   }
 
   const hasSender = info.org || info.name || info.title;
@@ -450,7 +464,7 @@ export default function SettingsPage() {
           {SECTIONS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
-              onClick={() => { setActiveSection(key); setMobileShowDetail(true); }}
+              onClick={() => router.push(`/settings?section=${key}`)}
               className={[
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition",
                 activeSection === key ? "bg-[#6C63FF]/10" : "hover:bg-slate-50 dark:hover:bg-zinc-800",
@@ -472,7 +486,7 @@ export default function SettingsPage() {
           mobileShowDetail ? "block" : "hidden sm:block",
         ].join(" ")}>
           <button
-            onClick={() => setMobileShowDetail(false)}
+            onClick={() => router.push("/settings")}
             className="sm:hidden flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-400 mb-3"
           >
             <IconChevronLeft className="w-3.5 h-3.5" /> {t("settings_mobile_back")}
@@ -1216,4 +1230,8 @@ export default function SettingsPage() {
       />
     </div>
   );
+}
+
+export default function SettingsPage() {
+  return <Suspense fallback={<SettingsLoading />}><SettingsContent /></Suspense>;
 }

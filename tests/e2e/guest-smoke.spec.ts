@@ -63,7 +63,8 @@ test("게스트가 대시보드에서 일정 관리 페이지로 이동할 수 �
   const authPayload = authRequest.postDataJSON() as { email?: string };
   expect(authPayload.email).toBe("guest@worky-demo.com");
   expect(authResponse.ok()).toBeTruthy();
-  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  // Shared guest settings may select either locale; the Korean home label is now localized.
+  await expect(page.getByRole("heading", { level: 1, name: /^(홈|Home)$/ })).toBeVisible();
   await dataReadResponsePromise;
   expect(mockedGroqRequests).toBeGreaterThan(0);
 

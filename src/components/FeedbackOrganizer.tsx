@@ -240,7 +240,7 @@ export default function FeedbackOrganizer() {
               <ul className="space-y-3">
                 {result.clarified.map(({ original, clarified }, i) => (
                   <li key={i} className="space-y-1">
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 line-through">"{original}"</p>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 line-through">&quot;{original}&quot;</p>
                     <p className="flex gap-2 text-sm text-slate-700 dark:text-zinc-300">
                       <span className="text-[#4D44CC] dark:text-[#8B85FF] shrink-0 mt-0.5">→</span>
                       <span>{clarified}</span>
