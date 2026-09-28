@@ -72,17 +72,14 @@ body {
 ::-webkit-scrollbar-thumb {
   background: rgba(108, 99, 255, 0.3);
   border-radius: 9999px;
-  transition: all 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(108, 99, 255, 0.6);
-  width: 8px;
 }
 
 ::-webkit-scrollbar-thumb:active {
   background: rgba(108, 99, 255, 0.8);
-  width: 8px;
 }
 
 ::-webkit-scrollbar-corner {
@@ -125,12 +122,9 @@ body {
   background: rgba(108, 99, 255, 0.65);
 }
 
-/* 스크롤바 드래그 중 강조 */
-[data-scrolling="true"] ::-webkit-scrollbar-thumb,
-[data-scrolling="true"]::-webkit-scrollbar-thumb {
-  background: rgba(108, 99, 255, 0.9) !important;
-  width: 10px;
-  height: 10px;
+/* Native thumb state stays local to the scrollbar being grabbed, including release outside the window. */
+.dark ::-webkit-scrollbar-thumb:active {
+  background: rgba(108, 99, 255, 0.8);
 }
 
 /* 거래처 목록 표 가로 스크롤바 */

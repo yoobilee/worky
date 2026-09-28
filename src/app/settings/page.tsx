@@ -348,16 +348,16 @@ function SettingsContent() {
   const handleRequestPermission = async () => { await requestPermission(); setNotifPermission(getPermissionStatus()); };
 
   if (!hydrated) return <SettingsLoading />;
-  const sections: { key: SettingsSection; label: TranslationKey; hint: TranslationKey; icon: React.ElementType; group: TranslationKey }[] = [
-    { key: "info", label: "settings_section_info", hint: "st_info_hint", icon: IconUser, group: "st_group_personal" },
-    { key: "leave", label: "settings_section_leave", hint: "st_leave_hint", icon: IconCalendarEvent, group: "st_group_personal" },
-    { key: "greeting", label: "settings_section_greeting", hint: "st_greeting_hint", icon: IconMessageCircle, group: "st_group_workspace" },
-    { key: "job", label: "settings_section_job", hint: "st_job_hint", icon: IconBriefcase, group: "st_group_workspace" },
-    { key: "menu", label: "settings_section_menu", hint: "st_menu_hint", icon: IconApps, group: "st_group_workspace" },
-    { key: "help", label: "settings_section_help", hint: "st_help_hint", icon: IconHelp, group: "st_group_environment" },
-    { key: "language", label: "settings_language", hint: "st_language_hint", icon: IconWorld, group: "st_group_environment" },
-    { key: "github", label: "settings_section_github", hint: "st_github_hint", icon: IconBrandGithub, group: "st_group_environment" },
-    { key: "notif", label: "settings_section_notif", hint: "st_notif_hint", icon: IconBell, group: "st_group_environment" },
+  const sections: { key: SettingsSection; label: TranslationKey; hint: TranslationKey; description: TranslationKey; icon: React.ElementType; group: TranslationKey }[] = [
+    { key: "info", description: "info_desc", label: "settings_section_info", hint: "st_info_hint", icon: IconUser, group: "st_group_personal" },
+    { key: "leave", description: "leave_desc_empty", label: "settings_section_leave", hint: "st_leave_hint", icon: IconCalendarEvent, group: "st_group_personal" },
+    { key: "greeting", description: "greeting_desc", label: "settings_section_greeting", hint: "st_greeting_hint", icon: IconMessageCircle, group: "st_group_workspace" },
+    { key: "job", description: "job_hint", label: "settings_section_job", hint: "st_job_hint", icon: IconBriefcase, group: "st_group_workspace" },
+    { key: "menu", description: "menu_desc", label: "settings_section_menu", hint: "st_menu_hint", icon: IconApps, group: "st_group_workspace" },
+    { key: "help", description: "help_desc", label: "settings_section_help", hint: "st_help_hint", icon: IconHelp, group: "st_group_environment" },
+    { key: "language", description: "settings_language_desc", label: "settings_language", hint: "st_language_hint", icon: IconWorld, group: "st_group_environment" },
+    { key: "github", description: "github_desc", label: "settings_section_github", hint: "st_github_hint", icon: IconBrandGithub, group: "st_group_environment" },
+    { key: "notif", description: "notif_setup", label: "settings_section_notif", hint: "st_notif_hint", icon: IconBell, group: "st_group_environment" },
   ];
   const current = sections.find(section => section.key === activeSection)!;
   const state = states[activeSection];
@@ -384,17 +384,15 @@ function SettingsContent() {
       </div>
       <section className="st-detail" aria-labelledby="st-section-title">
         <button type="button" className="st-back" onClick={() => router.push("/settings")}><IconChevronLeft size={16} aria-hidden="true" />{t("settings_mobile_back")}</button>
-        <header className="st-section-heading"><p className="st-eyebrow">{t(current.group)}</p><h2 id="st-section-title" ref={detailRef} tabIndex={-1}>{t(current.label)}</h2></header>
-        <fieldset className="st-fields" disabled={busy} aria-label={t(current.label)}>
+        <header className="st-section-heading"><h2 id="st-section-title" ref={detailRef} tabIndex={-1}>{t(current.label)}</h2><p className="st-description">{t(current.description)}</p></header>
+        <fieldset className={`st-fields${activeSection === "leave" ? " st-fields--aligned" : ""}`} disabled={busy} aria-label={t(current.label)}>
           {activeSection === "info" && <>
-            <p className="st-description">{t("info_desc")}</p>
             <div className="st-form-grid">{(["org", "name", "title"] as const).map(field => <SettingsField key={field} id={`st-info-${field}`} label={t(("info_label_" + field) as TranslationKey)}>
               <input id={`st-info-${field}`} value={info[field]} onChange={event => handleChange(field, event.target.value)} placeholder={t(("info_placeholder_" + field) as TranslationKey)} autoComplete={field === "name" ? "name" : field === "org" ? "organization" : "organization-title"} />
             </SettingsField>)}</div>
             {(info.org || info.name || info.title) && <div className="st-preview"><h3>{t("info_signature_preview")}</h3><p>{t("info_signature_thanks")}<br />{[info.org, info.name, info.title].filter(Boolean).join(" ")}</p></div>}
           </>}
           {activeSection === "leave" && <>
-            <p className="st-description">{t("leave_desc_empty")}</p>
             <div className="st-field"><span className="st-label">{t("leave_employment_type")}</span>
               {choices(t("leave_employment_type"), employmentType, [{ id: "new", label: t("leave_new") }, { id: "career", label: t("leave_career") }], value => { setEmploymentType(value); dirty("leave"); })}
             </div>
@@ -405,7 +403,6 @@ function SettingsContent() {
             <SettingsStepper label={t("leave_used")} value={usedLeaves} onChange={value => { setUsedLeaves(value); dirty("leave"); }} />
           </>}
           {activeSection === "greeting" && <>
-            <p className="st-description">{t("greeting_desc")}</p>
             <SettingsSwitch label={t("greeting_toggle")} description={t("greeting_toggle_desc")} checked={greetingEnabled} onChange={() => { setGreetingEnabled(value => !value); dirty("greeting"); }} />
             {greetingEnabled && <>
               {choices(t("st_greeting_mode"), greetingMode, [{ id: "basic", label: t("greeting_mode_basic") }, { id: "time", label: t("greeting_mode_time") }, { id: "day", label: t("greeting_mode_day") }], value => { setGreetingMode(value); dirty("greeting"); })}
@@ -415,13 +412,12 @@ function SettingsContent() {
             </>}
           </>}
           {activeSection === "job" && <>
-            <p className="st-description">{t("job_hint")}</p>
             <div className="st-presets">{JOB_PRESETS.map(preset => <button className="st-preset" type="button" key={preset.id} aria-pressed={jobPreset === preset.id} onClick={() => setPendingPreset(preset.id)}>
               <preset.icon size={20} aria-hidden="true" /><span><strong>{presetLabel(preset.id)}</strong><small>{t(("st_preset_" + preset.id + "_desc") as TranslationKey)}</small></span><IconCheck className="st-selected-check" size={18} aria-hidden="true" />
             </button>)}</div>
           </>}
           {activeSection === "menu" && <>
-            <p className="st-description">{t("menu_desc")}</p><p className="st-hint">{t("st_menu_order_hint")}</p>
+            <p className="st-hint">{t("st_menu_order_hint")}</p>
             <h3 className="st-subheading">{t("menu_optional")}</h3>
             <div className="st-menu-list">{menuOrder.map((href, index) => {
               const item = OPTIONAL_MENU_ITEMS.find(menu => menu.href === href);
@@ -437,13 +433,12 @@ function SettingsContent() {
             <h3 className="st-subheading">{t("menu_always")}</h3><p className="st-hint">{ALWAYS_VISIBLE_ITEMS.map(item => MENU_LOCALE_MAP[item.href] ? t(MENU_LOCALE_MAP[item.href]) : item.label).join(" · ")}</p>
           </>}
           {activeSection === "help" && <>
-            <p className="st-description">{t("help_desc")}</p><SettingsSwitch label={t("help_toggle")} description={t("help_toggle_desc")} checked={helpOn} onChange={handleHelpToggle} />
+            <SettingsSwitch label={t("help_toggle")} description={t("help_toggle_desc")} checked={helpOn} onChange={handleHelpToggle} />
           </>}
           {activeSection === "language" && <>
-            <p className="st-description">{t("settings_language_desc")}</p>{choices(t("settings_language"), locale, [{ id: "ko", label: "한국어" }, { id: "en", label: "English" }], value => void runSave("language", async () => { await setLocale(value); }))}
+            {choices(t("settings_language"), locale, [{ id: "ko", label: "한국어" }, { id: "en", label: "English" }], value => void runSave("language", async () => { await setLocale(value); }))}
           </>}
           {activeSection === "github" && <>
-            <p className="st-description">{t("github_desc")}</p>
             <div className="st-connection" role="status" data-state={githubConnected ? "connected" : "idle"}>
               {githubStatusLoading ? t("st_checking") : githubStatusError ? t("st_connection_error") : githubConnected ? <><IconCheck size={18} aria-hidden="true" />{tFormat(t("github_connected_msg"), { repo: githubRepoStatus ?? "" })}</> : <><IconAlertTriangle size={18} aria-hidden="true" />{t("github_not_connected")}</>}
             </div>
@@ -454,7 +449,6 @@ function SettingsContent() {
             {githubWarnings.map(warning => <p key={warning} className="st-warning" role="alert">{t(warning)}</p>)}
           </>}
           {activeSection === "notif" && <>
-            <p className="st-description">{t("notif_setup")}</p>
             <div className="st-connection" role="status" data-state={notifPermission === "granted" ? "connected" : "idle"}>{notifPermission === "granted" ? <><IconCheck size={18} aria-hidden="true" />{t("notif_granted_msg")}</> : notifPermission === "unsupported" ? t("st_notif_unsupported") : notifPermission === "denied" ? t("notif_denied_desc") : t("notif_default_desc")}</div>
             {notifPermission === "default" && <button type="button" className="st-button st-button--primary" onClick={() => void handleRequestPermission()}><IconBell size={18} aria-hidden="true" />{t("notif_allow_btn")}</button>}
             {notifPermission === "granted" && <p className="st-hint">{t("notif_off_hint")}</p>}

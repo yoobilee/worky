@@ -193,7 +193,7 @@ for (const width of [1440, 1100, 390, 320]) {
     test(`설정 9개 항목: ${width}px ${theme}, 대비·넘침·주소`, async ({ page }) => {
       const { errors, networkErrors } = await workspace(page);
       if (theme === "dark") await page.getByRole("button", { name: "다크 모드", exact: true }).click();
-      await page.setViewportSize({ width, height: 1000 });
+      await page.setViewportSize({ width, height: width < 640 ? 844 : 1000 });
       for (const section of sections) {
         await page.goto(`/settings?section=${section}`);
         await expect(page.locator(".st-section-heading h2")).toBeVisible();
@@ -202,6 +202,10 @@ for (const width of [1440, 1100, 390, 320]) {
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         const result = await new AxeBuilder({ page }).include(".st-settings").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
         expect(result.violations).toEqual([]);
+        const capturePhase = process.env.WORKY_SETTINGS_REFINEMENT_CAPTURE_PHASE;
+        if (capturePhase && [1440, 390].includes(width)) {
+          await page.screenshot({ path: `docs/images/settings-refinement/${capturePhase}/${width}-${theme}-${section}.png`, animations: "disabled" });
+        }
       }
       expect(errors).toEqual([]);
       expect(networkErrors).toEqual([]);

@@ -341,3 +341,51 @@ Supabase 테이블·컬럼·conflict key·patch 형태·localStorage 키·이벤
 29장 촬영 검사는 원격에서 60초 제한에 도달했다. 같은 화면과 단언, 파일명을 유지하고 테마별 데스크톱/모바일 네 묶음(각 4~6장), 9개 상세 화면 두 묶음(5장과 4장)으로 나눴다. 로컬 재실행에서 한 화면의 상세 내용이 기본 5초 안에 나타나지 않는 경우도 확인해, 해당 내용이 실제로 보일 때까지 최대 15초 기다린다. 테스트 전체의 60초 제한은 그대로다. `--grep '설정 전후 화면 기록'`은 여섯 테스트를 모두 선택한다. CI에서도 내 정보·메뉴·모바일 목록과 모든 상세 화면의 렌더링을 계속 확인한다.
 
 수정 후 대상 테스트 7개와 전체 게스트 E2E 40개가 로컬 개발 서버에서 통과했다. 타입 검사 통과, 린트 오류 0(기존 경고 8)이며 앱 코드는 수정하지 않았다.
+
+### 설정 밀도와 스크롤바 상호작용 보정
+
+기준 커밋은 `88ec6df`이며 같은 Draft PR #169에서 수정했다. 연차의 마지막 행과 저장 영역이 각각 테두리를 가져 빈 여백을 사이에 둔 두 선으로 보였다. 같은 구조인 도움말·알림·직업군, 인사말을 끈 상태도 확인했다. 행 구분선은 이웃한 항목 사이에만 두고 저장 영역의 선을 마지막 구분으로 사용한다.
+
+기존 문서 mousedown 처리는 클릭한 요소의 마지막 12px을 스크롤바로 간주했다. 회귀 테스트에서 경력 버튼 가장자리를 누르자 페이지와 사이드바 손잡이의 색이 모두 `rgba(108, 99, 255, 0.3)`에서 `0.9`로 바뀌는 것을 재현했다. 이 추정과 문서 전체 `data-scrolling` 상태를 제거했다. 실제 스크롤바의 `::-webkit-scrollbar-thumb:hover/:active`만 유지하므로 브라우저가 조작 중인 손잡이만 강조하고 해제 상태도 관리한다. 스크롤바의 `transition: all`과 hover/active 폭 변경도 제거했다.
+
+화면 밀도는 다음처럼 조정했다.
+
+- 제목 아래에 기존 설명을 붙여 하나의 도입부로 읽히게 하고, 상세에서 반복하던 그룹 이름을 없앴다.
+- 상세 제목은 20px, 폼 간격은 24px에서 16px, 작업 면 안쪽 여백은 32px에서 24px로 조정했다.
+- 선택 버튼을 전체 너비로 균등 분할하지 않고 내용 길이에 맞는 묶음으로 표현했다. 현재 선택에는 테두리와 글자색을 사용한다.
+- 데스크톱 연차는 항목 이름과 입력을 같은 줄에 맞추고 날짜 입력의 너비를 값에 맞췄다. 모바일은 위아래 배치를 유지한다.
+- 직업군 행의 상하 여백은 16px에서 8px, 메뉴 행은 60px에서 52px로 조정했다. 입력·선택·증감·스위치·저장 버튼의 최소 44px 조작 높이는 유지했다.
+- 모바일 입력 글자는 16px로 두었다. 저장 상태와 저장 버튼은 한 구분선 아래에 남겨 변경 결과를 찾기 쉽게 했다.
+
+| 파일 | 이번 수정의 역할 |
+| --- | --- |
+| `src/app/settings/page.tsx` | 9개 항목 설명을 제목 바로 아래로 이동, 연차의 정렬용 클래스 |
+| `src/app/settings/settings.css` | 마지막 행 구분선, 옵션 묶음, 여백·제목·행 밀도, 데스크톱 연차 정렬 |
+| `src/components/AppShell.tsx` | 요소 가장자리 클릭을 스크롤바로 오인하던 문서 이벤트 제거 |
+| `src/app/globals.css` | 전역 스크롤바 강조 제거, 손잡이 자체의 상태 표현 유지 |
+| `tests/e2e/settings-interaction.spec.ts` | 밝음/어두움 버튼 가장자리, 실제 드래그·해제·창 밖 이동, 구분선과 44px 높이 회귀 검사 |
+| `tests/e2e/settings-ui.spec.ts` | 기존 항목별 접근성 검사에 선택적 전후 촬영 추가, 모바일 높이 844px로 검증 |
+
+인증·DB·API·설정값·저장 계약·URL 선택·메뉴 정렬 처리와 ko/en 문구는 그대로다. 새로운 기능·의존성·장식 애니메이션은 추가하지 않았다. 스크롤바 테스트만 headless Chromium의 기본 `--hide-scrollbars` 옵션을 제외해 실제 스크롤바를 드래그한다. 기하값·스크롤 위치와 다른 영역의 색을 확인하며 가짜 스크롤바를 삽입하지 않는다.
+
+검증: 타입 검사와 프로덕션 빌드 통과, 린트 오류 0(기존 경고 8), 단위 테스트 18개 통과. 실제 설정 저장·재방문·검사 전 값 복원 E2E 1개 통과. 최종 프로덕션 서버의 전체 UI E2E 44개가 통과했다(3.6분). 1440/1100/390/320px × 밝음/어두움 × 9개 항목의 axe A/AA·가로 넘침·예상치 못한 콘솔/네트워크 오류 검사와 기존 키보드·초점·움직임 감소·URL·저장 실패/재시도·메뉴 정렬 검증을 유지했다.
+
+#### 같은 설정값의 전후 화면
+
+before는 기준 커밋의 개발 서버, after는 최종 프로덕션 빌드다. before의 작은 Next 개발 도구 표시는 제품 UI가 아니다. 9개 항목 × 데스크톱 1440px/모바일 390px × 밝음/어두움 각 36장을 촬영했다. 1100px와 320px는 기존 전체 항목 접근성·넘침 검사에 포함한다.
+
+| 항목 | 데스크톱 전 | 데스크톱 후 | 모바일 전 | 모바일 후 |
+| --- | --- | --- | --- | --- |
+| 내 정보 | [밝음](images/settings-refinement/before/1440-light-info.png) · [어두움](images/settings-refinement/before/1440-dark-info.png) | [밝음](images/settings-refinement/after/1440-light-info.png) · [어두움](images/settings-refinement/after/1440-dark-info.png) | [밝음](images/settings-refinement/before/390-light-info.png) · [어두움](images/settings-refinement/before/390-dark-info.png) | [밝음](images/settings-refinement/after/390-light-info.png) · [어두움](images/settings-refinement/after/390-dark-info.png) |
+| 연차 | [밝음](images/settings-refinement/before/1440-light-leave.png) · [어두움](images/settings-refinement/before/1440-dark-leave.png) | [밝음](images/settings-refinement/after/1440-light-leave.png) · [어두움](images/settings-refinement/after/1440-dark-leave.png) | [밝음](images/settings-refinement/before/390-light-leave.png) · [어두움](images/settings-refinement/before/390-dark-leave.png) | [밝음](images/settings-refinement/after/390-light-leave.png) · [어두움](images/settings-refinement/after/390-dark-leave.png) |
+| 인사말 | [밝음](images/settings-refinement/before/1440-light-greeting.png) · [어두움](images/settings-refinement/before/1440-dark-greeting.png) | [밝음](images/settings-refinement/after/1440-light-greeting.png) · [어두움](images/settings-refinement/after/1440-dark-greeting.png) | [밝음](images/settings-refinement/before/390-light-greeting.png) · [어두움](images/settings-refinement/before/390-dark-greeting.png) | [밝음](images/settings-refinement/after/390-light-greeting.png) · [어두움](images/settings-refinement/after/390-dark-greeting.png) |
+| 직업군 | [밝음](images/settings-refinement/before/1440-light-job.png) · [어두움](images/settings-refinement/before/1440-dark-job.png) | [밝음](images/settings-refinement/after/1440-light-job.png) · [어두움](images/settings-refinement/after/1440-dark-job.png) | [밝음](images/settings-refinement/before/390-light-job.png) · [어두움](images/settings-refinement/before/390-dark-job.png) | [밝음](images/settings-refinement/after/390-light-job.png) · [어두움](images/settings-refinement/after/390-dark-job.png) |
+| 메뉴 | [밝음](images/settings-refinement/before/1440-light-menu.png) · [어두움](images/settings-refinement/before/1440-dark-menu.png) | [밝음](images/settings-refinement/after/1440-light-menu.png) · [어두움](images/settings-refinement/after/1440-dark-menu.png) | [밝음](images/settings-refinement/before/390-light-menu.png) · [어두움](images/settings-refinement/before/390-dark-menu.png) | [밝음](images/settings-refinement/after/390-light-menu.png) · [어두움](images/settings-refinement/after/390-dark-menu.png) |
+| 도움말 | [밝음](images/settings-refinement/before/1440-light-help.png) · [어두움](images/settings-refinement/before/1440-dark-help.png) | [밝음](images/settings-refinement/after/1440-light-help.png) · [어두움](images/settings-refinement/after/1440-dark-help.png) | [밝음](images/settings-refinement/before/390-light-help.png) · [어두움](images/settings-refinement/before/390-dark-help.png) | [밝음](images/settings-refinement/after/390-light-help.png) · [어두움](images/settings-refinement/after/390-dark-help.png) |
+| 언어 | [밝음](images/settings-refinement/before/1440-light-language.png) · [어두움](images/settings-refinement/before/1440-dark-language.png) | [밝음](images/settings-refinement/after/1440-light-language.png) · [어두움](images/settings-refinement/after/1440-dark-language.png) | [밝음](images/settings-refinement/before/390-light-language.png) · [어두움](images/settings-refinement/before/390-dark-language.png) | [밝음](images/settings-refinement/after/390-light-language.png) · [어두움](images/settings-refinement/after/390-dark-language.png) |
+| GitHub | [밝음](images/settings-refinement/before/1440-light-github.png) · [어두움](images/settings-refinement/before/1440-dark-github.png) | [밝음](images/settings-refinement/after/1440-light-github.png) · [어두움](images/settings-refinement/after/1440-dark-github.png) | [밝음](images/settings-refinement/before/390-light-github.png) · [어두움](images/settings-refinement/before/390-dark-github.png) | [밝음](images/settings-refinement/after/390-light-github.png) · [어두움](images/settings-refinement/after/390-dark-github.png) |
+| 알림 | [밝음](images/settings-refinement/before/1440-light-notif.png) · [어두움](images/settings-refinement/before/1440-dark-notif.png) | [밝음](images/settings-refinement/after/1440-light-notif.png) · [어두움](images/settings-refinement/after/1440-dark-notif.png) | [밝음](images/settings-refinement/before/390-light-notif.png) · [어두움](images/settings-refinement/before/390-dark-notif.png) | [밝음](images/settings-refinement/after/390-light-notif.png) · [어두움](images/settings-refinement/after/390-dark-notif.png) |
+
+[실제 페이지 스크롤바 드래그 중 화면](images/settings-refinement/after/scrollbar-drag.png)도 기록했다. 강조는 해당 손잡이에만 적용되며 사이드바는 같은 색을 유지한다.
+
+재촬영은 `WORKY_SETTINGS_REFINEMENT_CAPTURE_PHASE=after`로 전체 UI E2E를 실행하거나 `settings-ui.spec.ts --grep '설정 9개 항목: (1440|390)'`을 실행한다. baseline 파일을 새 코드로 덮어쓰지 않는다. Chromium에서 실제 포인터 클릭·드래그·창 밖 이동을 검사했으며 Safari/Firefox·실기기는 이번 검사에 포함하지 않았다.
