@@ -229,7 +229,7 @@
 
 최종 검사: 타입 검사·프로덕션 빌드 통과, 린트 오류 0(기존 경고 8), 프로덕션 Chromium UI E2E 19개 통과. 1440px/390px에서 링크 진입·새로고침·항목 이동·뒤로 가기·일반 `/settings`·잘못된 항목 복구를 확인하고, 기존 메뉴 on/off·드래그 순서 저장 검사도 통과했다.
 
-## 남은 범위와 다음 단계
+## 1단계 종료 시 남은 범위와 다음 단계
 
 - 기능 페이지(일정 추출의 원문/검토/저장 UI 포함), 설정 페이지 레이아웃, 인증, DB/RLS/API, 업무 계산/저장 로직을 개편하지 않았다.
 - 전체 검색, 명령 팔레트, 홈 영역 pin, 문서 단위 최근 편집 이력은 다음 단계. 이번 방문의 최근 도구는 새로고침 시 비워지며 서버에 저장하지 않는다.
@@ -237,3 +237,99 @@
 - AI 연결 배지는 기존 연결 요청의 결과이며 지속적인 서비스 가용성 보장이 아니다. E2E의 AI 응답과 날씨는 대역이므로 실제 추론 품질이나 외부 API 가용성을 검증하지 않는다.
 - 신규 UI는 공통 토큰을 사용하지만 기존 기능 페이지의 하드코딩 색/스타일은 점진적 전환 대상이다.
 - 새 디자인은 검토용 브랜치/PR로 전달한다. 병합·정식 배포·버전 태그는 이 작업에서 실행하지 않는다.
+
+## 2026-09-28 2단계 — 설정을 조정하고 결과를 확인하는 작업 흐름
+
+### 기준과 조사
+
+최신 `origin/master`를 fetch해 `d1f55a9`와 일치하는 것을 확인한 뒤, 깨끗한 작업 트리에서 `feature/worky-settings-phase2`를 만들었다. PR #167을 이어 수정하지 않고 별도 Draft PR로 전달한다. 범위는 `/settings`의 탐색 → 입력 → 저장 결과이며 인증·스키마·API·다른 기능 페이지의 업무 처리는 제외한다.
+
+`AGENTS.md`, `CLAUDE.md`, 이 문서, Git 이력, 기존 설정 화면과 메뉴·인사말·언어·알림 저장 도우미, GitHub 연결 API의 계약을 확인했다. `node_modules/next/dist/docs/`는 설치된 Next 15.3.9에 없으므로 기존에 확인한 [Next 15 CSS](https://nextjs.org/docs/15/app/getting-started/css)와 [useSearchParams 문서](https://nextjs.org/docs/15/app/api-reference/functions/use-search-params)를 기준으로 기존 Suspense/URL 패턴을 유지했다. 브라우저 스킬로 연결을 확인했지만 사용할 수 있는 브라우저 세션이 없어 저장소의 Playwright/Chromium으로 실제 로컬 화면을 실행·조작했다.
+
+기준 커밋을 실행한 화면에서 다음을 확인했다.
+
+- 항목 목록·상세·미리보기가 각각 카드로 중첩되고 글자가 작아, 현재 항목과 입력·저장 결과의 위계가 약했다.
+- 입력 경계와 스위치의 꺼짐 상태가 옅고, 일부 입력·스위치에 접근 가능한 이름이 없었다.
+- 모바일에서 메뉴 순서를 바꾸는 드래그 조작을 대신할 키보드·터치 조작이 없었다.
+- 저장 요청이 끝나기 전에 완료 표시가 나오거나 저장 오류를 도우미가 무시해, 실제 저장 결과와 화면 상태가 달라질 수 있었다.
+- 메뉴 설정 주소·새로고침·뒤로 가기는 이미 구현돼 있었다. 이 동작은 교체하지 않고 보존한다.
+
+### 확정한 화면 구조
+
+카드 모음 대신 왼쪽의 가벼운 항목 목록과 오른쪽의 단일 작업 면으로 구성했다. 항목은 ‘나와 업무’, ‘작업 공간’, ‘환경과 연결’로 묶는다. 내 정보·연차·인사말·직업군·메뉴·도움말·언어·GitHub·알림 9개 항목을 모두 유지하며, 알림 미지원 브라우저에서도 항목을 숨기지 않고 이유를 설명한다.
+
+- 바탕은 기존 `--wk-canvas`, 입력 작업 면은 `--wk-surface`, 직업군 확인 대화상자만 `--wk-floating`/그림자를 사용한다.
+- `#6D63FF` 브랜드, Tabler 아이콘, 현재 항목의 짧은 Worky 흐름선을 유지한다. 텍스트·저장 버튼은 대비가 검증된 기존 `--wk-accent`를 사용한다. 브랜드 보라색 위 흰색 작은 글자는 초기 axe 검사에서 4.3:1로 실패해 이 토큰 조합으로 수정했다.
+- 본문 15px, 라벨·설명 13px, 그룹 이름 12px, 상세 제목 24px(모바일 22px). 기존 4/8/12/16/24/32px 간격 토큰과 8/16px 모서리를 재사용한다. 입력은 최소 44px 높이이며 실제 label과 연결한다.
+- 스위치는 켜짐 색상뿐 아니라 체크로 상태를 구분한다. 메뉴 행에는 드래그를 그대로 두고 같은 저장 함수를 쓰는 위/아래 버튼을 추가했다. 모바일에서는 드래그 손잡이를 숨기고 이 버튼으로 정렬한다.
+- 수동 저장은 미저장 → 저장 중 → 완료 또는 오류를 구분한다. 자동 저장에는 안내와 실제 결과를 표시한다. 알림은 계정 저장으로 오해하지 않도록 ‘이 브라우저에 저장’으로 구분한다.
+- 저장 중에는 해당 입력을 잠그고 같은 항목의 중복 요청을 막는다. 메뉴·직업군은 공유 데이터 저장 중 서로 잠근다. 실패 시 입력을 보존하고, 자동 저장의 메뉴·정렬·도움말·언어는 이전 선택으로 복원하고 재시도할 수 있다.
+- GitHub는 연결 조회 실패와 미연결을 구분하고 PAT는 비밀번호 입력으로 받는다. 저장 성공 후 입력을 비우고, 재방문 시 비밀 값은 다시 표시하지 않는다. 기존 웹훅 경고는 그대로 표시한다.
+
+767px 이하에서는 목록 → 상세 → 목록으로 이어지고 상세의 카드 테두리를 없앤다. `/settings`의 기본 항목은 내 정보이며 모바일은 기존처럼 목록부터 시작한다. `/settings?section=menu` 등 유효한 주소는 상세로 바로 진입한다. 상세 진입 시 제목, 목록 복귀 시 이전 항목으로 초점을 이동하며 잘못된 항목은 `/settings`로 정리한다. URL을 선택 상태의 단일 기준으로 유지한다.
+
+반응 효과는 140ms 색상 변화, 스위치의 짧은 위치 변화, 저장 버튼의 120ms 누름 반응에 한정한다. 페이지 등장·반복 효과와 `transition: all`은 없다. hover는 정밀 포인터 조건 안에 두고 reduced-motion에서는 이동·크기 변화를 없애고 짧은 색상 변화만 남긴다. 공통 포커스 링, Escape/Tab 대화상자 동작, sticky 저장 영역에 가리지 않도록 하는 입력 scroll margin을 사용한다.
+
+### 파일별 역할과 보존 범위
+
+| 파일 | 역할 |
+| --- | --- |
+| `src/app/settings/page.tsx` | 9개 항목의 목록/상세, 기존 URL 선택, 입력·저장 상태와 재시도, 모바일 초점, 기존 처리 함수 연결 |
+| `src/app/settings/settings.css` | 설정에 한정된 토큰 기반 표면·타이포·입력·스위치·반응형·reduced-motion |
+| `src/components/settings/SettingsControls.tsx` | 라벨 필드, 스위치, 0.5일 증감, 포털 확인 대화상자의 재사용 UI |
+| `src/lib/i18n/translations.ts` | 그룹·안내·저장 상태·접근 가능한 조작 이름의 동일한 ko/en 키 |
+| `src/lib/db/settings.ts` | 기존 upsert가 반환한 오류를 호출자에 전달해 거짓 완료 표시 방지 |
+| `src/lib/i18n/LocaleContext.tsx` | 같은 언어 upsert의 완료/오류를 기다리고 실패 시 이전 언어 복원 |
+| `src/lib/db/settings.test.ts` | 기존 테이블/patch/conflict key 보존 및 실패 전파 단위 검사 |
+| `tests/e2e/fixtures/workspace.ts` | 기존 UI fixture 추출, 공유 게스트의 DB 쓰기를 격리한 테스트 대역 |
+| `tests/e2e/settings-ui.spec.ts` | 9개 항목, 저장/실패/재시도/재방문, 키보드, 반응형, 테마, axe, 전후 캡처 |
+| `tests/e2e/fixtures/settings-account.ts` | 기존 전용 계정 인증 방식을 따르는 실제 저장 검사의 안전한 준비 |
+| `tests/e2e/settings-crud.spec.ts` | 전용 계정에서 실제 설정 저장·재방문·DB 확인 후 검사 전 필드 값 복원 |
+| `tests/e2e/workspace-ui.spec.ts` | 공용 fixture 사용, 화면에서 제거한 내부 경로 문자열 대신 `data-route`로 기존 드래그 대상 선택 |
+| `docs/images/settings-phase2/` | 동일한 고정 데이터로 촬영한 기준/최종 화면 각 29장 |
+
+Supabase 테이블·컬럼·conflict key·patch 형태·localStorage 키·이벤트는 변경하지 않았다. 저장 결과를 표시하기 위해 오류 전달만 보강했다. helper의 다른 호출자는 이미 오류를 처리하며 해당 기능 코드는 수정하지 않았다. 인증, DB 권한/RLS, API 입력·출력, GitHub 연결 처리, 알림 발송 로직, 의존성은 그대로다.
+
+직업군 ID/메뉴 추천 배열, 메뉴 on/off·드래그 정렬, 인사말의 basic/time/day와 한국어 시간대 키·숫자 요일 키, 연차 저장 필드와 증감 범위를 유지한다. 설정의 입사일 입력만 브라우저 기본 date 입력으로 바꿨고 저장 값은 기존 `YYYY-MM-DD`/null 그대로다. 다른 페이지의 공통 DatePickerInput은 수정하지 않았다. 한국어/영어 전환과 기존 설정값 로딩을 보존했다.
+
+### 검증 결과
+
+최종 로컬 프로덕션 빌드에서 실행했다. 기존 검사는 제거·skip·완화하지 않았으며 새 UI로 인해 바뀐 메뉴 행 선택자만 조정했다.
+
+| 검사 | 결과 |
+| --- | --- |
+| `npm run typecheck` | 통과 |
+| `npm run lint` | 오류 0, 기존 경고 8 유지 |
+| `npm run build` | 통과, 34개 경로 생성 |
+| `npm run test:unit` | 5개 파일 18개 통과 |
+| `npx playwright test --workers=1 --reporter=line` | 35개 통과, 3.4분. 설정 신규 16개와 기존 UI·게스트 19개 |
+| `npx playwright test --config playwright.crud.config.ts --workers=1 --output playwright-report/crud` | 8개 통과, 31.7초. 실제 설정 저장 검사와 기존 일정·거래처·메모·할 일 검사 포함 |
+| 접근성·반응형 | 1440/1100/390/320px × light/dark × 9개 항목의 axe WCAG A/AA 위반 0, 가로 넘침·콘솔·주요 네트워크 오류 0 (의도적인 저장 실패 응답 제외) |
+| 이동·회귀 | 홈 → 메뉴 설정, URL 직접 진입·새로고침·뒤로 가기·잘못된 항목, 프리셋 확인/취소, 메뉴 드래그/키보드 정렬, 인사말 3모드, 저장 실패/재시도, ko/en 재방문 |
+
+실제 저장 테스트의 첫 준비는 전용 계정에 설정 행이 없어 멈췄다. 다음 실행에서는 만든 테스트 행의 삭제가 authenticated 권한으로 금지되어 정리 단계가 실패했다. DB 권한은 바꾸지 않았다. 해당 행의 테스트 이름·인사말·메뉴 등 값은 별도 검증으로 지우고 스키마 기본값과 한국어로 정리했다. **전용 테스트 계정에는 기본값의 설정 행 1개가 남아 있으며, 검사 전의 ‘행 없음’ 상태와 완전히 같지는 않다.** 최종 테스트는 기존 행이 있는 계정만 허용하고, 변경 필드를 snapshot/restore하며 복원 후 동등성까지 확인한다. 공유 게스트 데이터는 변경하지 않았다. 이 부작용과 제한을 숨기지 않고 기록한다.
+
+### 전후 화면
+
+`before`는 `d1f55a9`의 실제 로컬 실행, `after`는 최종 프로덕션 빌드다. 고정된 가상 설정 데이터를 사용해 개인 정보와 PAT는 포함하지 않는다. 모바일 제목/목록의 테두리는 실제 초점 표시다. 표의 기본 링크는 내 정보이며 메뉴와 모바일 목록도 같은 폴더에 기록했다.
+
+| 너비 | 수정 전 | 수정 후 | 메뉴 설정 (수정 후) |
+| --- | --- | --- | --- |
+| 1440px | [밝음](images/settings-phase2/before/1440-light-info.png) · [어두움](images/settings-phase2/before/1440-dark-info.png) | [밝음](images/settings-phase2/after/1440-light-info.png) · [어두움](images/settings-phase2/after/1440-dark-info.png) | [밝음](images/settings-phase2/after/1440-light-menu.png) · [어두움](images/settings-phase2/after/1440-dark-menu.png) |
+| 1100px | [밝음](images/settings-phase2/before/1100-light-info.png) · [어두움](images/settings-phase2/before/1100-dark-info.png) | [밝음](images/settings-phase2/after/1100-light-info.png) · [어두움](images/settings-phase2/after/1100-dark-info.png) | [밝음](images/settings-phase2/after/1100-light-menu.png) · [어두움](images/settings-phase2/after/1100-dark-menu.png) |
+| 390px | [밝음](images/settings-phase2/before/390-light-info.png) · [어두움](images/settings-phase2/before/390-dark-info.png) | [밝음](images/settings-phase2/after/390-light-info.png) · [어두움](images/settings-phase2/after/390-dark-info.png) | [밝음](images/settings-phase2/after/390-light-menu.png) · [어두움](images/settings-phase2/after/390-dark-menu.png) |
+| 320px | [밝음](images/settings-phase2/before/320-light-info.png) · [어두움](images/settings-phase2/before/320-dark-info.png) | [밝음](images/settings-phase2/after/320-light-info.png) · [어두움](images/settings-phase2/after/320-dark-info.png) | [밝음](images/settings-phase2/after/320-light-menu.png) · [어두움](images/settings-phase2/after/320-dark-menu.png) |
+
+모바일 목록: [390 밝음](images/settings-phase2/after/390-light-list.png) · [390 어두움](images/settings-phase2/after/390-dark-list.png) · [320 밝음](images/settings-phase2/after/320-light-list.png) · [320 어두움](images/settings-phase2/after/320-dark-list.png).
+
+나머지 항목: [연차](images/settings-phase2/after/section-leave.png) · [인사말](images/settings-phase2/after/section-greeting.png) · [직업군](images/settings-phase2/after/section-job.png) · [도움말](images/settings-phase2/after/section-help.png) · [언어](images/settings-phase2/after/section-language.png) · [GitHub](images/settings-phase2/after/section-github.png) · [알림](images/settings-phase2/after/section-notif.png).
+
+재촬영은 PowerShell에서 `$env:WORKY_SETTINGS_CAPTURE_PHASE='after'` 후 `npx playwright test tests/e2e/settings-ui.spec.ts --grep '설정 전후 화면 기록' --workers=1 --reporter=line`으로 실행한다. 일반 실행의 캡처는 `test-results`에 저장한다. 기준 before 이미지를 현재 코드로 덮어쓰지 않는다.
+
+### 남은 한계와 다음 단계
+
+- 화면과 접근성 검사는 Chromium 기준이다. Safari/Firefox·실제 모바일 키보드·스크린리더 실사용은 별도 확인이 필요하다. 자동 axe 통과가 전체 접근성 적합성을 보장하지 않는다.
+- 실제 GitHub PAT/저장소 연결을 변경하지 않았다. 연결·실패·웹훅 경고·재방문은 API 대역으로 검사했고, 외부 GitHub 가용성은 미검증이다.
+- Windows headless Chromium은 권한 부여를 시도해도 알림 거부를 반환했다. 알림 E2E는 권한 API의 기본/허용/거부 상태를 명시적으로 대체해 UI와 로컬 저장만 검증한다. OS 권한 창·실제 알림 수신은 미검증이다.
+- 설정 조회 도우미의 기존 ‘오류를 null로 반환’ 계약은 유지했다. 조회 장애를 새 사용자 기본값과 구분하는 작업은 이번 표시 개편에서 제외했다.
+- 인증·DB·API·알림 발송·다른 기능 페이지·앱 셸/홈 재개편·검색/명령 팔레트는 의도적으로 변경하지 않았다. 배포/버전 변경/병합/Ready 전환/리뷰 봇 요청 없이 Draft PR까지만 전달한다.

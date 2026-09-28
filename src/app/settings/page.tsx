@@ -1,14 +1,13 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import HelpButton from "@/components/HelpButton";
-import { useToast } from "@/contexts/ToastContext";
 import {
-  IconUser, IconDeviceFloppy, IconCheck, IconChevronLeft, IconApps,
-  IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette, IconX,
+  IconUser, IconDeviceFloppy, IconCheck, IconChevronLeft, IconChevronRight, IconArrowUp, IconArrowDown, IconApps,
+  IconBriefcase, IconCode, IconBuildingSkyscraper, IconFileText, IconPalette,
   IconGripVertical, IconHelp, IconMessageCircle, IconCalendarEvent,
-  IconBell, IconBellOff, IconWorld, IconBrandGithub, IconAlertTriangle,
+  IconBell, IconWorld, IconBrandGithub, IconAlertTriangle,
 } from "@tabler/icons-react";
 import {
   loadNotificationSettings, saveNotificationSettings,
@@ -18,14 +17,16 @@ import {
 import {
   OPTIONAL_MENU_ITEMS, ALWAYS_VISIBLE_ITEMS,
   loadMenuSettings, saveMenuSettings, isRouteEnabled,
-  MENU_SETTINGS_EVENT, type MenuSettings,
+  type MenuSettings,
   loadMenuOrder, saveMenuOrder,
   loadHelpButtonEnabled, saveHelpButtonEnabled,
   MENU_LOCALE_MAP,
 } from "@/lib/menuSettings";
 import { createClient } from "@/lib/supabase/client";
 import { getSettings, upsertSettings, type CustomGreeting } from "@/lib/db/settings";
-import DatePickerInput from "@/components/DatePickerInput";
+import WorkyFlow from "@/components/WorkyFlow";
+import { SettingsField, SettingsSwitch, SettingsStepper, SettingsConfirm } from "@/components/settings/SettingsControls";
+import "./settings.css";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { tFormat, type TranslationKey } from "@/lib/i18n/translations";
 
@@ -118,43 +119,32 @@ const JOB_PRESETS: JobPreset[] = [
 ];
 
 function SettingsLoading() {
-  return <div className="max-w-5xl mx-auto w-full space-y-4">
-    {Array.from({ length: 7 }).map((_, i) => (
-      <div key={i} className="animate-pulse bg-slate-200 dark:bg-zinc-700/50 rounded-2xl h-14" />
-    ))}
-  </div>;
+  return <div className="st-loading" role="status" aria-label="Loading"><div /><div /><div /></div>;
 }
 
 function SettingsContent() {
-  const toast = useToast();
+
   const { locale, setLocale, t } = useLocale();
   const router = useRouter();
   const requestedSection = useSearchParams().get("section");
   const activeSection = isSettingsSection(requestedSection) ? requestedSection : "info";
   const mobileShowDetail = isSettingsSection(requestedSection);
   const [info,          setInfo]          = useState<SenderInfo>({ org: "", name: "", title: "" });
-  const [saved,         setSaved]         = useState(false);
   const [hydrated,      setHydrated]      = useState(false);
   const [userId,        setUserId]        = useState<string | null>(null);
   const [menuSettings,  setMenuSettings]  = useState<MenuSettings>({});
-  const [menuSaved,     setMenuSaved]     = useState(false);
   const [jobPreset,     setJobPreset]     = useState<string | null>(null);
   const [pendingPreset, setPendingPreset] = useState<string | null>(null);
-  const [jobSaved,       setJobSaved]       = useState(false);
   const [menuOrder,      setMenuOrder]      = useState<string[]>([]);
-  const [orderSaved,     setOrderSaved]     = useState(false);
   const [dragIdx,        setDragIdx]        = useState<number | null>(null);
   const [dropIdx,        setDropIdx]        = useState<number | null>(null);
   const [helpOn,         setHelpOn]         = useState(true);
-  const [helpSaved,      setHelpSaved]      = useState(false);
   const [greetingEnabled,  setGreetingEnabled]  = useState(false);
   const [greetingMode,     setGreetingMode]     = useState<GreetingMode>("basic");
   const [greetingValues,   setGreetingValues]   = useState<Record<string, string>>({});
-  const [greetingSaved,    setGreetingSaved]    = useState(false);
   const [joinDate,         setJoinDate]         = useState("");
   const [leaveStandard,    setLeaveStandard]    = useState<"join_date" | "fiscal_year">("fiscal_year");
   const [usedLeaves,       setUsedLeaves]       = useState(0);
-  const [leaveSaved,       setLeaveSaved]       = useState(false);
   const [employmentType,   setEmploymentType]   = useState<"new" | "career">("new");
   const [grantedLeaves,    setGrantedLeaves]    = useState(15);
   const [notifPermission,  setNotifPermission]  = useState<NotificationPermission | "unsupported">("default");
@@ -162,9 +152,16 @@ function SettingsContent() {
   const [githubConnected,     setGithubConnected]     = useState(false);
   const [githubRepoStatus,    setGithubRepoStatus]    = useState<string | null>(null);
   const [githubStatusLoading, setGithubStatusLoading] = useState(true);
+  const [githubStatusError, setGithubStatusError] = useState(false);
+  const [githubWarnings, setGithubWarnings] = useState<TranslationKey[]>([]);
+  const [states, setStates] = useState<Partial<Record<SettingsSection, "dirty" | "saving" | "saved" | "error">>>({});
+  const pending = useRef(new Set<SettingsSection>());
+  const retries = useRef<Partial<Record<SettingsSection, () => Promise<void>>>>({});
+  const detailRef = useRef<HTMLHeadingElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
+  const lastSection = useRef<SettingsSection>("info");
   const [githubPatInput,      setGithubPatInput]      = useState("");
   const [githubRepoInput,     setGithubRepoInput]     = useState("");
-  const [githubSaving,        setGithubSaving]        = useState(false);
 
   useEffect(() => {
     if (requestedSection !== null && !isSettingsSection(requestedSection)) router.replace("/settings");
@@ -228,1008 +225,256 @@ function SettingsContent() {
     });
   }, []);
 
-  const fetchGithubStatus = () => {
-    setGithubStatusLoading(true);
-    return fetch("/api/settings/github")
-      .then((res) => res.json())
-      .then((data: { connected?: boolean; repo?: string | null }) => {
-        setGithubConnected(Boolean(data.connected));
-        setGithubRepoStatus(data.repo ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setGithubStatusLoading(false));
-  };
 
   useEffect(() => {
-    fetchGithubStatus();
-  }, []);
+    if (!hydrated || !window.matchMedia("(max-width: 767px)").matches) return;
+    if (mobileShowDetail) {
+      lastSection.current = activeSection;
+      detailRef.current?.focus();
+      detailRef.current?.closest("main")?.scrollTo(0, 0);
+    } else {
+      navRef.current?.querySelector<HTMLButtonElement>(`[data-section="${lastSection.current}"]`)?.focus();
+    }
+  }, [requestedSection, activeSection, mobileShowDetail, hydrated]);
 
-  const handleGithubSave = async () => {
-    if (!githubPatInput.trim() || !githubRepoInput.trim()) return;
-    setGithubSaving(true);
+  const dirty = (section: SettingsSection) => setStates(prev => ({ ...prev, [section]: "dirty" }));
+  const runSave = async (section: SettingsSection, operation: () => Promise<void>) => {
+    if (pending.current.has(section)) return;
+    pending.current.add(section);
+    retries.current[section] = operation;
+    setStates(prev => ({ ...prev, [section]: "saving" }));
     try {
+      await operation();
+      delete retries.current[section];
+      setStates(prev => ({ ...prev, [section]: "saved" }));
+    } catch {
+      setStates(prev => ({ ...prev, [section]: "error" }));
+    } finally { pending.current.delete(section); }
+  };
+  const persist = async (patch: Parameters<typeof upsertSettings>[1]) => {
+    if (!userId) throw new Error("No settings user");
+    await upsertSettings(userId, patch);
+  };
+  const fetchGithubStatus = async () => {
+    setGithubStatusLoading(true); setGithubStatusError(false);
+    try {
+      const res = await fetch("/api/settings/github");
+      if (!res.ok) throw new Error("GitHub status unavailable");
+      const data = await res.json() as { connected?: boolean; repo?: string | null };
+      setGithubConnected(Boolean(data.connected)); setGithubRepoStatus(data.repo ?? null);
+    } catch { setGithubStatusError(true); }
+    finally { setGithubStatusLoading(false); }
+  };
+  useEffect(() => { void fetchGithubStatus(); }, []);
+
+  const handleGithubSave = () => {
+    if (!githubPatInput.trim() || !githubRepoInput.trim()) return;
+    setGithubWarnings([]);
+    void runSave("github", async () => {
       const res = await fetch("/api/settings/github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat: githubPatInput.trim(), repo: githubRepoInput.trim() }),
       });
-      const data = (await res.json()) as { warnings?: TranslationKey[]; error?: string };
-      if (!res.ok) throw new Error(data.error);
-      if (data.warnings?.length) {
-        data.warnings.forEach((code) => toast.error(t(code)));
-      } else {
-        toast.success(t("github_save_success"));
-      }
-      setGithubPatInput("");
-      setGithubRepoInput("");
+      const data = await res.json() as { warnings?: TranslationKey[] };
+      if (!res.ok) throw new Error("GitHub save failed");
+      setGithubWarnings(data.warnings ?? []);
+      setGithubPatInput(""); setGithubRepoInput("");
       await fetchGithubStatus();
-    } catch (e) {
-      toast.error(e instanceof Error && e.message ? e.message : t("github_save_error"));
-    } finally {
-      setGithubSaving(false);
-    }
+    });
   };
-
-  const handleChange = (field: keyof SenderInfo, value: string) => {
-    setInfo((prev) => ({ ...prev, [field]: value }));
-    setSaved(false);
-  };
-
+  const handleChange = (field: keyof SenderInfo, value: string) => { setInfo(prev => ({ ...prev, [field]: value })); dirty("info"); };
   const handleSave = () => {
     localStorage.setItem(SENDER_KEY, JSON.stringify(info));
-    if (userId) upsertSettings(userId, { sender_info: info as unknown as Record<string, string> })
-      .then(() => toast.success("내 정보가 저장됐습니다."))
-      .catch(() => toast.error("저장에 실패했습니다."));
-    else toast.success("내 정보가 저장됐습니다.");
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    void runSave("info", () => persist({ sender_info: info as unknown as Record<string, string> }));
   };
-
   const handleMenuToggle = (href: string) => {
     const next = { ...menuSettings, [href]: !isRouteEnabled(menuSettings, href) };
-    setMenuSettings(next);
-    saveMenuSettings(next);
-    if (userId) upsertSettings(userId, { menu_settings: next }).catch(() => { toast.error("저장에 실패했습니다."); });
-    setMenuSaved(true);
-    setTimeout(() => setMenuSaved(false), 2500);
+    const previous = menuSettings;
+    void runSave("menu", async () => {
+      setMenuSettings(next); saveMenuSettings(next);
+      try { await persist({ menu_settings: next }); }
+      catch (error) { setMenuSettings(previous); saveMenuSettings(previous); throw error; }
+    });
   };
-
-  /* ── 드래그&드롭 순서 변경 ── */
-  const handleDragStart = (i: number) => setDragIdx(i);
-  const handleDragEnd   = () => { setDragIdx(null); setDropIdx(null); };
-  const handleDragOver  = (e: React.DragEvent, i: number) => { e.preventDefault(); setDropIdx(i); };
-  const handleDrop      = (e: React.DragEvent, i: number) => {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === i) { setDragIdx(null); setDropIdx(null); return; }
+  const moveMenu = (from: number, to: number) => {
+    if (pending.current.has("menu") || from === to || to < 0 || to >= menuOrder.length) return;
     const next = [...menuOrder];
-    const [moved] = next.splice(dragIdx, 1);
-    next.splice(i, 0, moved);
-    setMenuOrder(next);
-    saveMenuOrder(next);
-    if (userId) upsertSettings(userId, { menu_order: next }).catch(() => { toast.error("저장에 실패했습니다."); });
-    setOrderSaved(true);
-    setTimeout(() => setOrderSaved(false), 2500);
-    setDragIdx(null);
-    setDropIdx(null);
+    const [moved] = next.splice(from, 1); next.splice(to, 0, moved);
+    const previous = menuOrder;
+    void runSave("menu", async () => {
+      setMenuOrder(next); saveMenuOrder(next);
+      try { await persist({ menu_order: next }); }
+      catch (error) { setMenuOrder(previous); saveMenuOrder(previous); throw error; }
+    });
   };
-
-  /* ── 도움말 버튼 토글 ── */
+  const handleDrop = (event: React.DragEvent, index: number) => {
+    event.preventDefault();
+    if (dragIdx !== null) moveMenu(dragIdx, index);
+    setDragIdx(null); setDropIdx(null);
+  };
   const handleHelpToggle = () => {
     const next = !helpOn;
-    setHelpOn(next);
-    saveHelpButtonEnabled(next);
-    if (userId) upsertSettings(userId, { help_button: next }).catch(() => { toast.error("저장에 실패했습니다."); });
-    setHelpSaved(true);
-    setTimeout(() => setHelpSaved(false), 2500);
+    void runSave("help", async () => {
+      setHelpOn(next); saveHelpButtonEnabled(next);
+      try { await persist({ help_button: next }); }
+      catch (error) { setHelpOn(!next); saveHelpButtonEnabled(!next); throw error; }
+    });
   };
-
-  /* ── 커스텀 인사말 ── */
-  const handleGreetingToggle = () => {
-    setGreetingEnabled((v) => !v);
-    setGreetingSaved(false);
-  };
-
-  const handleGreetingValueChange = (key: string, value: string) => {
-    setGreetingValues((prev) => ({ ...prev, [key]: value }));
-    setGreetingSaved(false);
-  };
-
-  const handleLeaveSave = () => {
-    if (userId) upsertSettings(userId, {
-      join_date: joinDate || null,
-      leave_standard: leaveStandard,
-      used_leaves: usedLeaves,
-      employment_type: employmentType,
-      granted_leaves: grantedLeaves,
-    }).then(() => toast.success("연차 설정이 저장됐습니다.")).catch(() => { toast.error("저장에 실패했습니다."); });
-    setLeaveSaved(true);
-    setTimeout(() => setLeaveSaved(false), 2500);
-  };
-
+  const handleGreetingValueChange = (key: string, value: string) => { setGreetingValues(prev => ({ ...prev, [key]: value })); dirty("greeting"); };
+  const handleLeaveSave = () => void runSave("leave", () => persist({
+    join_date: joinDate || null, leave_standard: leaveStandard, used_leaves: usedLeaves,
+    employment_type: employmentType, granted_leaves: grantedLeaves,
+  }));
   const handleGreetingSave = () => {
-    const payload: CustomGreeting = {
-      enabled: greetingEnabled,
-      mode: greetingMode,
-      values: greetingValues,
-    };
-    if (userId) upsertSettings(userId, { custom_greeting: payload })
-      .then(() => toast.success("인사말이 저장됐습니다."))
-      .catch(() => toast.error("저장에 실패했습니다."));
-    setGreetingSaved(true);
-    setTimeout(() => setGreetingSaved(false), 2500);
+    const payload: CustomGreeting = { enabled: greetingEnabled, mode: greetingMode, values: greetingValues };
+    void runSave("greeting", () => persist({ custom_greeting: payload }));
   };
-
   const handlePresetConfirm = () => {
-    if (!pendingPreset) return;
-    const preset = JOB_PRESETS.find((p) => p.id === pendingPreset);
+    const preset = JOB_PRESETS.find(p => p.id === pendingPreset);
     if (!preset) return;
-
-    const next: MenuSettings = Object.fromEntries(
-      ALL_OPTIONAL_HREFS.map((href) => [
-        href,
-        preset.on === null ? true : preset.on.includes(href),
-      ])
-    );
-    setMenuSettings(next);
-    saveMenuSettings(next);
-    localStorage.setItem(JOB_KEY, pendingPreset);
-    if (userId) upsertSettings(userId, { menu_settings: next, job_preset: pendingPreset }).catch(() => { toast.error("저장에 실패했습니다."); });
-    setJobPreset(pendingPreset);
+    const next: MenuSettings = Object.fromEntries(ALL_OPTIONAL_HREFS.map(href => [href, preset.on === null || preset.on.includes(href)]));
     setPendingPreset(null);
-    setJobSaved(true);
-    setTimeout(() => setJobSaved(false), 2500);
+    // Apply the confirmed preset only after the existing write succeeds.
+    void runSave("job", async () => {
+      await persist({ menu_settings: next, job_preset: preset.id });
+      setMenuSettings(next); saveMenuSettings(next);
+      localStorage.setItem(JOB_KEY, preset.id); setJobPreset(preset.id);
+    });
   };
-
   const handleNotifToggle = (key: keyof NotificationSettings) => {
-    const next = { ...notifSettings, [key]: !notifSettings[key] };
-    setNotifSettings(next);
-    saveNotificationSettings(next);
+    const next = { ...notifSettings, [key]: !notifSettings[key] }; setNotifSettings(next);
+    void runSave("notif", async () => { saveNotificationSettings(next); });
   };
+  const handleRequestPermission = async () => { await requestPermission(); setNotifPermission(getPermissionStatus()); };
 
-  const handleRequestPermission = async () => {
-    const granted = await requestPermission();
-    setNotifPermission(granted ? "granted" : "denied");
-    if (granted) toast.success("알림이 허용됐습니다.");
-    else toast.error("알림 권한이 거부됐습니다. 브라우저 설정에서 직접 허용해 주세요.");
-  };
-
-  if (!hydrated) {
-    return <SettingsLoading />;
-  }
-
-  const hasSender = info.org || info.name || info.title;
-  const pendingPresetLabel = JOB_PRESETS.find((p) => p.id === pendingPreset)?.label ?? "";
-
-  const SECTIONS: { key: SettingsSection; label: string; icon: React.ElementType }[] = [
-    { key: "info",     label: t("settings_section_info"),     icon: IconUser },
-    { key: "leave",    label: t("settings_section_leave"),    icon: IconCalendarEvent },
-    { key: "greeting", label: t("settings_section_greeting"), icon: IconMessageCircle },
-    { key: "job",      label: t("settings_section_job"),      icon: IconBriefcase },
-    { key: "menu",     label: t("settings_section_menu"),     icon: IconApps },
-    { key: "help",     label: t("settings_section_help"),     icon: IconHelp },
-    { key: "language", label: t("settings_language"),         icon: IconWorld },
-    { key: "github",   label: t("settings_section_github"),   icon: IconBrandGithub },
-    ...(notifPermission !== "unsupported"
-      ? [{ key: "notif" as SettingsSection, label: t("settings_section_notif"), icon: IconBell }]
-      : []),
+  if (!hydrated) return <SettingsLoading />;
+  const sections: { key: SettingsSection; label: TranslationKey; hint: TranslationKey; icon: React.ElementType; group: TranslationKey }[] = [
+    { key: "info", label: "settings_section_info", hint: "st_info_hint", icon: IconUser, group: "st_group_personal" },
+    { key: "leave", label: "settings_section_leave", hint: "st_leave_hint", icon: IconCalendarEvent, group: "st_group_personal" },
+    { key: "greeting", label: "settings_section_greeting", hint: "st_greeting_hint", icon: IconMessageCircle, group: "st_group_workspace" },
+    { key: "job", label: "settings_section_job", hint: "st_job_hint", icon: IconBriefcase, group: "st_group_workspace" },
+    { key: "menu", label: "settings_section_menu", hint: "st_menu_hint", icon: IconApps, group: "st_group_workspace" },
+    { key: "help", label: "settings_section_help", hint: "st_help_hint", icon: IconHelp, group: "st_group_environment" },
+    { key: "language", label: "settings_language", hint: "st_language_hint", icon: IconWorld, group: "st_group_environment" },
+    { key: "github", label: "settings_section_github", hint: "st_github_hint", icon: IconBrandGithub, group: "st_group_environment" },
+    { key: "notif", label: "settings_section_notif", hint: "st_notif_hint", icon: IconBell, group: "st_group_environment" },
   ];
+  const current = sections.find(section => section.key === activeSection)!;
+  const state = states[activeSection];
+  const busy = state === "saving" || (activeSection === "menu" && states.job === "saving") || (activeSection === "job" && states.menu === "saving");
+  const saveActions: Partial<Record<SettingsSection, () => void>> = { info: handleSave, leave: handleLeaveSave, greeting: handleGreetingSave, github: handleGithubSave };
+  const manualSave = saveActions[activeSection];
+  const presetLabel = (id: string) => t(("st_preset_" + id) as TranslationKey);
+  const choices = <T extends string,>(label: string, value: T, options: { id: T; label: string }[], onChange: (value: T) => void) =>
+    <div className="st-choices" role="group" aria-label={label}>{options.map(option =>
+      <button key={option.id} type="button" aria-pressed={value === option.id} onClick={() => onChange(option.id)}>{option.label}</button>
+    )}</div>;
 
-  return (
-    <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
-
-      {/* 직업군 변경 확인 모달 */}
-      {pendingPreset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl p-6 w-full max-w-sm">
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("job_change_modal_title")}</h3>
-              <button
-                onClick={() => setPendingPreset(null)}
-                className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
-              >
-                <IconX className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
-              <span className="font-semibold text-[#4D44CC] dark:text-[#8B85FF]">{pendingPresetLabel}</span> 직군으로 메뉴를 설정하시겠습니까?
-              <br />
-              <span className="text-slate-500 dark:text-zinc-400 text-xs">{t("job_change_modal_warning")}</span>
-            </p>
-            <div className="flex gap-2 mt-5">
-              <button
-                onClick={() => setPendingPreset(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
-              >
-                {t("cancel")}
-              </button>
-              <button
-                onClick={handlePresetConfirm}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                {t("confirm")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-4 items-start">
-
-        {/* 좌측: 섹션 목록 */}
-        <div className={[
-          "w-full sm:w-[220px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-2",
-          mobileShowDetail ? "hidden sm:block" : "block",
-        ].join(" ")}>
-          {SECTIONS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => router.push(`/settings?section=${key}`)}
-              className={[
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition",
-                activeSection === key ? "bg-[#6C63FF]/10" : "hover:bg-slate-50 dark:hover:bg-zinc-800",
-              ].join(" ")}
-            >
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                <Icon className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-              </div>
-              <span className={`text-sm font-medium ${activeSection === key ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-300"}`}>
-                {label}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* 우측: 선택된 섹션 내용 */}
-        <div className={[
-          "flex-1 min-w-0 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm p-5",
-          mobileShowDetail ? "block" : "hidden sm:block",
-        ].join(" ")}>
-          <button
-            onClick={() => router.push("/settings")}
-            className="sm:hidden flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-400 mb-3"
-          >
-            <IconChevronLeft className="w-3.5 h-3.5" /> {t("settings_mobile_back")}
+  return <div className="st-settings" data-detail={mobileShowDetail}>
+    <header className="st-intro"><h2>{t("st_title")}</h2><p>{t("st_intro")}</p></header>
+    <div className="st-layout">
+      <div ref={navRef} className="st-nav" role="navigation" aria-label={t("settings_mobile_back")}>
+        {sections.map((section, index) => <div key={section.key}>
+          {(index === 0 || sections[index - 1].group !== section.group) && <h3>{t(section.group)}</h3>}
+          <button type="button" data-section={section.key} aria-label={t(section.label)} aria-current={activeSection === section.key ? "page" : undefined} onClick={() => router.push(`/settings?section=${section.key}`)}>
+            <section.icon size={20} aria-hidden="true" /><span><strong>{t(section.label)}</strong><small>{t(section.hint)}</small></span>
+            {activeSection === section.key ? <WorkyFlow compact /> : <IconChevronRight className="st-nav-arrow" size={16} aria-hidden="true" />}
           </button>
-
-          {/* 내 정보 */}
-          {activeSection === "info" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconUser className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_info")}</p>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("info_desc")}</p>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                {([
-                  { field: "org",   label: t("info_label_org"),   placeholder: t("info_placeholder_org") },
-                  { field: "name",  label: t("info_label_name"),  placeholder: t("info_placeholder_name") },
-                  { field: "title", label: t("info_label_title"), placeholder: t("info_placeholder_title") },
-                ] as { field: keyof SenderInfo; label: string; placeholder: string }[]).map(({ field, label, placeholder }) => (
-                  <div key={field} className="flex-1">
-                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">
-                      {label}
-                    </label>
-                    <input
-                      value={info[field]}
-                      onChange={(e) => handleChange(field, e.target.value)}
-                      placeholder={placeholder}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {hasSender && (
-                <div className="mt-4 px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                  <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("info_signature_preview")}</p>
-                  <p className="text-sm text-slate-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed">
-                    {`${t("info_signature_thanks")}\n${[info.org, info.name, info.title].filter(Boolean).join(" ")}`}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-end mt-4">
-                <button
-                  onClick={handleSave}
-                  className={[
-                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all",
-                    saved ? "bg-emerald-500" : "",
-                  ].join(" ")}
-                  style={saved ? undefined : { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-                >
-                  {saved ? (
-                    <><IconCheck className="w-4 h-4" />{t("save_done")}</>
-                  ) : (
-                    <><IconDeviceFloppy className="w-4 h-4" />{t("save")}</>
-                  )}
-                </button>
-              </div>
-
-            </div>
-          )}
-
-          {/* 연차 설정 */}
-          {activeSection === "leave" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconCalendarEvent className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_leave")}</p>
-                  {leaveSaved && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
-                {joinDate ? `입사일: ${joinDate}` : t("leave_desc_empty")}
-              </p>
-
-              {/* 입사 유형 토글 */}
-              <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_employment_type")}</label>
-                <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
-                  {([
-                    { id: "new",    label: t("leave_new") },
-                    { id: "career", label: t("leave_career") },
-                  ] as { id: "new" | "career"; label: string }[]).map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => { setEmploymentType(id); setLeaveSaved(false); }}
-                      className={[
-                        "py-1.5 rounded-lg text-xs font-medium transition-colors",
-                        employmentType === id
-                          ? "bg-[#6C63FF] text-white shadow-sm"
-                          : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
-                      ].join(" ")}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 신입: 입사일 + 연차 기준 */}
-              {employmentType === "new" && (
-                <>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_join_date")}</label>
-                    <DatePickerInput value={joinDate} onChange={(v) => { setJoinDate(v); setLeaveSaved(false); }} />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_standard")}</label>
-                    <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-2 gap-1">
-                      {([
-                        { id: "join_date",   label: t("leave_standard_join") },
-                        { id: "fiscal_year", label: t("leave_standard_fiscal") },
-                      ] as { id: "join_date" | "fiscal_year"; label: string }[]).map(({ id, label }) => (
-                        <button
-                          key={id}
-                          onClick={() => { setLeaveStandard(id); setLeaveSaved(false); }}
-                          className={[
-                            "py-1.5 rounded-lg text-xs font-medium transition-colors",
-                            leaveStandard === id
-                              ? "bg-[#6C63FF] text-white shadow-sm"
-                              : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
-                          ].join(" ")}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* 경력: 부여 연차 stepper */}
-              {employmentType === "career" && (
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_granted")}</label>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => { setGrantedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                      className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
-                    >
-                      −
-                    </button>
-                    <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
-                      {grantedLeaves}{t("leave_unit_day")}
-                    </span>
-                    <button
-                      onClick={() => { setGrantedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                      disabled={grantedLeaves >= 25}
-                      className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 사용한 연차 */}
-              <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("leave_used")}</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => { setUsedLeaves((v) => Math.max(0, Math.round((v - 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition"
-                  >
-                    −
-                  </button>
-                  <span className="w-16 text-center text-sm font-semibold text-slate-800 dark:text-zinc-100">
-                    {usedLeaves}{t("leave_unit_day")}
-                  </span>
-                  <button
-                    onClick={() => { setUsedLeaves((v) => Math.min(25, Math.round((v + 0.5) * 2) / 2)); setLeaveSaved(false); }}
-                    disabled={usedLeaves >= 25}
-                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-lg font-semibold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={handleLeaveSave}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                <IconDeviceFloppy className="w-3.5 h-3.5" />
-                {t("save")}
-              </button>
-            </div>
-          )}
-
-          {/* 커스텀 인사말 */}
-          {activeSection === "greeting" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconMessageCircle className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_greeting")}</p>
-                  {greetingSaved && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("greeting_desc")}</p>
-
-              {/* on/off 토글 */}
-              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-                <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("greeting_toggle")}</p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                    {t("greeting_toggle_desc")}
-                  </p>
-                </div>
-                <button
-                  onClick={handleGreetingToggle}
-                  role="switch"
-                  aria-checked={greetingEnabled}
-                  className={[
-                    "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
-                    greetingEnabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                  ].join(" ")}
-                >
-                  <span className={[
-                    "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                    greetingEnabled ? "translate-x-5" : "translate-x-1",
-                  ].join(" ")} />
-                </button>
-              </div>
-
-              {greetingEnabled && (
-                <>
-                  {/* 모드 선택 탭 */}
-                  <div className="bg-slate-100 dark:bg-zinc-800 rounded-xl p-1 grid grid-cols-3 gap-1">
-                    {([
-                      { id: "basic", label: t("greeting_mode_basic") },
-                      { id: "time",  label: t("greeting_mode_time") },
-                      { id: "day",   label: t("greeting_mode_day") },
-                    ] as { id: GreetingMode; label: string }[]).map(({ id, label }) => (
-                      <button
-                        key={id}
-                        onClick={() => { setGreetingMode(id); setGreetingSaved(false); }}
-                        className={[
-                          "py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
-                          greetingMode === id
-                            ? "bg-[#6C63FF] text-white shadow-sm"
-                            : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200",
-                        ].join(" ")}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* 기본 모드 */}
-                  {greetingMode === "basic" && (
-                    <input
-                      value={greetingValues.default ?? ""}
-                      onChange={(e) => handleGreetingValueChange("default", e.target.value)}
-                      placeholder={GREETING_PLACEHOLDERS.default}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                    />
-                  )}
-
-                  {/* 시간대별 모드 */}
-                  {greetingMode === "time" && (
-                    <div className="space-y-2">
-                      {GREETING_TIME_PERIODS.map(({ id, label }) => (
-                        <div key={id} className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
-                          <input
-                            value={greetingValues[id] ?? ""}
-                            onChange={(e) => handleGreetingValueChange(id, e.target.value)}
-                            placeholder={GREETING_PLACEHOLDERS.time[id]}
-                            className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 요일별 모드 */}
-                  {greetingMode === "day" && (
-                    <div className="space-y-2">
-                      {GREETING_DAY_LABELS.map((label, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-12 shrink-0">{label}</span>
-                          <input
-                            value={greetingValues[String(idx)] ?? ""}
-                            onChange={(e) => handleGreetingValueChange(String(idx), e.target.value)}
-                            placeholder={GREETING_PLACEHOLDERS.day[idx]}
-                            className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-
-              <button
-                onClick={handleGreetingSave}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
-                style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-              >
-                <IconDeviceFloppy className="w-3.5 h-3.5" />
-                {t("save")}
-              </button>
-            </div>
-          )}
-
-          {/* 직업군 설정 */}
-          {activeSection === "job" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconBriefcase className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_job")}</p>
-                  {jobSaved && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
-                {jobPreset
-                  ? `현재: ${JOB_PRESETS.find((p) => p.id === jobPreset)?.label ?? ""}`
-                  : t("job_desc_empty")}
-              </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {JOB_PRESETS.map((preset) => {
-                  const Icon   = preset.icon;
-                  const active = jobPreset === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setPendingPreset(preset.id)}
-                      className={[
-                        "flex flex-col gap-2 p-3.5 rounded-2xl border text-left transition-all",
-                        active
-                          ? "border-[#6C63FF] shadow-md"
-                          : "border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/40 hover:shadow-sm",
-                      ].join(" ")}
-                      style={active ? { background: "linear-gradient(135deg, #6C63FF15, #8B85FF20)", borderColor: "#6C63FF" } : undefined}
-                    >
-                      <div className={[
-                        "w-7 h-7 rounded-xl flex items-center justify-center shrink-0",
-                        active ? "bg-[#6C63FF]/15" : "bg-slate-100 dark:bg-zinc-800",
-                      ].join(" ")}>
-                        <Icon className={`w-4 h-4 ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-500 dark:text-zinc-400"}`} />
-                      </div>
-                      <div>
-                        <p className={`text-sm font-semibold leading-tight ${active ? "text-[#4D44CC] dark:text-[#8B85FF]" : "text-slate-700 dark:text-zinc-200"}`}>
-                          {preset.label}
-                        </p>
-                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-snug">{preset.desc}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-3">
-                {t("job_hint")}
-              </p>
-            </div>
-          )}
-
-          {/* 메뉴 설정 */}
-          {activeSection === "menu" && (
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconApps className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_menu")}</p>
-                  {menuSaved && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("menu_desc")}</p>
-
-              {/* 선택 메뉴 — 드래그&드롭 순서 변경 */}
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                  {t("menu_optional")}
-                </p>
-                {orderSaved && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                    <IconCheck className="w-3.5 h-3.5" />{t("menu_order_saved")}
-                  </span>
-                )}
-              </div>
-              <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800 mb-4">
-                {menuOrder.map((href, idx) => {
-                  const item = OPTIONAL_MENU_ITEMS.find((m) => m.href === href);
-                  if (!item) return null;
-                  const enabled    = isRouteEnabled(menuSettings, href);
-                  const isDragging = dragIdx === idx;
-                  const isOver     = dropIdx === idx;
-                  return (
-                    <div
-                      key={href}
-                      draggable
-                      onDragStart={() => handleDragStart(idx)}
-                      onDragEnd={handleDragEnd}
-                      onDragOver={(e) => handleDragOver(e, idx)}
-                      onDrop={(e) => handleDrop(e, idx)}
-                      className={[
-                        "flex items-center justify-between px-3 py-3 transition-colors cursor-grab active:cursor-grabbing",
-                        isDragging ? "opacity-40 bg-slate-50 dark:bg-zinc-800" : "",
-                        isOver && !isDragging ? "bg-[#6C63FF]/5 border-t-2 border-t-[#6C63FF]/40" : "",
-                      ].join(" ")}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <IconGripVertical className="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{MENU_LOCALE_MAP[item.href] ? t(MENU_LOCALE_MAP[item.href]) : item.label}</p>
-                          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleMenuToggle(href)}
-                        role="switch"
-                        aria-checked={enabled}
-                        className={[
-                          "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-2",
-                          enabled ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                        ].join(" ")}
-                      >
-                        <span className={[
-                          "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                          enabled ? "translate-x-5" : "translate-x-1",
-                        ].join(" ")} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* 공통 메뉴 (항상 표시) */}
-              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-                {t("menu_always")}
-              </p>
-              <div className="rounded-xl border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
-                {ALWAYS_VISIBLE_ITEMS.map(({ href, label }) => (
-                  <div key={href} className="flex items-center justify-between px-4 py-3 opacity-60">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : label}</p>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{href}</p>
-                    </div>
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 font-medium shrink-0">
-                      {t("menu_always")}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 도움말 설정 */}
-          {activeSection === "help" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconHelp className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_help")}</p>
-                  {helpSaved && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                      <IconCheck className="w-3.5 h-3.5" />{t("saved_badge")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("help_desc")}</p>
-
-              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-                <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("help_toggle")}</p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                    {t("help_toggle_desc")}
-                  </p>
-                </div>
-                <button
-                  onClick={handleHelpToggle}
-                  role="switch"
-                  aria-checked={helpOn}
-                  className={[
-                    "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
-                    helpOn ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                  ].join(" ")}
-                >
-                  <span className={[
-                    "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                    helpOn ? "translate-x-5" : "translate-x-1",
-                  ].join(" ")} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 언어 설정 */}
-          {activeSection === "language" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconWorld className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_language")}</p>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("settings_language_desc")}</p>
-
-              <div className="flex gap-2">
-                {(["ko", "en"] as const).map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLocale(l)}
-                    className={[
-                      "px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all",
-                      locale === l
-                        ? "text-white border-transparent"
-                        : "text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:border-[#6C63FF]/50",
-                    ].join(" ")}
-                    style={locale === l ? { background: "linear-gradient(135deg, #6C63FF, #8B85FF)" } : undefined}
-                  >
-                    {l === "ko" ? "한국어" : "English"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* GitHub 연동 */}
-          {activeSection === "github" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconBrandGithub className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_github")}</p>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">{t("github_desc")}</p>
-
-              {!githubStatusLoading && (
-                <div className={[
-                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border",
-                  githubConnected
-                    ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-                    : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800",
-                ].join(" ")}>
-                  {githubConnected ? (
-                    <>
-                      <IconCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                        {tFormat(t("github_connected_msg"), { repo: githubRepoStatus ?? "" })}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <IconAlertTriangle className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
-                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">{t("github_not_connected")}</p>
-                    </>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("github_pat_label")}</label>
-                <input
-                  type="password"
-                  value={githubPatInput}
-                  onChange={(e) => setGithubPatInput(e.target.value)}
-                  placeholder={t("github_pat_placeholder")}
-                  autoComplete="off"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">{t("github_repo_label")}</label>
-                <input
-                  value={githubRepoInput}
-                  onChange={(e) => setGithubRepoInput(e.target.value)}
-                  placeholder={t("github_repo_placeholder")}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/40 transition"
-                />
-              </div>
-
-              <div className="flex items-center justify-end">
-                <button
-                  onClick={handleGithubSave}
-                  disabled={githubSaving || !githubPatInput.trim() || !githubRepoInput.trim()}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-                >
-                  <IconDeviceFloppy className="w-4 h-4" />
-                  {t("save")}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 알림 설정 */}
-          {activeSection === "notif" && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#6C63FF]/10 shrink-0">
-                  <IconBell className="w-4 h-4 text-[#4D44CC] dark:text-[#8B85FF]" />
-                </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-zinc-100">{t("settings_section_notif")}</p>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-4">
-                {notifPermission === "granted" ? t("notif_allowed") : t("notif_setup")}
-              </p>
-
-              {/* 권한 상태 */}
-              {notifPermission !== "granted" ? (
-                <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-                  <div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("notif_permission")}</p>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                      {notifPermission === "denied"
-                        ? t("notif_denied_desc")
-                        : t("notif_default_desc")}
-                    </p>
-                  </div>
-                  {notifPermission === "default" && (
-                    <button
-                      onClick={handleRequestPermission}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shrink-0"
-                      style={{ background: "linear-gradient(135deg, #6C63FF, #8B85FF)" }}
-                    >
-                      <IconBell className="w-3.5 h-3.5" />{t("notif_allow_btn")}
-                    </button>
-                  )}
-                  {notifPermission === "denied" && (
-                    <span className="flex items-center gap-1 text-xs text-red-400 shrink-0">
-                      <IconBellOff className="w-3.5 h-3.5" />{t("notif_denied_badge")}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                    <IconCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">{t("notif_granted_msg")}</p>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 px-1">
-                    {t("notif_off_hint")}
-                  </p>
-                </>
-              )}
-
-              {/* 일정 알림 토글 */}
-              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-                <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("notif_event_toggle")}</p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{t("notif_event_desc")}</p>
-                </div>
-                <button
-                  onClick={() => handleNotifToggle("eventNotif")}
-                  disabled={notifPermission !== "granted"}
-                  role="switch"
-                  aria-checked={notifSettings.eventNotif}
-                  className={[
-                    "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
-                    notifPermission !== "granted" ? "opacity-40 cursor-not-allowed" : "",
-                    notifSettings.eventNotif ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                  ].join(" ")}
-                >
-                  <span className={[
-                    "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                    notifSettings.eventNotif ? "translate-x-5" : "translate-x-1",
-                  ].join(" ")} />
-                </button>
-              </div>
-
-              {/* 거래처 D-day 알림 토글 */}
-              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-                <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{t("notif_dday_toggle")}</p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{t("notif_dday_desc")}</p>
-                </div>
-                <button
-                  onClick={() => handleNotifToggle("ddayNotif")}
-                  disabled={notifPermission !== "granted"}
-                  role="switch"
-                  aria-checked={notifSettings.ddayNotif}
-                  className={[
-                    "relative inline-flex w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ml-4",
-                    notifPermission !== "granted" ? "opacity-40 cursor-not-allowed" : "",
-                    notifSettings.ddayNotif ? "bg-[#6C63FF]" : "bg-slate-200 dark:bg-zinc-700",
-                  ].join(" ")}
-                >
-                  <span className={[
-                    "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                    notifSettings.ddayNotif ? "translate-x-5" : "translate-x-1",
-                  ].join(" ")} />
-                </button>
-              </div>
-            </div>
-          )}
-
-        </div>
+        </div>)}
       </div>
-
-      <HelpButton
-        title={t("help_settings_title")}
-        steps={[
-          { step: t("help_settings_1_step"), desc: t("help_settings_1_desc") },
-          { step: t("help_settings_2_step"), desc: t("help_settings_2_desc") },
-          { step: t("help_settings_3_step"), desc: t("help_settings_3_desc") },
-          { step: t("help_settings_4_step"), desc: t("help_settings_4_desc") },
-          { step: t("help_settings_5_step"), desc: t("help_settings_5_desc") },
-          { step: t("help_settings_6_step"), desc: t("help_settings_6_desc") },
-          { step: t("help_settings_7_step"), desc: t("help_settings_7_desc") },
-        ]}
-      />
+      <section className="st-detail" aria-labelledby="st-section-title">
+        <button type="button" className="st-back" onClick={() => router.push("/settings")}><IconChevronLeft size={16} aria-hidden="true" />{t("settings_mobile_back")}</button>
+        <header className="st-section-heading"><p className="st-eyebrow">{t(current.group)}</p><h2 id="st-section-title" ref={detailRef} tabIndex={-1}>{t(current.label)}</h2></header>
+        <fieldset className="st-fields" disabled={busy} aria-label={t(current.label)}>
+          {activeSection === "info" && <>
+            <p className="st-description">{t("info_desc")}</p>
+            <div className="st-form-grid">{(["org", "name", "title"] as const).map(field => <SettingsField key={field} id={`st-info-${field}`} label={t(("info_label_" + field) as TranslationKey)}>
+              <input id={`st-info-${field}`} value={info[field]} onChange={event => handleChange(field, event.target.value)} placeholder={t(("info_placeholder_" + field) as TranslationKey)} autoComplete={field === "name" ? "name" : field === "org" ? "organization" : "organization-title"} />
+            </SettingsField>)}</div>
+            {(info.org || info.name || info.title) && <div className="st-preview"><h3>{t("info_signature_preview")}</h3><p>{t("info_signature_thanks")}<br />{[info.org, info.name, info.title].filter(Boolean).join(" ")}</p></div>}
+          </>}
+          {activeSection === "leave" && <>
+            <p className="st-description">{t("leave_desc_empty")}</p>
+            <div className="st-field"><span className="st-label">{t("leave_employment_type")}</span>
+              {choices(t("leave_employment_type"), employmentType, [{ id: "new", label: t("leave_new") }, { id: "career", label: t("leave_career") }], value => { setEmploymentType(value); dirty("leave"); })}
+            </div>
+            {employmentType === "new" ? <>
+              <SettingsField id="st-join-date" label={t("leave_join_date")}><input id="st-join-date" type="date" value={joinDate} onChange={event => { setJoinDate(event.target.value); dirty("leave"); }} /></SettingsField>
+              <div className="st-field"><span className="st-label">{t("leave_standard")}</span>{choices(t("leave_standard"), leaveStandard, [{ id: "join_date", label: t("leave_standard_join") }, { id: "fiscal_year", label: t("leave_standard_fiscal") }], value => { setLeaveStandard(value); dirty("leave"); })}</div>
+            </> : <SettingsStepper label={t("leave_granted")} value={grantedLeaves} onChange={value => { setGrantedLeaves(value); dirty("leave"); }} />}
+            <SettingsStepper label={t("leave_used")} value={usedLeaves} onChange={value => { setUsedLeaves(value); dirty("leave"); }} />
+          </>}
+          {activeSection === "greeting" && <>
+            <p className="st-description">{t("greeting_desc")}</p>
+            <SettingsSwitch label={t("greeting_toggle")} description={t("greeting_toggle_desc")} checked={greetingEnabled} onChange={() => { setGreetingEnabled(value => !value); dirty("greeting"); }} />
+            {greetingEnabled && <>
+              {choices(t("st_greeting_mode"), greetingMode, [{ id: "basic", label: t("greeting_mode_basic") }, { id: "time", label: t("greeting_mode_time") }, { id: "day", label: t("greeting_mode_day") }], value => { setGreetingMode(value); dirty("greeting"); })}
+              {greetingMode === "basic" && <SettingsField id="st-greeting-default" label={t("st_greeting_text")}><input id="st-greeting-default" value={greetingValues.default ?? ""} placeholder={t("st_greeting_placeholder")} onChange={event => handleGreetingValueChange("default", event.target.value)} /></SettingsField>}
+              {greetingMode === "time" && GREETING_TIME_PERIODS.map(({ id }, index) => <SettingsField key={id} id={`st-greeting-time-${index}`} label={t((["st_morning", "st_afternoon", "st_evening", "st_night"] as const)[index])}><input id={`st-greeting-time-${index}`} value={greetingValues[id] ?? ""} placeholder={locale === "ko" ? GREETING_PLACEHOLDERS.time[id] : t("st_greeting_text")} onChange={event => handleGreetingValueChange(id, event.target.value)} /></SettingsField>)}
+              {greetingMode === "day" && GREETING_DAY_LABELS.map((label, index) => <SettingsField key={index} id={`st-greeting-day-${index}`} label={new Intl.DateTimeFormat(locale, { weekday: "long" }).format(new Date(2026, 8, 27 + index))}><input id={`st-greeting-day-${index}`} value={greetingValues[String(index)] ?? ""} placeholder={locale === "ko" ? GREETING_PLACEHOLDERS.day[index] : t("st_greeting_text")} onChange={event => handleGreetingValueChange(String(index), event.target.value)} /></SettingsField>)}
+            </>}
+          </>}
+          {activeSection === "job" && <>
+            <p className="st-description">{t("job_hint")}</p>
+            <div className="st-presets">{JOB_PRESETS.map(preset => <button className="st-preset" type="button" key={preset.id} aria-pressed={jobPreset === preset.id} onClick={() => setPendingPreset(preset.id)}>
+              <preset.icon size={20} aria-hidden="true" /><span><strong>{presetLabel(preset.id)}</strong><small>{t(("st_preset_" + preset.id + "_desc") as TranslationKey)}</small></span><IconCheck className="st-selected-check" size={18} aria-hidden="true" />
+            </button>)}</div>
+          </>}
+          {activeSection === "menu" && <>
+            <p className="st-description">{t("menu_desc")}</p><p className="st-hint">{t("st_menu_order_hint")}</p>
+            <h3 className="st-subheading">{t("menu_optional")}</h3>
+            <div className="st-menu-list">{menuOrder.map((href, index) => {
+              const item = OPTIONAL_MENU_ITEMS.find(menu => menu.href === href);
+              if (!item) return null;
+              const label = MENU_LOCALE_MAP[href] ? t(MENU_LOCALE_MAP[href]) : item.label;
+              return <div key={href} className="st-menu-row" data-route={href} draggable={!busy} data-dragging={dragIdx === index} data-over={dropIdx === index && dragIdx !== index}
+                onDragStart={() => setDragIdx(index)} onDragEnd={() => { setDragIdx(null); setDropIdx(null); }} onDragOver={event => { event.preventDefault(); setDropIdx(index); }} onDrop={event => handleDrop(event, index)}>
+                <IconGripVertical className="st-grip" size={18} aria-hidden="true" /><span className="st-menu-name">{label}</span>
+                <div className="st-reorder"><button type="button" disabled={index === 0} className="st-icon-button" aria-label={tFormat(t("st_move_up"), { name: label })} onClick={() => moveMenu(index, index - 1)}><IconArrowUp size={16} /></button><button type="button" disabled={index === menuOrder.length - 1} className="st-icon-button" aria-label={tFormat(t("st_move_down"), { name: label })} onClick={() => moveMenu(index, index + 1)}><IconArrowDown size={16} /></button></div>
+                <button type="button" className="st-switch" role="switch" aria-label={label} aria-checked={isRouteEnabled(menuSettings, href)} onClick={() => handleMenuToggle(href)}><span>{isRouteEnabled(menuSettings, href) && <IconCheck size={12} aria-hidden="true" />}</span></button>
+              </div>;
+            })}</div>
+            <h3 className="st-subheading">{t("menu_always")}</h3><p className="st-hint">{ALWAYS_VISIBLE_ITEMS.map(item => MENU_LOCALE_MAP[item.href] ? t(MENU_LOCALE_MAP[item.href]) : item.label).join(" · ")}</p>
+          </>}
+          {activeSection === "help" && <>
+            <p className="st-description">{t("help_desc")}</p><SettingsSwitch label={t("help_toggle")} description={t("help_toggle_desc")} checked={helpOn} onChange={handleHelpToggle} />
+          </>}
+          {activeSection === "language" && <>
+            <p className="st-description">{t("settings_language_desc")}</p>{choices(t("settings_language"), locale, [{ id: "ko", label: "한국어" }, { id: "en", label: "English" }], value => void runSave("language", async () => { await setLocale(value); }))}
+          </>}
+          {activeSection === "github" && <>
+            <p className="st-description">{t("github_desc")}</p>
+            <div className="st-connection" role="status" data-state={githubConnected ? "connected" : "idle"}>
+              {githubStatusLoading ? t("st_checking") : githubStatusError ? t("st_connection_error") : githubConnected ? <><IconCheck size={18} aria-hidden="true" />{tFormat(t("github_connected_msg"), { repo: githubRepoStatus ?? "" })}</> : <><IconAlertTriangle size={18} aria-hidden="true" />{t("github_not_connected")}</>}
+            </div>
+            {githubStatusError && <button type="button" className="st-button" onClick={() => void fetchGithubStatus()}>{t("st_retry")}</button>}
+            <SettingsField id="st-github-pat" label={t("github_pat_label")}><input id="st-github-pat" type="password" autoComplete="off" value={githubPatInput} placeholder={t("github_pat_placeholder")} onChange={event => { setGithubPatInput(event.target.value); dirty("github"); }} /></SettingsField>
+            <SettingsField id="st-github-repo" label={t("github_repo_label")}><input id="st-github-repo" value={githubRepoInput} placeholder={t("github_repo_placeholder")} onChange={event => { setGithubRepoInput(event.target.value); dirty("github"); }} /></SettingsField>
+            <p className="st-hint">{t("st_github_private")}</p>
+            {githubWarnings.map(warning => <p key={warning} className="st-warning" role="alert">{t(warning)}</p>)}
+          </>}
+          {activeSection === "notif" && <>
+            <p className="st-description">{t("notif_setup")}</p>
+            <div className="st-connection" role="status" data-state={notifPermission === "granted" ? "connected" : "idle"}>{notifPermission === "granted" ? <><IconCheck size={18} aria-hidden="true" />{t("notif_granted_msg")}</> : notifPermission === "unsupported" ? t("st_notif_unsupported") : notifPermission === "denied" ? t("notif_denied_desc") : t("notif_default_desc")}</div>
+            {notifPermission === "default" && <button type="button" className="st-button st-button--primary" onClick={() => void handleRequestPermission()}><IconBell size={18} aria-hidden="true" />{t("notif_allow_btn")}</button>}
+            {notifPermission === "granted" && <p className="st-hint">{t("notif_off_hint")}</p>}
+            <SettingsSwitch label={t("notif_event_toggle")} description={t("notif_event_desc")} checked={notifSettings.eventNotif} disabled={notifPermission !== "granted"} onChange={() => handleNotifToggle("eventNotif")} />
+            <SettingsSwitch label={t("notif_dday_toggle")} description={t("notif_dday_desc")} checked={notifSettings.ddayNotif} disabled={notifPermission !== "granted"} onChange={() => handleNotifToggle("ddayNotif")} />
+          </>}
+        </fieldset>
+        <footer className="st-savebar">
+          <div className="st-save-state" data-state={state ?? "idle"} role={state === "error" ? "alert" : "status"}>
+            {state === "saved" && <IconCheck size={18} aria-hidden="true" />}
+            <span>{state === "saving" ? t("st_saving") : state === "error" ? t("st_save_error") : state === "saved" ? t(activeSection === "notif" ? "st_local_saved" : "save_done") : state === "dirty" ? t("st_unsaved") : t(manualSave ? "st_manual_hint" : activeSection === "notif" ? "st_local_hint" : "st_auto_hint")}</span>
+          </div>
+          {manualSave ? <button type="button" className="st-button st-button--primary" disabled={busy || (activeSection === "github" && (!githubPatInput.trim() || !githubRepoInput.trim()))} onClick={manualSave}><IconDeviceFloppy size={18} aria-hidden="true" />{t(busy ? "st_saving" : "save")}</button> :
+            state === "error" && <button type="button" className="st-button" onClick={() => { const operation = retries.current[activeSection]; if (operation) void runSave(activeSection, operation); }}>{t("st_retry")}</button>}
+        </footer>
+      </section>
     </div>
-  );
+    {pendingPreset && <SettingsConfirm title={t("job_change_modal_title")} onCancel={() => setPendingPreset(null)} onConfirm={handlePresetConfirm}><p>{tFormat(t("st_preset_confirm"), { name: presetLabel(pendingPreset) })}</p><p className="st-warning">{t("job_change_modal_warning")}</p></SettingsConfirm>}
+    <HelpButton title={t("help_settings_title")} steps={Array.from({ length: 7 }, (_, i) => ({ step: t((`help_settings_${i + 1}_step`) as TranslationKey), desc: t((`help_settings_${i + 1}_desc`) as TranslationKey) }))} />
+  </div>;
 }
 
 export default function SettingsPage() {
