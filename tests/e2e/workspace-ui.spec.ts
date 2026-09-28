@@ -238,7 +238,7 @@ test("홈 글자 링크는 밑줄 없이 반응하며 키보드와 동작 감소
     }
     await page.keyboard.press("Enter");
     await expect(tools).toHaveAttribute("aria-expanded", "true");
-    await expect(page.locator('.wk-customize')).toHaveAttribute("href", "/settings");
+    await expect(page.locator('.wk-customize')).toHaveAttribute("href", "/settings?section=menu");
     await page.locator(".wk-customize").hover();
     await expect(page.locator(".wk-customize")).toHaveCSS("text-decoration-line", "none");
     await tools.click();
@@ -407,6 +407,54 @@ test("설정의 인사말·프리셋·메뉴 변경을 홈에서 보존한다", 
   await page.locator('.wk-rail-nav a[href="/"]').click();
   await expect(page.locator('.wk-recent a[href="/summary"]')).toBeVisible();
 });
+
+for (const width of [1440, 390]) {
+  test(`홈 메뉴 설정 링크는 ${width}px에서 주소·선택·뒤로 가기를 동기화한다`, async ({ page }) => {
+    const { errors, networkErrors } = await workspace(page);
+    await page.setViewportSize({ width, height: 844 });
+    await page.locator(".wk-tools-toggle").click();
+    const customize = page.locator(".wk-customize");
+    await expect(customize).toHaveText("메뉴 설정");
+    await expect(customize).toHaveAttribute("href", "/settings?section=menu");
+    await customize.click();
+    await expect(page).toHaveURL(/\/settings\?section=menu$/);
+    await expect(page.getByText("사이드바에 표시할 메뉴를 선택하세요")).toBeVisible();
+
+    await page.reload();
+    await expect(page).toHaveURL(/\/settings\?section=menu$/);
+    await expect(page.getByText("사이드바에 표시할 메뉴를 선택하세요")).toBeVisible();
+    if (width === 390) await page.getByRole("button", { name: "설정 목록" }).click();
+    await page.getByRole("button", { name: "직업군 설정", exact: true }).click();
+    await expect(page).toHaveURL(/\/settings\?section=job$/);
+    await expect(page.getByText("직업군을 선택하면 추천 메뉴가 자동으로 적용됩니다.")).toBeVisible();
+    await page.goBack();
+    if (width === 390) {
+      await expect(page).toHaveURL(/\/settings$/);
+      await expect(page.getByRole("button", { name: "메뉴 설정", exact: true })).toBeVisible();
+      await page.goBack();
+    }
+    await expect(page).toHaveURL(/\/settings\?section=menu$/);
+    await expect(page.getByText("사이드바에 표시할 메뉴를 선택하세요")).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+
+    await page.goto("/settings");
+    await expect(page).toHaveURL(/\/settings$/);
+    if (width === 390) {
+      await expect(page.getByRole("button", { name: "내 정보", exact: true })).toBeVisible();
+      await expect(page.getByText("이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다.")).toBeHidden();
+    } else {
+      await expect(page.getByText("이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다.")).toBeVisible();
+    }
+
+    await page.goto("/settings?section=unknown");
+    await expect(page).toHaveURL(/\/settings$/);
+    if (width === 390) await expect(page.getByRole("button", { name: "내 정보", exact: true })).toBeVisible();
+    else await expect(page.getByText("이메일·템플릿 작성 시 발신자 서명에 자동으로 사용됩니다.")).toBeVisible();
+    expect(errors).toEqual([]);
+    expect(networkErrors).toEqual([]);
+  });
+}
 
 test("메뉴 표시와 드래그 순서 변경이 같은 화면과 새로고침에 반영된다", async ({ page }) => {
   const { settings } = await workspace(page);

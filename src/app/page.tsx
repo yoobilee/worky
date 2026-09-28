@@ -383,7 +383,7 @@ export default function HomePage() {
     <div id="worky-tool-list" className="wk-tool-drawer" data-state={showMore ? "open" : "closed"} aria-hidden={!showMore} inert={!showMore}>
       <div className="wk-tool-drawer-inner"><nav className="wk-tools" aria-label={t("wk_tools")}>
         {activeRoutes.map(route => <Link className="wk-tool" href={route} key={route}><span className="wk-tool-icon"><WorkspaceIcon route={route} /></span><span>{t(MENU_LOCALE_MAP[route])}</span><IconArrowRight className="wk-link-arrow" size={14} aria-hidden="true" /></Link>)}
-      </nav><Link className="wk-text-link wk-customize" href="/settings"><IconAdjustments size={16} aria-hidden="true" />{t("wk_customize")}</Link></div>
+      </nav><Link className="wk-text-link wk-customize" href="/settings?section=menu"><IconAdjustments size={16} aria-hidden="true" />{t("wk_customize")}</Link></div>
     </div>
 
     {dataLoaded && <HomeAccountStatus weekTotal={weekTotal} leaveRemaining={leaveData ? Math.max(0, leaveData.total - leaveData.used) : null} />}

@@ -221,6 +221,14 @@
 
 브라우저 검증은 Chromium 기준이며 Safari/Firefox와 실제 모바일 기기는 미검증이다. UI 테스트는 실제 게스트 인증을 사용하되 홈 계정 데이터·AI·날씨 응답은 격리된 대역을 사용한다. 실제 저장 회귀는 별도 전용 계정 CRUD로 확인했다. 인증·DB·API·설정 저장 코드와 다른 기능 페이지는 수정하지 않았다.
 
+## 2026-09-28 홈 메뉴 설정 이동
+
+홈의 전체 도구 아래 링크는 ‘메뉴 설정’(영어 `Menu settings`)으로 표시하고 `/settings?section=menu`로 이동한다. 설정 화면은 주소의 `section` 값을 선택 상태로 사용하므로 직접 진입, 새로고침, 브라우저 뒤로 가기에서 같은 항목이 열린다. 모바일에서는 항목을 지정한 주소로 진입하면 목록 대신 상세 내용을 바로 보여준다. 기존 `/settings`는 ‘내 정보’를 기본 선택하며 모바일에서는 기존처럼 설정 목록을 먼저 보여준다. 알 수 없는 `section` 값은 `/settings`로 주소를 정리한다.
+
+변경 파일은 홈 링크의 `src/app/page.tsx`, 설정 화면의 URL 선택 처리 `src/app/settings/page.tsx`, 한·영 링크 문구 `src/lib/i18n/translations.ts`, 이동 회귀 검사 `tests/e2e/workspace-ui.spec.ts`다. 설정 데이터 저장, 메뉴 표시 여부·순서 변경, 인증·DB·API는 변경하지 않았다. Next 15의 `useSearchParams`는 정적 페이지에서 Suspense 경계가 필요하므로 기존 설정 로딩 표시를 경계에서도 사용한다. 관련 기준은 [Next 15 공식 문서](https://nextjs.org/docs/15/app/api-reference/functions/use-search-params)다.
+
+최종 검사: 타입 검사·프로덕션 빌드 통과, 린트 오류 0(기존 경고 8), 프로덕션 Chromium UI E2E 19개 통과. 1440px/390px에서 링크 진입·새로고침·항목 이동·뒤로 가기·일반 `/settings`·잘못된 항목 복구를 확인하고, 기존 메뉴 on/off·드래그 순서 저장 검사도 통과했다.
+
 ## 남은 범위와 다음 단계
 
 - 기능 페이지(일정 추출의 원문/검토/저장 UI 포함), 설정 페이지 레이아웃, 인증, DB/RLS/API, 업무 계산/저장 로직을 개편하지 않았다.
